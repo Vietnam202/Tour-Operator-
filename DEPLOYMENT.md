@@ -64,7 +64,7 @@ Run a long-lived worker:
 npm run notifications:process
 ```
 
-The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Run at least one worker process in production. Multiple workers are supported.
+The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Each HTTP attempt is bounded to 10 seconds by default; set `BOOKING_WEBHOOK_TIMEOUT_MS` to override it. Run at least one worker process in production. Multiple workers are supported.
 
 Delivery is at-least-once across network ambiguity. Receivers should honor the stable `Idempotency-Key` header (and `X-Notification-Id`) so a webhook accepted upstream but followed by a lost response can be safely retried without duplicating side effects.
 
