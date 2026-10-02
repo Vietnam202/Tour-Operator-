@@ -10,9 +10,9 @@ const allowed = new Set(Object.values(BookingStatus));
 
 export async function PATCH(
   request: Request,
-  {
-  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 }); params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   if (!(await requireAdminPermission(request,"bookings:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
