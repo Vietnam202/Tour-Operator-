@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { notifyPaymentRequested } from "@/lib/notifications";
 import { sameOrigin } from "@/lib/csrf";
+import { markPaymentTaskInProgress } from "@/lib/booking-automation";
 
 
 export async function POST(request: Request) {
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
   });
 
   const paymentUrl = `/pay/${token}`;
+  await markPaymentTaskInProgress(booking.id);
   await notifyPaymentRequested({
     reference: booking.reference,
     primaryGuest: booking.primaryGuest,
