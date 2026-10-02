@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthorized } from "@/lib/admin-auth";
+import { requireAdminPermission } from "@/lib/admin-auth";
 import { paymentPlan } from "@/lib/payments";
 
 
 export async function POST(request: Request) {
-  if (!isAdminAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await requireAdminPermission(request,"payments:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   const booking = await prisma.bookingInquiry.findUnique({ where: { id: body.bookingId } });
   if (!booking || !booking.estimatedTotal) return NextResponse.json({ error: "Booking or quoted total not found" }, { status: 404 });
