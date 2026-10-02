@@ -13,7 +13,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
-  if (!(await requireAdminPermission(request,"bookings:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const actor=await requireAdminPermission(request,"bookings:write");
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await request.json();
@@ -58,6 +59,13 @@ export async function PATCH(
       // Operations should explicitly reopen inventory after checking supplier terms.
       return tx.bookingInquiry.update({ where: { id }, data: { ...operationalData, ...(nextStatus?{status:nextStatus}:{}) } });
     });
+
+    const changes:string[]=[];
+    if(nextStatus) changes.push("status → "+nextStatus);
+    if(body.assignedToId!==undefined) changes.push("owner updated");
+    if(body.followUpAt!==undefined) changes.push("follow-up updated");
+    if(body.internalNotes!==undefined) changes.push("internal notes updated");
+    if(changes.length) await prisma.bookingActivity.create({data:{bookingId:id,actorId:actor.id==="legacy-api-key"?null:actor.id,type:"BOOKING_UPDATED",message:changes.join(" · ")}});
 
     if (nextStatus === "CONFIRMED") {
       await notifyBookingConfirmed({
