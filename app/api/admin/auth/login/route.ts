@@ -1,0 +1,31 @@
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { hashSessionToken } from "@/lib/admin-auth";
+
+function verifyPassword(password:string,stored:string) {
+  const [salt,hash]=stored.split(":");
+  if(!salt||!hash) return false;
+  const candidate=scryptSync(password,salt,64);
+  const expected=Buffer.from(hash,"hex");
+  return candidate.length===expected.length && timingSafeEqual(candidate,expected);
+}
+
+export async function POST(request:Request) {
+  const body=await request.json();
+  const email=String(body.email||"").trim().toLowerCase();
+  const password=String(body.password||"");
+  const user=await prisma.staffUser.findUnique({where:{email}});
+  if(!user||!user.isActive||!verifyPassword(password,user.passwordHash)) {
+    return NextResponse.json({error:"Invalid email or password"},{status:401});
+  }
+
+  const token=randomBytes(32).toString("hex");
+  await prisma.staffSession.create({
+    data:{userId:user.id,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+12*60*60*1000)}
+  });
+
+  const response=NextResponse.json({user:{name:user.name,email:user.email,role:user.role}});
+  response.cookies.set("hca_staff_session",token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:12*60*60});
+  return response;
+}
