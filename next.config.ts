@@ -7,12 +7,20 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
-
+const privateHeaders = [
+  { key: "Referrer-Policy", value: "no-referrer" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" },
+];
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      { source: "/voucher/:path*", headers: privateHeaders },
+      { source: "/api/voucher/:path*", headers: privateHeaders },
+      { source: "/admin/:path*", headers: privateHeaders },
+      { source: "/pay/:path*", headers: privateHeaders },
+    ];
   },
 };
-
 export default nextConfig;

@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "smoke": "sh scripts/smoke.sh",
-    "test:integration": "tsx --test tests/booking.integration.test.ts"
+    "test:integration": "tsx --test --test-concurrency=1 tests/*.integration.test.ts"
   },
   "dependencies": {
     "next": "15.5.27",
@@ -29,7 +29,5 @@
     "prisma": "^6.8.2",
     "tsx": "^4.19.3"
   },
-  "engines": {
-    "node": ">=20 <21"
-  }
+  "engines": { "node": ">=20 <21" }
 }

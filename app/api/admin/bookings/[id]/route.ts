@@ -1,91 +1,108 @@
 import { BookingStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
-import { notifyBookingConfirmed } from "@/lib/notifications";
 import { sameOrigin } from "@/lib/csrf";
-import { ensureConfirmedBookingTasks } from "@/lib/booking-automation";
+import { notifyBookingConfirmed } from "@/lib/notifications";
+import { ensureConfirmedBookingTasksTx } from "@/lib/booking-automation";
+import { BookingOperationError, withBookingLock } from "@/lib/booking-lock";
 
-const allowed = new Set(Object.values(BookingStatus));
+const headers = { "Cache-Control": "private, no-store" };
+const statuses = new Set<string>(Object.values(BookingStatus));
+function nullableText(value: unknown, max: number): string | null {
+  if (value === null || value === "") return null;
+  if (typeof value !== "string" || value.length > max) throw new BookingOperationError("Invalid text field.", 400);
+  return value.trim() || null;
+}
 
-
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
-  const actor=await requireAdminPermission(request,"bookings:write");
-  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = await params;
-  const body = await request.json();
-  const hasStatus=body.status!==undefined;
-  const nextStatus=hasStatus?String(body.status) as BookingStatus:null;
-  if (nextStatus && !allowed.has(nextStatus)) return NextResponse.json({ error: "Invalid booking status" }, { status: 400 });
-  const operationalData={
-    ...(body.assignedToId!==undefined?{assignedToId:body.assignedToId||null}:{}),
-    ...(body.followUpAt!==undefined?{followUpAt:body.followUpAt?new Date(body.followUpAt):null}:{}),
-    ...(body.internalNotes!==undefined?{internalNotes:String(body.internalNotes).trim().slice(0,5000)||null}:{})
-  };
-
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers });
   try {
-    const booking = await prisma.$transaction(async tx => {
-      const current = await tx.bookingInquiry.findUnique({ where: { id } });
-      if (!current) throw new Error("BOOKING_NOT_FOUND");
-
-      if (nextStatus === "CONFIRMED" && !current.inventoryCommitted && current.departureId) {
-        const departure = await tx.departure.findUnique({ where: { id: current.departureId } });
-        if (!departure || !departure.isAvailable) throw new Error("DEPARTURE_UNAVAILABLE");
-
-        if (departure.cabinsLeft !== null) {
-          const updated = await tx.departure.updateMany({
-            where: { id: departure.id, cabinsLeft: { gt: 0 }, isAvailable: true },
-            data: { cabinsLeft: { decrement: 1 } }
-          });
-          if (updated.count !== 1) throw new Error("SOLD_OUT");
-
-          const refreshed = await tx.departure.findUnique({ where: { id: departure.id } });
-          if (refreshed?.cabinsLeft === 0) {
-            await tx.departure.update({ where: { id: departure.id }, data: { isAvailable: false } });
-          }
-        }
-
-        return tx.bookingInquiry.update({
-          where: { id },
-          data: { ...operationalData, status: nextStatus, inventoryCommitted: true }
-        });
-      }
-
-      // Once inventory is committed we do not automatically restore it on cancellation.
-      // Operations should explicitly reopen inventory after checking supplier terms.
-      return tx.bookingInquiry.update({ where: { id }, data: { ...operationalData, ...(nextStatus?{status:nextStatus}:{}) } });
-    });
-
-    const changes:string[]=[];
-    if(nextStatus) changes.push("status → "+nextStatus);
-    if(body.assignedToId!==undefined) changes.push("owner updated");
-    if(body.followUpAt!==undefined) changes.push("follow-up updated");
-    if(body.internalNotes!==undefined) changes.push("internal notes updated");
-    if(changes.length) await prisma.bookingActivity.create({data:{bookingId:id,actorId:actor.id==="legacy-api-key"?null:actor.id,type:"BOOKING_UPDATED",message:changes.join(" · ")}});
-
-    if (nextStatus === "CONFIRMED") {
-      await ensureConfirmedBookingTasks(booking.id);
-      await notifyBookingConfirmed({
-        reference: booking.reference,
-        cruiseName: booking.cruiseName,
-        primaryGuest: booking.primaryGuest,
-        email: booking.email,
-        departureDate: booking.departureDate.toISOString(),
-        estimatedTotal: booking.estimatedTotal,
-        currency: booking.currency
-      });
+    const actor = await requireAdminPermission(request, "bookings:write");
+    if (!actor) return NextResponse.json({ error: "Unauthorized." }, { status: 401, headers });
+    const { id } = await params;
+    const body: unknown = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new BookingOperationError("A JSON object is required.", 400);
+    const input = body as Record<string, unknown>;
+    const keys = Object.keys(input);
+    if (!keys.length || keys.some(key => !["status", "assignedToId", "followUpAt", "internalNotes"].includes(key))) {
+      throw new BookingOperationError("Unsupported booking fields.", 400);
     }
-    return NextResponse.json({ booking });
+    let nextStatus: BookingStatus | undefined;
+    if ("status" in input) {
+      if (typeof input.status !== "string" || !statuses.has(input.status)) throw new BookingOperationError("Invalid booking status.", 400);
+      nextStatus = input.status as BookingStatus;
+    }
+    const operational: { assignedToId?: string | null; followUpAt?: Date | null; internalNotes?: string | null } = {};
+    if ("assignedToId" in input) operational.assignedToId = nullableText(input.assignedToId, 100);
+    if ("internalNotes" in input) operational.internalNotes = nullableText(input.internalNotes, 5000);
+    if ("followUpAt" in input) {
+      const value = nullableText(input.followUpAt, 40);
+      operational.followUpAt = value ? new Date(value) : null;
+      if (operational.followUpAt && !Number.isFinite(operational.followUpAt.getTime())) throw new BookingOperationError("Invalid follow-up date.", 400);
+    }
+    const result = await withBookingLock(id, async tx => {
+      const current = await tx.bookingInquiry.findUniqueOrThrow({ where: { id } });
+      if (current.status === "CANCELLED" && nextStatus && nextStatus !== "CANCELLED") {
+        throw new BookingOperationError("Cancelled bookings cannot be reopened. Review supplier release and create a new request.");
+      }
+      if (current.status === "CONFIRMED" && nextStatus && !["CONFIRMED", "CANCELLED"].includes(nextStatus)) {
+        throw new BookingOperationError("A confirmed booking cannot return to the enquiry pipeline.");
+      }
+      if (operational.assignedToId) {
+        const owner = await tx.staffUser.findFirst({ where: { id: operational.assignedToId, isActive: true }, select: { id: true } });
+        if (!owner) throw new BookingOperationError("Select an active staff owner.", 400);
+      }
+      let inventoryCommitted = current.inventoryCommitted;
+      if (nextStatus === "CONFIRMED" && !inventoryCommitted) {
+        if (!current.departureId || !current.cruiseId) throw new BookingOperationError("A dated cruise allocation is required before confirmation.");
+        await tx.$queryRaw`SELECT "id" FROM "Departure" WHERE "id" = ${current.departureId} FOR UPDATE`;
+        const departure = await tx.departure.findUnique({ where: { id: current.departureId } });
+        if (!departure || departure.cruiseId !== current.cruiseId || !departure.isAvailable || departure.departureDate.getTime() <= Date.now()) {
+          throw new BookingOperationError("This departure is no longer available.");
+        }
+        if (departure.departureDate.getTime() !== current.departureDate.getTime() || departure.durationNights !== current.durationNights) {
+          throw new BookingOperationError("Departure details changed. Review the booking before confirming.");
+        }
+        if (departure.cabinsLeft === null) throw new BookingOperationError("Set a verified cabin allocation before confirming.");
+        const reserved = await tx.departure.updateMany({
+          where: { id: departure.id, cabinsLeft: { gt: 0 }, isAvailable: true },
+          data: { cabinsLeft: { decrement: 1 } },
+        });
+        if (reserved.count !== 1) throw new BookingOperationError("This departure is sold out.");
+        await tx.departure.updateMany({ where: { id: departure.id, cabinsLeft: 0 }, data: { isAvailable: false } });
+        inventoryCommitted = true;
+      }
+      const changed: string[] = [];
+      if (nextStatus && nextStatus !== current.status) changed.push("status: " + current.status + " -> " + nextStatus);
+      if ("assignedToId" in operational && operational.assignedToId !== current.assignedToId) changed.push("owner updated");
+      if ("followUpAt" in operational && operational.followUpAt?.getTime() !== current.followUpAt?.getTime()) changed.push("follow-up updated");
+      if ("internalNotes" in operational && operational.internalNotes !== current.internalNotes) changed.push("internal notes updated");
+      const booking = await tx.bookingInquiry.update({ where: { id }, data: {
+        ...operational, ...(nextStatus ? { status: nextStatus } : {}), inventoryCommitted,
+      } });
+      if (changed.length) await tx.bookingActivity.create({ data: {
+        bookingId: id, actorId: actor.id === "legacy-api-key" ? null : actor.id,
+        type: "BOOKING_UPDATED", message: changed.join("; "),
+      } });
+      if (booking.status === "CONFIRMED") await ensureConfirmedBookingTasksTx(tx, id);
+      if (booking.status === "CANCELLED") {
+        await tx.voucherGrant.updateMany({ where: { bookingId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+        await tx.bookingTask.updateMany({ where: { bookingId: id, status: { in: ["OPEN", "IN_PROGRESS"] } }, data: { status: "CANCELLED" } });
+        // Supplier release, refunds and inventory restoration are explicit operations, not automatic.
+      }
+      return { booking, newlyConfirmed: current.status !== "CONFIRMED" && booking.status === "CONFIRMED" };
+    });
+    if (result.newlyConfirmed) {
+      // External notification failure must not turn a committed booking into a failed API response.
+      try { await notifyBookingConfirmed({ reference: result.booking.reference, cruiseName: result.booking.cruiseName,
+        primaryGuest: result.booking.primaryGuest, email: result.booking.email,
+        departureDate: result.booking.departureDate.toISOString(), estimatedTotal: result.booking.estimatedTotal,
+        currency: result.booking.currency }); } catch { /* Delivery requires a separate durable outbox. */ }
+    }
+    return NextResponse.json({ booking: result.booking }, { headers });
   } catch (error) {
-    const code = error instanceof Error ? error.message : "";
-    if (code === "SOLD_OUT") return NextResponse.json({ error: "This departure is sold out and cannot be confirmed." }, { status: 409 });
-    if (code === "DEPARTURE_UNAVAILABLE") return NextResponse.json({ error: "This departure is no longer available." }, { status: 409 });
-    if (code === "BOOKING_NOT_FOUND") return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    return NextResponse.json({ error: "Unable to update booking" }, { status: 400 });
+    if (error instanceof BookingOperationError) return NextResponse.json({ error: error.message }, { status: error.status, headers });
+    if (error instanceof SyntaxError) return NextResponse.json({ error: "Invalid JSON request." }, { status: 400, headers });
+    return NextResponse.json({ error: "Unable to update booking. Please refresh and try again." }, { status: 503, headers });
   }
 }

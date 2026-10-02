@@ -224,6 +224,7 @@ model BookingInquiry {
   supplierPayables SupplierPayable[]
   tasks            BookingTask[]
   activities       BookingActivity[]
+  voucherGrants    VoucherGrant[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -231,7 +232,6 @@ model BookingInquiry {
   @@index([email])
   @@index([assignedToId, followUpAt])
 }
-
 
 model PaymentTransaction {
   id              String             @id @default(cuid())
@@ -265,7 +265,6 @@ model WebhookEvent {
   @@index([createdAt])
 }
 
-
 model PaymentRequest {
   id          String               @id @default(cuid())
   bookingId   String
@@ -283,7 +282,6 @@ model PaymentRequest {
   @@index([bookingId, createdAt])
   @@index([status, expiresAt])
 }
-
 
 model StaffUser {
   id           String    @id @default(cuid())
@@ -310,7 +308,6 @@ model StaffSession {
 
   @@index([userId, expiresAt])
 }
-
 
 model BookingExpense {
   id          String          @id @default(cuid())
@@ -347,7 +344,6 @@ model SupplierPayable {
   @@index([supplierId, status, dueDate])
 }
 
-
 model BookingTask {
   id          String            @id @default(cuid())
   bookingId   String
@@ -380,4 +376,17 @@ model BookingActivity {
 
   @@index([bookingId, createdAt])
   @@index([actorId, createdAt])
+}
+
+// Bearer secrets are returned only at issuance. Only their digest is persisted.
+model VoucherGrant {
+  id        String         @id @default(cuid())
+  bookingId String
+  booking   BookingInquiry @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tokenHash String         @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([bookingId, expiresAt])
 }
