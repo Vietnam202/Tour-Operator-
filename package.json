@@ -28,9 +28,6 @@
     "prisma": "^6.8.2",
     "tsx": "^4.19.3"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "engines": {
     "node": ">=20 <21"
   }
