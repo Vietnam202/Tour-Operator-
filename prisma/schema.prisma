@@ -76,6 +76,29 @@ enum PayableStatus {
   CANCELLED
 }
 
+enum SupplierConfirmationStatus {
+  NOT_REQUESTED
+  REQUESTED
+  CONFIRMED
+  REJECTED
+}
+
+enum BookingTaskType {
+  SUPPLIER_CONFIRMATION
+  PAYMENT
+  PASSPORT
+  TRANSFER_DETAILS
+  PRE_DEPARTURE
+  OTHER
+}
+
+enum BookingTaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
 model Cruise {
   id          String       @id @default(cuid())
   slug        String       @unique
@@ -190,10 +213,15 @@ model BookingInquiry {
   assignedTo      StaffUser?    @relation("BookingAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   followUpAt      DateTime?
   internalNotes   String?
+  supplierConfirmationStatus SupplierConfirmationStatus @default(NOT_REQUESTED)
+  supplierConfirmationRef String?
+  supplierConfirmedAt DateTime?
   payments        PaymentTransaction[]
   paymentRequests PaymentRequest[]
   expenses        BookingExpense[]
   supplierPayables SupplierPayable[]
+  tasks            BookingTask[]
+  activities       BookingActivity[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -264,6 +292,8 @@ model StaffUser {
   isActive     Boolean   @default(true)
   sessions     StaffSession[]
   assignedBookings BookingInquiry[] @relation("BookingAssignee")
+  tasks            BookingTask[] @relation("TaskOwner")
+  activities       BookingActivity[] @relation("ActivityActor")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -313,4 +343,39 @@ model SupplierPayable {
 
   @@index([bookingId, createdAt])
   @@index([supplierId, status, dueDate])
+}
+
+
+model BookingTask {
+  id          String            @id @default(cuid())
+  bookingId   String
+  booking     BookingInquiry    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type        BookingTaskType
+  title       String
+  status      BookingTaskStatus @default(OPEN)
+  ownerId     String?
+  owner       StaffUser?        @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  dueAt       DateTime?
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([bookingId, status, dueAt])
+  @@index([ownerId, status, dueAt])
+}
+
+model BookingActivity {
+  id          String         @id @default(cuid())
+  bookingId   String
+  booking     BookingInquiry @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       StaffUser?     @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type        String
+  message     String
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([actorId, createdAt])
 }
