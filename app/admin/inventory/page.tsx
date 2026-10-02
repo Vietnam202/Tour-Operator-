@@ -3,9 +3,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Cabin={id:string;name:string;basePrice:number;capacity:number;childRatePct:number;singleSupplement:number;isActive:boolean};
-type Departure={id:string;departureDate:string;durationNights:number;priceFrom:number;holidaySurcharge:number;cabinsLeft:number|null;isAvailable:boolean};
-type Cruise={id:string;name:string;slug:string;route:string;status:string;stars:number;badge?:string;cabins:Cabin[];departures:Departure[]};
+type Cabin={id:string;name:string;basePrice:number;netCost?:number|null;capacity:number;childRatePct:number;singleSupplement:number;isActive:boolean};
+type Departure={id:string;departureDate:string;durationNights:number;priceFrom:number;netCostFrom?:number|null;holidaySurcharge:number;cabinsLeft:number|null;isAvailable:boolean};
+type Cruise={id:string;name:string;slug:string;route:string;status:string;stars:number;badge?:string;supplierId?:string|null;cabins:Cabin[];departures:Departure[]};
 
 export default function InventoryAdmin(){
  const router=useRouter();
@@ -15,6 +15,7 @@ export default function InventoryAdmin(){
  const [error,setError]=useState("");
  const [message,setMessage]=useState("");
  const [loading,setLoading]=useState(false);
+ const [suppliers,setSuppliers]=useState<{id:string;name:string}[]>([]);
 
  async function request(url:string,options:RequestInit={}){
    const res=await fetch(url,{...options,headers:{"content-type":"application/json",...(options.headers||{})}});
@@ -24,7 +25,7 @@ export default function InventoryAdmin(){
  }
  async function load(e?:FormEvent){
    e?.preventDefault(); setLoading(true);setError("");setMessage("");
-   try{const data=await request("/api/admin/cruises");setCruises(data.cruises||[]);if(!selected&&data.cruises?.[0])setSelected(data.cruises[0].id)}
+   try{const data=await request("/api/admin/cruises");setCruises(data.cruises||[]);request("/api/admin/suppliers").then(d=>setSuppliers(d.suppliers||[])).catch(()=>{});if(!selected&&data.cruises?.[0])setSelected(data.cruises[0].id)}
    catch(err){setError(err instanceof Error?err.message:"Unable to load inventory")}
    finally{setLoading(false)}
  }
@@ -78,17 +79,17 @@ export default function InventoryAdmin(){
      <div className="panelTitle"><h2>Manage inventory</h2><span>{cruises.length} cruise{cruises.length===1?"":"s"} loaded</span></div>
      <label className="cruiseSelect"><span>Select cruise</span><select value={selected} onChange={e=>setSelected(e.target.value)}>{cruises.map(c=><option key={c.id} value={c.id}>{c.name} - {c.status}</option>)}</select></label>
      {!current?<div className="inventoryEmpty">Load inventory or create your first cruise.</div>:<>
-       <div className="inventoryCruiseHead"><div><h3>{current.name}</h3><p>{current.route} · {current.stars}-star</p></div><select value={current.status} disabled={!canWrite} onChange={e=>setStatus(current,e.target.value)}><option>DRAFT</option><option>PUBLISHED</option><option>ARCHIVED</option></select></div>
+       <div className="inventoryCruiseHead"><div><h3>{current.name}</h3><p>{current.route} · {current.stars}-star</p></div><select value={current.supplierId||""} disabled={!canWrite} onChange={e=>request("/api/admin/cruises/"+current.id,{method:"PATCH",body:JSON.stringify({supplierId:e.target.value||null})}).then(()=>load())}><option value="">No supplier</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select value={current.status} disabled={!canWrite} onChange={e=>setStatus(current,e.target.value)}><option>DRAFT</option><option>PUBLISHED</option><option>ARCHIVED</option></select></div>
        <div className="inventoryColumns">
         <div>
          <h3>Cabins</h3>
-         <div className="inventoryItems">{current.cabins.map(c=><div className="inventoryItem" key={c.id}><div><b>{c.name}</b><span>Capacity {c.capacity} · Child {c.childRatePct}% · Single +US$ {c.singleSupplement}</span></div><strong>US$ {c.basePrice}</strong></div>)}{!current.cabins.length&&<p className="muted">No cabins yet.</p>}</div>
-         {canWrite&&<form className="compactForm" onSubmit={createCabin}><input name="name" required placeholder="Cabin name"/><div className="miniGrid"><input name="basePrice" type="number" required placeholder="Base USD"/><input name="capacity" type="number" defaultValue="2" placeholder="Capacity"/></div><div className="miniGrid"><input name="childRatePct" type="number" min="0" max="100" defaultValue="70" placeholder="Child rate %"/><input name="singleSupplement" type="number" min="0" defaultValue="0" placeholder="Single +USD"/></div><input name="sizeSqm" type="number" placeholder="Size m²"/><input name="description" placeholder="Balcony, deck, view..."/><button className="darkButton">Add cabin</button></form>}
+         <div className="inventoryItems">{current.cabins.map(c=><div className="inventoryItem" key={c.id}><div><b>{c.name}</b><span>Capacity {c.capacity} · Child {c.childRatePct}% · Single +US$ {c.singleSupplement}</span></div><strong>US$ {c.basePrice}<small>Cost {c.netCost==null?"-":"US$ "+c.netCost}</small></strong></div>)}{!current.cabins.length&&<p className="muted">No cabins yet.</p>}</div>
+         {canWrite&&<form className="compactForm" onSubmit={createCabin}><input name="name" required placeholder="Cabin name"/><div className="miniGrid"><input name="basePrice" type="number" required placeholder="Sell USD"/><input name="netCost" type="number" min="0" placeholder="Net cost USD"/></div><div className="miniGrid"><input name="capacity" type="number" defaultValue="2" placeholder="Capacity"/></div><div className="miniGrid"><input name="childRatePct" type="number" min="0" max="100" defaultValue="70" placeholder="Child rate %"/><input name="singleSupplement" type="number" min="0" defaultValue="0" placeholder="Single +USD"/></div><input name="sizeSqm" type="number" placeholder="Size m²"/><input name="description" placeholder="Balcony, deck, view..."/><button className="darkButton">Add cabin</button></form>}
         </div>
         <div>
          <h3>Departures & rates</h3>
-         <div className="inventoryItems">{current.departures.map(d=><div className="inventoryItem" key={d.id}><div><b>{new Date(d.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b><span>{d.durationNights+1}D{d.durationNights}N · {d.cabinsLeft??"?"} cabins left · Holiday +US$ {d.holidaySurcharge}</span></div><strong>US$ {d.priceFrom}</strong></div>)}{!current.departures.length&&<p className="muted">No departures yet.</p>}</div>
-         {canWrite&&<form className="compactForm" onSubmit={createDeparture}><input name="departureDate" type="date" required/><div className="miniGrid"><select name="durationNights" defaultValue="1"><option value="1">2D1N</option><option value="2">3D2N</option></select><input name="priceFrom" type="number" required placeholder="From USD"/></div><div className="miniGrid"><input name="cabinsLeft" type="number" min="0" placeholder="Cabins left"/><input name="holidaySurcharge" type="number" min="0" defaultValue="0" placeholder="Holiday +USD"/></div><button className="darkButton">Add departure</button></form>}
+         <div className="inventoryItems">{current.departures.map(d=><div className="inventoryItem" key={d.id}><div><b>{new Date(d.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b><span>{d.durationNights+1}D{d.durationNights}N · {d.cabinsLeft??"?"} cabins left · Holiday +US$ {d.holidaySurcharge}</span></div><strong>US$ {d.priceFrom}<small>Cost {d.netCostFrom==null?"-":"US$ "+d.netCostFrom}</small></strong></div>)}{!current.departures.length&&<p className="muted">No departures yet.</p>}</div>
+         {canWrite&&<form className="compactForm" onSubmit={createDeparture}><input name="departureDate" type="date" required/><div className="miniGrid"><select name="durationNights" defaultValue="1"><option value="1">2D1N</option><option value="2">3D2N</option></select><input name="priceFrom" type="number" required placeholder="Sell USD"/></div><div className="miniGrid"><input name="netCostFrom" type="number" min="0" placeholder="Net cost USD"/><input name="cabinsLeft" type="number" min="0" placeholder="Cabins left"/><input name="holidaySurcharge" type="number" min="0" defaultValue="0" placeholder="Holiday +USD"/></div><button className="darkButton">Add departure</button></form>}
         </div>
        </div>
      </>}
