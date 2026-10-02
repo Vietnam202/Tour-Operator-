@@ -1,20 +1,17 @@
 import { BookingStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdminAuthorized } from "@/lib/admin-auth";
 import { notifyBookingConfirmed } from "@/lib/notifications";
 
 const allowed = new Set(Object.values(BookingStatus));
 
-function authorized(request: Request) {
-  const configured = process.env.ADMIN_API_KEY;
-  return Boolean(configured && request.headers.get("x-admin-key") === configured);
-}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdminAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await request.json();
