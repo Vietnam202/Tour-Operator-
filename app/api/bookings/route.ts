@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyNewBooking } from "@/lib/notifications";
 
 function bookingReference() {
   const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
@@ -37,6 +38,18 @@ export async function POST(request: Request) {
         estimatedTotal: body.estimatedTotal ? Number(body.estimatedTotal) : null,
         currency: "USD",
       },
+    });
+
+    await notifyNewBooking({
+      reference: booking.reference,
+      cruiseName: booking.cruiseName,
+      departureDate: booking.departureDate.toISOString(),
+      primaryGuest: booking.primaryGuest,
+      email: booking.email,
+      phone: booking.phone,
+      adults: booking.adults,
+      children: booking.children,
+      estimatedTotal: booking.estimatedTotal,
     });
 
     return NextResponse.json(
