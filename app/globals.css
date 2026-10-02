@@ -36,3 +36,5 @@
 
 .departureGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.departureCard{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:7px;padding:14px}.departureCard b,.departureCard span,.departureCard small,.departureCard strong{display:block}.departureCard b{font-size:12px}.departureCard span,.departureCard small{font-size:8px;color:#74858d;margin-top:4px}.departureCard>div:last-child{text-align:right}.departureCard strong{font-size:15px}.notFoundCruise{padding-top:100px;padding-bottom:100px;text-align:center}.notFoundCruise h1{font:40px Georgia,serif}.notFoundCruise p{color:#687b84;margin-bottom:25px}
 @media(max-width:600px){.departureGrid{grid-template-columns:1fr}}
+
+.summaryCabinSelect{display:block;margin:12px 0}.summaryCabinSelect span{display:block;font-size:9px;font-weight:700;margin-bottom:5px}.summaryCabinSelect select{width:100%;padding:9px;border:1px solid var(--line);border-radius:5px;background:#fff}
