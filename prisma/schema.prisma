@@ -178,7 +178,6 @@ model BookingInquiry {
   updatedAt       DateTime      @updatedAt
 
   @@index([status, createdAt])
-  @@index([supplierId])
   @@index([email])
   @@index([assignedToId, followUpAt])
 }
