@@ -60,6 +60,7 @@ export type ProcessOutboxOptions = {
   maxAttempts?: number;
   baseDelayMs?: number;
   workerId?: string;
+  deliveryTimeoutMs?: number;
   client?: PrismaClient;
 };
 
@@ -73,6 +74,8 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
   const maxAttempts = Math.max(1, options.maxAttempts ?? 10);
   const baseDelayMs = Math.max(0, options.baseDelayMs ?? 5_000);
   const workerId = options.workerId ?? `worker-${process.pid}-${crypto.randomUUID()}`;
+  const configuredTimeout = Number(process.env.BOOKING_WEBHOOK_TIMEOUT_MS || "10000");
+  const deliveryTimeoutMs = Math.max(100, options.deliveryTimeoutMs ?? (Number.isFinite(configuredTimeout) ? configuredTimeout : 10_000));
 
   const claimed = await client.$transaction(async tx => {
     const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -124,6 +127,7 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
         },
         body: JSON.stringify({ id: event.id, event: event.eventType, payload: event.payload }),
         cache: "no-store",
+        signal: AbortSignal.timeout(deliveryTimeoutMs),
       });
       if (!response.ok) throw new Error(`Webhook responded with HTTP ${response.status}`);
 
