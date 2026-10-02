@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashSessionToken } from "@/lib/admin-auth";
 import { sameOrigin } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 
 function verifyPassword(password:string,stored:string) {
   const [salt,hash]=stored.split(":");
@@ -13,6 +14,8 @@ function verifyPassword(password:string,stored:string) {
 }
 
 export async function POST(request:Request) {
+  const limit=rateLimit(request,"admin-login",8,5*60_000);
+  if(!limit.allowed) return NextResponse.json({error:"Too many sign-in attempts. Try again later."},{status:429,headers:{"retry-after":String(limit.retryAfter)}});
   if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   const body=await request.json();
   const email=String(body.email||"").trim().toLowerCase();
