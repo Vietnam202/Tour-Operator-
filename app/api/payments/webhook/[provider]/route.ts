@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { refreshBookingPaymentStatus } from "@/lib/payments";
 import { notifyPaymentUpdated } from "@/lib/notifications";
+import { syncPaymentTasks } from "@/lib/booking-automation";
 
 export async function POST(
   request: Request,
@@ -56,6 +57,7 @@ export async function POST(
 
     if (!result.duplicate) {
       const booking = await refreshBookingPaymentStatus(result.bookingId);
+      await syncPaymentTasks(booking.id, booking.paymentStatus);
       await notifyPaymentUpdated({
         reference: booking.reference,
         paymentStatus: booking.paymentStatus,
