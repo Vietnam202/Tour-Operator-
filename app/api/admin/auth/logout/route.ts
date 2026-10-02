@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashSessionToken } from "@/lib/admin-auth";
+import { sameOrigin } from "@/lib/csrf";
 
 function sessionToken(request:Request) {
   const raw=request.headers.get("cookie")||"";
   return raw.split(";").map(v=>v.trim()).find(v=>v.startsWith("hca_staff_session="))?.split("=")[1]||null;
 }
 export async function POST(request:Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   const token=sessionToken(request);
   if(token) await prisma.staffSession.deleteMany({where:{tokenHash:hashSessionToken(decodeURIComponent(token))}});
   const response=NextResponse.json({ok:true});
