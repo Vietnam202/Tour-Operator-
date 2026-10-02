@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthorized } from "@/lib/admin-auth";
+import { requireAdminPermission } from "@/lib/admin-auth";
 
 
 export async function GET(request: Request) {
-  if (!isAdminAuthorized(request)) {
+  if (!(await requireAdminPermission(request,"bookings:read"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
