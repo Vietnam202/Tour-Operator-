@@ -26,6 +26,18 @@ export default function AdminPage() {
     } finally { setLoading(false); }
   }
 
+  async function createPaymentRequest(b: Booking, kind: "DEPOSIT"|"BALANCE") {
+    const total=b.estimatedTotal||0; const paid=b.amountPaid||0;
+    const amount=kind==="DEPOSIT"?(b.depositAmount||Math.max(1,Math.round(total*.3))):Math.max(1,total-paid);
+    setError("");
+    const res=await fetch("/api/admin/payments/request",{method:"POST",headers:{"content-type":"application/json","x-admin-key":key},body:JSON.stringify({bookingId:b.id,kind,amount})});
+    const data=await res.json();
+    if(!res.ok){setError(data.error||"Unable to create payment request");return}
+    const url=window.location.origin+data.paymentUrl;
+    await navigator.clipboard?.writeText(url);
+    window.prompt("Payment link created. Copy and send this secure link to the guest:",url);
+  }
+
   async function updateStatus(id: string, status: string) {
     setError("");
     const res = await fetch("/api/admin/bookings/" + id, {
@@ -48,7 +60,7 @@ export default function AdminPage() {
       {error && <div className="adminError">{error}</div>}
       <div className="adminStats"><div><span>Total loaded</span><strong>{bookings.length}</strong></div><div><span>New enquiries</span><strong>{bookings.filter(b => b.status === "NEW").length}</strong></div><div><span>Estimated pipeline</span><strong>US$ {pipeline.toLocaleString()}</strong></div></div>
       <div className="adminTableWrap"><table className="adminTable"><thead><tr><th>Reference</th><th>Guest</th><th>Cruise / Date</th><th>Guests</th><th>Contact</th><th>Value</th><th>Payment</th><th>Status</th></tr></thead><tbody>
-        {bookings.length === 0 ? <tr><td colSpan={8} className="emptyAdmin">No bookings loaded yet.</td></tr> : bookings.map(b => <tr key={b.id}><td><b>{b.reference}</b><small>{new Date(b.createdAt).toLocaleDateString("en-US")}</small></td><td>{b.primaryGuest}<small>{b.nationality || "-"}</small></td><td>{b.cruiseName}<small>{new Date(b.departureDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</small></td><td>{b.adults} adult{b.adults !== 1 ? "s" : ""}{b.children ? ", " + b.children + " child" : ""}</td><td><a href={"mailto:" + b.email}>{b.email}</a><small>{b.phone || "-"}</small></td><td>{b.estimatedTotal ? b.currency + " " + b.estimatedTotal : "-"}</td><td><b>{b.paymentStatus||"UNPAID"}</b><small>{b.amountPaid ? b.currency+" "+b.amountPaid+" paid" : "No payment"}</small></td><td><select className={"statusSelect " + b.status.toLowerCase()} value={b.status} onChange={e => updateStatus(b.id, e.target.value)}><option>NEW</option><option>CONTACTED</option><option>QUOTED</option><option>CONFIRMED</option><option>CANCELLED</option></select></td></tr>)}
+        {bookings.length === 0 ? <tr><td colSpan={8} className="emptyAdmin">No bookings loaded yet.</td></tr> : bookings.map(b => <tr key={b.id}><td><b>{b.reference}</b><small>{new Date(b.createdAt).toLocaleDateString("en-US")}</small></td><td>{b.primaryGuest}<small>{b.nationality || "-"}</small></td><td>{b.cruiseName}<small>{new Date(b.departureDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</small></td><td>{b.adults} adult{b.adults !== 1 ? "s" : ""}{b.children ? ", " + b.children + " child" : ""}</td><td><a href={"mailto:" + b.email}>{b.email}</a><small>{b.phone || "-"}</small></td><td>{b.estimatedTotal ? b.currency + " " + b.estimatedTotal : "-"}</td><td><b>{b.paymentStatus||"UNPAID"}</b><small>{b.amountPaid ? b.currency+" "+b.amountPaid+" paid" : "No payment"}</small>{b.status==="CONFIRMED"&&b.paymentStatus!=="PAID"&&<div className="paymentActions"><button onClick={()=>createPaymentRequest(b,"DEPOSIT")}>Deposit link</button><button onClick={()=>createPaymentRequest(b,"BALANCE")}>Balance link</button></div>}</td><td><select className={"statusSelect " + b.status.toLowerCase()} value={b.status} onChange={e => updateStatus(b.id, e.target.value)}><option>NEW</option><option>CONTACTED</option><option>QUOTED</option><option>CONFIRMED</option><option>CANCELLED</option></select></td></tr>)}
       </tbody></table></div>
     </div>
   </main>;
