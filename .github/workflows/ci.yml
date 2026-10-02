@@ -6,13 +6,32 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hca_ci
+          POSTGRES_PASSWORD: ci-only-disposable-password
+          POSTGRES_DB: hca_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hca_ci -d hca_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
-      DATABASE_URL: postgresql://user:password@localhost:5432/placeholder
+      DATABASE_URL: postgresql://hca_ci:ci-only-disposable-password@127.0.0.1:5432/hca_ci
       NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
+      NEXT_TELEMETRY_DISABLED: 1
+      BOOKING_WEBHOOK_URL: ""
       ADMIN_API_KEY: ci-placeholder-key-that-is-longer-than-32-characters
       PAYMENT_WEBHOOK_SECRET: ci-placeholder-secret-that-is-not-used-for-real-payments
     steps:
@@ -26,7 +45,31 @@ jobs:
         run: npx prisma validate
       - name: Generate Prisma client
         run: npx prisma generate
+      - name: Apply committed migrations to disposable database
+        run: npm run db:migrate
+      - name: Verify migration and schema agreement
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
       - name: Typecheck
         run: npm run typecheck
       - name: Production build
         run: npm run build
+      - name: Production HTTP and PostgreSQL integration tests
+        env:
+          HCA_INTEGRATION_TESTS: "1"
+          HCA_TEST_BASE_URL: http://127.0.0.1:3000
+        run: |
+          set -euo pipefail
+          npm run start -- --hostname 127.0.0.1 > /tmp/hca-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --max-time 2 -fsS http://127.0.0.1:3000/api/live > /dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/hca-server.log; exit 1; fi
+          npm run test:integration
+          npm run smoke -- http://127.0.0.1:3000
+      - name: Server diagnostics on failure
+        if: failure()
+        run: test ! -f /tmp/hca-server.log || tail -n 100 /tmp/hca-server.log

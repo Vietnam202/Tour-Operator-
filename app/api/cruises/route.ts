@@ -1,26 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPublicCruises } from "@/lib/public-cruises";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const cruises = await prisma.cruise.findMany({
-      where: { status: "PUBLISHED" },
-      include: {
-        cabins: { where: { isActive: true }, orderBy: { basePrice: "asc" } },
-        departures: {
-          where: { isAvailable: true, departureDate: { gte: new Date() } },
-          orderBy: { departureDate: "asc" },
-          take: 8,
-        },
-      },
-      orderBy: [{ rating: "desc" }, { reviewCount: "desc" }],
-    });
-
-    return NextResponse.json({ cruises });
+    return NextResponse.json({ cruises: await getPublicCruises() }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json(
-      { error: "Cruise inventory is not available yet." },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: "Cruise inventory is temporarily unavailable." }, { status: 503 });
   }
 }

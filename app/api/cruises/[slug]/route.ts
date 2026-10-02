@@ -3,14 +3,14 @@ import { getPublicCruise } from "@/lib/public-cruises";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const slug = new URL(request.url).searchParams.get("cruise");
-  if (!slug || slug.length > 200) return NextResponse.json({ error: "A valid cruise is required." }, { status: 400 });
+export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  if (!slug || slug.length > 200) return NextResponse.json({ error: "Cruise not found." }, { status: 404 });
   try {
     const cruise = await getPublicCruise(slug);
     if (!cruise) return NextResponse.json({ error: "Cruise not found." }, { status: 404 });
     return NextResponse.json({ cruise }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json({ error: "Booking inventory is temporarily unavailable." }, { status: 503 });
+    return NextResponse.json({ error: "Cruise inventory is temporarily unavailable." }, { status: 503 });
   }
 }

@@ -1,48 +1,30 @@
-type Cabin={id:string;name:string;sizeSqm:number|null;description:string|null;basePrice:number;currency:string;image:string|null};
-type Departure={id:string;departureDate:string;durationNights:number;priceFrom:number;currency:string;cabinsLeft:number|null};
-type Cruise={id:string;slug:string;name:string;summary:string|null;route:string;stars:number;rating:number;reviewCount:number;badge:string|null;heroImage:string|null;cabins:Cabin[];departures:Departure[]};
+import { notFound } from "next/navigation";
+import { getPublicCruise } from "@/lib/public-cruises";
 
-const fallback:Record<string,Cruise>={
- "stellar-of-the-seas":{
-  id:"fallback-stellar",slug:"stellar-of-the-seas",name:"Stellar of the Seas",summary:"A refined luxury cruise combining contemporary cabins, spacious public areas and a quieter Lan Ha Bay itinerary.",route:"Halong Bay - Lan Ha Bay",stars:5,rating:4.9,reviewCount:328,badge:"Best Seller",heroImage:"https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=88",
-  cabins:[
-   {id:"junior",name:"Junior Suite",sizeSqm:28,description:"Private balcony - Bay view",basePrice:320,currency:"USD",image:"https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=900&q=85"},
-   {id:"senior",name:"Senior Suite",sizeSqm:32,description:"Private balcony - Upper deck",basePrice:375,currency:"USD",image:"https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=900&q=85"},
-   {id:"executive",name:"Executive Suite",sizeSqm:45,description:"Panoramic bay view - Bathtub",basePrice:460,currency:"USD",image:"https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=900&q=85"}
-  ],
-  departures:[]
- }
-};
+export const dynamic = "force-dynamic";
+const money = (amount: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 
-async function getCruise(slug:string){
- try{
-  const base=process.env.NEXT_PUBLIC_SITE_URL;
-  if(!base)return fallback[slug]||null;
-  const res=await fetch(base+"/api/cruises/"+slug,{next:{revalidate:60}});
-  if(!res.ok)return fallback[slug]||null;
-  const data=await res.json();
-  return data.cruise as Cruise;
- }catch{return fallback[slug]||null}
-}
-
-export default async function CruiseDetail({params}:{params:Promise<{slug:string}>}){
- const {slug}=await params;
- const cruise=await getCruise(slug);
- if(!cruise)return <main className="shell notFoundCruise"><h1>Cruise not found</h1><p>This cruise may be unpublished or unavailable.</p><a className="button" href="/cruises">Browse cruises</a></main>;
- const from=cruise.departures[0]?.priceFrom??cruise.cabins[0]?.basePrice??0;
- const hero=cruise.heroImage||"https://images.unsplash.com/photo-1573270689103-d7a4e42b609a?auto=format&fit=crop&w=1400&q=85";
- return <main>
-  <div className="detailNav shell"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>›</span><b>{cruise.name}</b></div>
-  <section className="shell detailHeader"><div>{cruise.badge&&<span className="badge staticBadge">{cruise.badge}</span>}<h1>{cruise.name}</h1><div className="rating">★ {cruise.rating.toFixed(1)} <span>({cruise.reviewCount} guest reviews)</span></div><p>⌖ {cruise.route} &nbsp; · &nbsp; {cruise.stars}-star cruise</p></div><div className="detailActions"><button>♡ Save</button><button>↗ Share</button></div></section>
-  <section className="shell gallery"><div className="galleryMain" style={{backgroundImage:`url("${hero}")`}}></div><div className="gallerySide one" style={{backgroundImage:`url("${cruise.cabins[0]?.image||hero}")`}}></div><div className="gallerySide two" style={{backgroundImage:`linear-gradient(rgba(0,38,55,.25),rgba(0,38,55,.25)),url("${cruise.cabins[1]?.image||hero}")`}}><button>▣ View all photos</button></div></section>
-  <nav className="anchorNav"><div className="shell"><a href="#overview">Overview</a><a href="#cabins">Cabins & Rates</a><a href="#departures">Departures</a><a href="#included">What's Included</a></div></nav>
-  <div className="shell detailLayout"><div className="detailContent">
-   <section id="overview" className="detailSection"><span className="eyebrow">CRUISE OVERVIEW</span><h2>{cruise.name}</h2><p>{cruise.summary||"A handpicked cruise for international travellers looking for a comfortable way to explore Halong Bay and nearby routes."}</p><div className="highlights"><div><b>{cruise.stars}-star</b><span>Cruise class</span></div><div><b>{cruise.cabins.length} cabin types</b><span>Current inventory</span></div><div><b>Hanoi</b><span>Transfer available</span></div><div><b>English</b><span>Guest support</span></div></div></section>
-   <section id="cabins" className="detailSection"><span className="eyebrow">CABINS & RATES</span><h2>Choose your cabin</h2><p className="sectionIntro">Select a cabin to continue. Final availability is confirmed before payment.</p><div className="cabinList">{cruise.cabins.map(c=><article className="cabin" key={c.id}><div className="cabinImg" style={{backgroundImage:`url("${c.image||hero}")`}}></div><div className="cabinInfo"><h3>{c.name}</h3><p>{c.sizeSqm?c.sizeSqm+" m² · ":""}{c.description||"Comfortable private cabin"}</p><div className="cabinFeatures"><span>✓ Ensuite bathroom</span><span>✓ Air conditioning</span><span>✓ Meals included</span></div></div><div className="cabinPrice"><small>From</small><strong>{c.currency} {c.basePrice}</strong><span>/ person</span><a className="darkButton linkButton" href={"/booking?cruise="+encodeURIComponent(cruise.slug)+"&cabin="+encodeURIComponent(c.id)}>Select cabin</a></div></article>)}</div></section>
-   <section id="departures" className="detailSection"><span className="eyebrow">UPCOMING AVAILABILITY</span><h2>Departure dates</h2>{cruise.departures.length?<div className="departureGrid">{cruise.departures.map(d=><a key={d.id} className="departureCard" href={"/booking?cruise="+encodeURIComponent(cruise.slug)+"&departure="+encodeURIComponent(d.id)}><div><b>{new Date(d.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b><span>{d.durationNights+1} days / {d.durationNights} night{d.durationNights>1?"s":""}</span></div><div><small>From</small><strong>{d.currency} {d.priceFrom}</strong><span>{d.cabinsLeft==null?"Check availability":d.cabinsLeft+" cabins left"}</span></div></a>)}</div>:<p>No dated departures are published yet. Submit a booking request and our team will check live availability.</p>}</section>
-   <section id="included" className="detailSection"><span className="eyebrow">GOOD TO KNOW</span><h2>Typical inclusions</h2><div className="includedGrid"><div><h3>Included</h3><p>✓ Private cabin</p><p>✓ Meals stated in itinerary</p><p>✓ Onboard activities</p><p>✓ English-speaking cruise staff</p><p>✓ Sightseeing fees</p></div><div><h3>Usually not included</h3><p>– Hanoi transfers unless selected</p><p>– Drinks and personal expenses</p><p>– Spa treatments</p><p>– Tips / gratuities</p><p>– Travel insurance</p></div></div></section>
-  </div>
-  <aside className="bookingBox"><div className="bookingPrice"><small>From</small><strong>US$ {from}</strong><span>/ person</span></div><p>Choose your date and cabin to request live availability.</p><a className="button bookingCta" href={"/booking?cruise="+encodeURIComponent(cruise.slug)}>Check Availability</a><div className="bookingTrust"><span>✓ No booking fee</span><span>✓ Secure confirmation process</span><span>✓ Vietnam-based support</span></div></aside></div>
-  <div className="mobileBooking"><div><small>From</small><b>US$ {from}</b><span>/ person</span></div><a className="button" href={"/booking?cruise="+encodeURIComponent(cruise.slug)}>Check Availability</a></div>
- </main>
+export default async function CruiseDetail({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  let cruise: Awaited<ReturnType<typeof getPublicCruise>>;
+  try { cruise = await getPublicCruise(slug); } catch {
+    return <main className="shell notFoundCruise"><h1>Cruise details are temporarily unavailable</h1><p>Please try again shortly. No availability or price has been confirmed.</p><a className="button" href="/cruises">Browse cruises</a></main>;
+  }
+  if (!cruise) notFound();
+  const available = cruise.cabins.length > 0 && cruise.departures.length > 0;
+  const bookUrl = `/booking?cruise=${encodeURIComponent(cruise.slug)}`;
+  const hero = cruise.heroImage;
+  return <main>
+    <nav className="shell detailNav" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>› {cruise.name}</span></nav>
+    <header className="shell detailHeader"><div>{cruise.badge && <span className="badge staticBadge">{cruise.badge}</span>}<h1>{cruise.name}</h1><p>{cruise.route}</p>{cruise.reviewCount > 0 && <p className="rating">{cruise.rating.toFixed(1)} / 5 <span>({cruise.reviewCount} reviews supplied in inventory)</span></p>}</div></header>
+    {hero && <section className="shell gallery" aria-label="Cruise gallery"><div className="galleryMain" role="img" aria-label={cruise.name} style={{ backgroundImage: `url(${JSON.stringify(hero)})` }}/><div className="gallerySide one" role="img" aria-label="Cabin preview" style={{ backgroundImage: `url(${JSON.stringify(cruise.cabins[0]?.image || hero)})` }}/><div className="gallerySide two" role="img" aria-label="Cabin preview" style={{ backgroundImage: `url(${JSON.stringify(cruise.cabins[1]?.image || hero)})` }}/></section>}
+    <nav className="anchorNav" aria-label="Cruise sections"><div className="shell"><a href="#overview">Overview</a><a href="#cabins">Cabins</a><a href="#departures">Departures</a><a href="#booking-terms">Booking information</a></div></nav>
+    <div className="shell detailLayout"><div className="detailContent">
+      <section id="overview" className="detailSection"><span className="eyebrow">CRUISE OVERVIEW</span><h2>Explore {cruise.name}</h2><p>{cruise.summary || "Contact our team for the latest itinerary and operator information."}</p><div className="highlights"><div><b>{cruise.cabins.length}</b><span>Published cabin types</span></div><div><b>{cruise.departures.length}</b><span>Published future departures</span></div></div></section>
+      <section id="cabins" className="detailSection"><span className="eyebrow">CABIN OPTIONS</span><h2>Choose your cabin</h2><p>Starting prices are indicative. Final cabin-specific rates and occupancy rules are confirmed by the operator.</p><div className="cabinList">{cruise.cabins.map(cabin => <article className="cabin" key={cabin.id}>{(cabin.image || hero) && <div className="cabinImg" role="img" aria-label={cabin.name} style={{ backgroundImage: `url(${JSON.stringify(cabin.image || hero)})` }}/>}<div className="cabinInfo"><h3>{cabin.name}</h3><p>{cabin.sizeSqm ? `${cabin.sizeSqm} m² · ` : ""}Up to {cabin.capacity} guests</p><p>{cabin.description}</p></div><div className="cabinPrice"><small>Indicative starting price</small><strong>{money(cabin.basePrice, cabin.currency)}</strong><span>per person</span>{available && <a className="darkButton linkButton" href={`${bookUrl}&cabin=${encodeURIComponent(cabin.id)}`}>Choose departure</a>}</div></article>)}</div>{!cruise.cabins.length && <p>No cabins are currently published.</p>}</section>
+      <section id="departures" className="detailSection"><span className="eyebrow">PUBLISHED DEPARTURES</span><h2>Select your travel date</h2>{available ? <div className="departureGrid">{cruise.departures.map(departure => <a className="departureCard" key={departure.id} href={`${bookUrl}&departure=${encodeURIComponent(departure.id)}`}><div><b>{departure.departureDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}</b><span>{departure.durationNights + 1} days / {departure.durationNights} nights</span></div><div><small>Starting from</small><strong>{money(departure.priceFrom, departure.currency)}</strong><span>Operator confirmation required</span></div></a>)}</div> : <p>No online booking options are currently published for this cruise. Please check again or <a href="/cruises">browse other cruises</a>.</p>}</section>
+      <section id="booking-terms" className="detailSection"><h2>Before requesting your cruise</h2><p>Cabin-specific rates, itinerary, meals, activities, transfers and cancellation terms must be confirmed in your final offer. A request does not reserve inventory or charge a payment.</p></section>
+    </div><aside className="bookingBox"><h2>Plan your cruise</h2><p>Choose a cabin and published departure to receive an indicative estimate.</p>{available ? <a className="button bookingCta" href={bookUrl}>Request availability</a> : <a className="button bookingCta" href="/cruises">Browse other cruises</a>}<p>No payment at the enquiry stage.</p></aside></div>
+    {available && <div className="mobileBooking"><span>Operator confirmation required</span><a className="button" href={bookUrl}>Request availability</a></div>}
+  </main>;
 }

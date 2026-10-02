@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
-    "smoke": "sh scripts/smoke.sh"
+    "smoke": "sh scripts/smoke.sh",
+    "test:integration": "tsx --test tests/booking.integration.test.ts"
   },
   "dependencies": {
     "next": "15.5.27",
