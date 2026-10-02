@@ -1,0 +1,43 @@
+import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+function authorized(request: Request) {
+  const configured = process.env.ADMIN_API_KEY;
+  return Boolean(configured && request.headers.get("x-admin-key") === configured);
+}
+
+export async function POST(request: Request) {
+  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = await request.json();
+  if (!body.bookingId || !body.kind || !body.amount) return NextResponse.json({ error: "bookingId, kind and amount are required" }, { status: 400 });
+
+  const booking = await prisma.bookingInquiry.findUnique({ where: { id: body.bookingId } });
+  if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  if (booking.status !== "CONFIRMED") return NextResponse.json({ error: "Booking must be confirmed before requesting payment" }, { status: 409 });
+
+  const amount = Math.max(1, Number(body.amount));
+  const kind = body.kind as PaymentKind;
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  const token = nonce + crypto.randomUUID().replaceAll("-", "");
+
+  const result = await prisma.$transaction(async tx => {
+    const transaction = await tx.paymentTransaction.create({
+      data: {
+        bookingId: booking.id, kind, status: PaymentEventStatus.PENDING, provider: "manual",
+        idempotencyKey: `manual-request:${booking.id}:${kind}:${nonce}`,
+        amount, currency: booking.currency
+      }
+    });
+    const paymentRequest = await tx.paymentRequest.create({
+      data: {
+        bookingId: booking.id, token, kind, amount, currency: booking.currency,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000)
+      }
+    });
+    await tx.bookingInquiry.update({ where: { id: booking.id }, data: { paymentStatus: PaymentStatus.PENDING } });
+    return { transaction, paymentRequest };
+  });
+
+  return NextResponse.json({ ...result, paymentUrl: `/pay/${token}` }, { status: 201 });
+}
