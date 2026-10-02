@@ -1,6 +1,7 @@
 import { BookingStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyBookingConfirmed } from "@/lib/notifications";
 
 const allowed = new Set(Object.values(BookingStatus));
 
@@ -53,6 +54,17 @@ export async function PATCH(
       return tx.bookingInquiry.update({ where: { id }, data: { status: nextStatus } });
     });
 
+    if (nextStatus === "CONFIRMED") {
+      await notifyBookingConfirmed({
+        reference: booking.reference,
+        cruiseName: booking.cruiseName,
+        primaryGuest: booking.primaryGuest,
+        email: booking.email,
+        departureDate: booking.departureDate.toISOString(),
+        estimatedTotal: booking.estimatedTotal,
+        currency: booking.currency
+      });
+    }
     return NextResponse.json({ booking });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
