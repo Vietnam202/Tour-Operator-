@@ -1,10 +1,10 @@
 import { CruiseStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthorized } from "@/lib/admin-auth";
+import { requireAdminPermission } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
-  if (!isAdminAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await requireAdminPermission(request,"inventory:read"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const cruises = await prisma.cruise.findMany({
     include: {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdminAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await requireAdminPermission(request,"inventory:read"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
 
   const name = String(body.name || "").trim().slice(0, 120);
