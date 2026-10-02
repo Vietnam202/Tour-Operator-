@@ -1,4 +1,4 @@
-import { PaymentEventStatus, PaymentKind } from "@prisma/client";
+import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -34,17 +34,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       const currentBooking = await tx.bookingInquiry.findUniqueOrThrow({ where: { id: body.bookingId } });
       const net = Math.max(0, paid - refunded);
       const total = currentBooking.estimatedTotal ?? 0;
-      const paymentStatus = refunded > 0 && net === 0 ? "REFUNDED"
-        : refunded > 0 ? "PARTIALLY_REFUNDED"
-        : net >= total && total > 0 ? "PAID"
-        : net > 0 ? "PARTIALLY_PAID" : "UNPAID";
+      const paymentStatus: PaymentStatus = refunded > 0 && net === 0 ? PaymentStatus.REFUNDED
+        : refunded > 0 ? PaymentStatus.PARTIALLY_REFUNDED
+        : net >= total && total > 0 ? PaymentStatus.PAID
+        : net > 0 ? PaymentStatus.PARTIALLY_PAID : PaymentStatus.UNPAID;
       const booking = await tx.bookingInquiry.update({
         where: { id: body.bookingId },
         data: { amountPaid: paid, amountRefunded: refunded, paymentStatus },
       });
-      if (paymentStatus === "PAID") {
+      if (paymentStatus === PaymentStatus.PAID) {
         await tx.bookingTask.updateMany({ where: { bookingId: booking.id, type: "PAYMENT", status: { in: ["OPEN", "IN_PROGRESS"] } }, data: { status: "DONE", completedAt: new Date() } });
-      } else if (paymentStatus !== "UNPAID") {
+      } else if (paymentStatus !== PaymentStatus.UNPAID) {
         await tx.bookingTask.updateMany({ where: { bookingId: booking.id, type: "PAYMENT", status: "OPEN" }, data: { status: "IN_PROGRESS" } });
       }
       await enqueueNotificationTx(tx, {
