@@ -21,6 +21,30 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentKind {
+  DEPOSIT
+  BALANCE
+  FULL
+  REFUND
+}
+
+enum PaymentEventStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
 model Cruise {
   id          String       @id @default(cuid())
   slug        String       @unique
@@ -102,9 +126,48 @@ model BookingInquiry {
   quotedTransfer  Int?
   currency        String        @default("USD")
   status          BookingStatus @default(NEW)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  depositAmount   Int?
+  balanceAmount   Int?
+  amountPaid      Int           @default(0)
+  amountRefunded  Int           @default(0)
+  payments        PaymentTransaction[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@index([status, createdAt])
   @@index([email])
+}
+
+
+model PaymentTransaction {
+  id              String             @id @default(cuid())
+  bookingId       String
+  booking         BookingInquiry     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind            PaymentKind
+  status          PaymentEventStatus @default(PENDING)
+  provider        String
+  providerRef     String?
+  idempotencyKey  String             @unique
+  amount          Int
+  currency        String             @default("USD")
+  metadata        Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([provider, providerRef])
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  provider        String
+  externalEventId String
+  eventType       String
+  payload         Json?
+  processedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  @@unique([provider, externalEventId])
+  @@index([createdAt])
 }
