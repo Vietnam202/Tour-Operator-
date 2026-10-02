@@ -145,6 +145,10 @@ model BookingInquiry {
   balanceAmount   Int?
   amountPaid      Int           @default(0)
   amountRefunded  Int           @default(0)
+  assignedToId    String?
+  assignedTo      StaffUser?    @relation("BookingAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  followUpAt      DateTime?
+  internalNotes   String?
   payments        PaymentTransaction[]
   paymentRequests PaymentRequest[]
   createdAt       DateTime      @default(now())
@@ -152,6 +156,7 @@ model BookingInquiry {
 
   @@index([status, createdAt])
   @@index([email])
+  @@index([assignedToId, followUpAt])
 }
 
 
@@ -215,6 +220,7 @@ model StaffUser {
   role         StaffRole @default(OPERATIONS)
   isActive     Boolean   @default(true)
   sessions     StaffSession[]
+  assignedBookings BookingInquiry[] @relation("BookingAssignee")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
