@@ -1,15 +1,12 @@
 import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdminAuthorized } from "@/lib/admin-auth";
 import { notifyPaymentRequested } from "@/lib/notifications";
 
-function authorized(request: Request) {
-  const configured = process.env.ADMIN_API_KEY;
-  return Boolean(configured && request.headers.get("x-admin-key") === configured);
-}
 
 export async function POST(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdminAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   if (!body.bookingId || !body.kind || !body.amount) return NextResponse.json({ error: "bookingId, kind and amount are required" }, { status: 400 });
 
