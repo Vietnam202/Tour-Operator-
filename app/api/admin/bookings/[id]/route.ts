@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { notifyBookingConfirmed } from "@/lib/notifications";
 import { sameOrigin } from "@/lib/csrf";
+import { ensureConfirmedBookingTasks } from "@/lib/booking-automation";
 
 const allowed = new Set(Object.values(BookingStatus));
 
@@ -68,6 +69,7 @@ export async function PATCH(
     if(changes.length) await prisma.bookingActivity.create({data:{bookingId:id,actorId:actor.id==="legacy-api-key"?null:actor.id,type:"BOOKING_UPDATED",message:changes.join(" · ")}});
 
     if (nextStatus === "CONFIRMED") {
+      await ensureConfirmedBookingTasks(booking.id);
       await notifyBookingConfirmed({
         reference: booking.reference,
         cruiseName: booking.cruiseName,
