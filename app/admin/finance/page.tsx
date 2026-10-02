@@ -9,7 +9,7 @@ export default function FinancePage(){
  const router=useRouter();const [data,setData]=useState<Data|null>(null);const [error,setError]=useState("");
  useEffect(()=>{Promise.all([fetch("/api/admin/auth/me"),fetch("/api/admin/finance")]).then(async([me,res])=>{if(!me.ok){router.replace("/admin/login");return}const d=await res.json();if(!res.ok)throw new Error(d.error||"Unable to load finance dashboard");setData(d)}).catch(e=>setError(e.message))},[router]);
  const money=(n:number)=>"US$ "+n.toLocaleString("en-US");
- return <main className="adminPage"><header className="adminHeader"><div className="shell"><a className="brand" href="/"><span className="brandMark">≋</span><span><b>HALONG CRUISE<br/>ADVISOR</b><small>Finance</small></span></a><nav className="adminNav"><a href="/admin">Bookings</a><a href="/admin/inventory">Inventory</a><a className="active" href="/admin/finance">Finance</a></nav></div></header>
+ return <main className="adminPage"><header className="adminHeader"><div className="shell"><a className="brand" href="/"><span className="brandMark">≋</span><span><b>HALONG CRUISE<br/>ADVISOR</b><small>Finance</small></span></a><nav className="adminNav"><a href="/admin">Bookings</a><a href="/admin/operations">Today</a><a href="/admin/inventory">Inventory</a><a className="active" href="/admin/finance">Finance</a></nav></div></header>
  <div className="shell adminWrap"><div className="adminTitle"><span className="eyebrow">COMMERCIAL PERFORMANCE</span><h1>Revenue & gross profit</h1><p>Internal commercial view based on booking quote snapshots and recorded payments.</p></div>
  {error&&<div className="adminError">{error}</div>}
  {!data?<div className="inventoryEmpty">Loading finance dashboard...</div>:<>
