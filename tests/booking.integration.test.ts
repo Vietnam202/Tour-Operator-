@@ -140,6 +140,12 @@ test("Published cruise booking against migrated PostgreSQL and the production HT
       assert.equal(saved.departureId, departure.id); assert.equal(saved.departureDate.toISOString(), departure.departureDate.toISOString());
       assert.equal(saved.inventoryCommitted, false); assert.equal(saved.status, "NEW");
       assert.equal(saved.activities.filter(item => item.type === "BOOKING_CREATED").length, 1);
+      const outbox = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: `booking.created:${saved.id}` } });
+      assert.equal(outbox.eventType, "booking.created");
+      assert.equal(outbox.aggregateId, saved.id);
+      assert.equal(outbox.status, "PENDING");
+      const payloadText = JSON.stringify(outbox.payload);
+      assert.ok(!/token|secret|session|authorization|cookie/i.test(payloadText));
       assert.equal((await prisma.departure.findUniqueOrThrow({ where: { id: departure.id } })).cabinsLeft, 3);
     });
     await t.test("missing consent and invalid email do not create bookings", async () => {
