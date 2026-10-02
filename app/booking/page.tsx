@@ -37,7 +37,7 @@ export default function BookingPage(){
         headers:{"content-type":"application/json"},
         body:JSON.stringify({
           cruiseId:cruise?.id,
-          cruiseName:cruise?.name||"{cruise?.name||"Selected cruise"}",
+          cruiseName:cruise?.name||"cruise?.name||"Selected cruise"",
           cabinName:cabin?.name||"Selected cabin",
           departureDate:form.get("departureDate"),
           durationNights:Number(form.get("durationNights")||departure?.durationNights||1),
@@ -64,14 +64,14 @@ export default function BookingPage(){
     return <main className="bookingSuccess"><div className="shell successCard">
       <div className="successIcon">✓</div><span className="eyebrow">REQUEST RECEIVED</span>
       <h1>Thanks — our cruise team will confirm availability.</h1>
-      <p>We’ve received your booking request for {cruise?.name||"Selected cruise"}. A Vietnam-based cruise expert will review cabin availability, final pricing and transfer details before payment.</p>
+      <p>We’ve received your booking request for cruise?.name||"Selected cruise". A Vietnam-based cruise expert will review cabin availability, final pricing and transfer details before payment.</p>
       <div className="successMeta"><div><b>Reference</b><span>{reference}</span></div><div><b>Estimated total</b><span>US$ {subtotal}</span></div><div><b>Payment</b><span>Not charged yet</span></div></div>
       <a className="button" href="/">Back to Homepage</a>
     </div></main>
   }
 
   return <main className="checkoutPage">
-    <div className="shell detailNav"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>›</span><a href="/cruises/stellar-of-the-seas">{cruise?.name||"Selected cruise"}</a><span>›</span><b>Booking</b></div>
+    <div className="shell detailNav"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>›</span><a href="/cruises/stellar-of-the-seas">cruise?.name||"Selected cruise"</a><span>›</span><b>Booking</b></div>
     <section className="shell checkoutHeader"><span className="eyebrow">SECURE BOOKING REQUEST</span><h1>Complete your cruise details</h1><p>No payment is taken at this stage. We confirm live cabin availability and the final total first.</p></section>
     <div className="shell checkoutLayout">
       <form className="checkoutForm" onSubmit={submitBooking}>
@@ -102,7 +102,7 @@ export default function BookingPage(){
           <button className="button checkoutSubmit" type="submit" disabled={submitting}>{submitting?"Submitting request...":"Request Booking Confirmation →"}</button>
         </section>
       </form>
-      <aside className="summaryCard"><div className="summaryImage"></div><div className="summaryBody"><span className="eyebrow">YOUR CRUISE</span><h2>{cruise?.name||"Selected cruise"}</h2><div className="rating">★ International guest support</div><p>{cabin?.name||"Select cabin"} · {departure?new Date(departure.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Choose your date"}</p>{cruise&&cruise.cabins.length>1&&<label className="summaryCabinSelect"><span>Cabin</span><select value={selectedCabin} onChange={e=>setSelectedCabin(e.target.value)}>{cruise.cabins.map(c=><option key={c.id} value={c.id}>{c.name} - US$ {c.basePrice}</option>)}</select></label>}<div className="summaryRows"><div><span>Adults × {adults}</span><b>US$ {adults*cabinPrice}</b></div>{children>0&&<div><span>Children × {children}</span><b>US$ {children*childPrice}</b></div>}<div><span>{transfer==="shared"?"Shared limousine":transfer==="private"?"Private car":"No transfer"}</span><b>US$ {transferPrice}</b></div></div><div className="summaryTotal"><span>Estimated total</span><strong>US$ {subtotal}</strong></div><small>Final pricing may vary by travel date, cabin availability, child age and operator supplements.</small><div className="secureList"><span>✓ Secure booking process</span><span>✓ No payment before confirmation</span><span>✓ Vietnam-based support</span></div></div></aside>
+      <aside className="summaryCard"><div className="summaryImage"></div><div className="summaryBody"><span className="eyebrow">YOUR CRUISE</span><h2>cruise?.name||"Selected cruise"</h2><div className="rating">★ International guest support</div><p>{cabin?.name||"Select cabin"} · {departure?new Date(departure.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Choose your date"}</p>{cruise&&cruise.cabins.length>1&&<label className="summaryCabinSelect"><span>Cabin</span><select value={selectedCabin} onChange={e=>setSelectedCabin(e.target.value)}>{cruise.cabins.map(c=><option key={c.id} value={c.id}>{c.name} - US$ {c.basePrice}</option>)}</select></label>}<div className="summaryRows"><div><span>Adults × {adults}</span><b>US$ {adults*cabinPrice}</b></div>{children>0&&<div><span>Children × {children}</span><b>US$ {children*childPrice}</b></div>}<div><span>{transfer==="shared"?"Shared limousine":transfer==="private"?"Private car":"No transfer"}</span><b>US$ {transferPrice}</b></div></div><div className="summaryTotal"><span>Estimated total</span><strong>US$ {subtotal}</strong></div><small>Final pricing may vary by travel date, cabin availability, child age and operator supplements.</small><div className="secureList"><span>✓ Secure booking process</span><span>✓ No payment before confirmation</span><span>✓ Vietnam-based support</span></div></div></aside>
     </div>
   </main>
 }
