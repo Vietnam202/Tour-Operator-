@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { calculateQuote } from "@/lib/pricing";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const limit=rateLimit(request,"quote",60,60_000);
+    if(!limit.allowed) return NextResponse.json({error:"Too many quote requests"},{status:429,headers:{"retry-after":String(limit.retryAfter)}});
     const body = await request.json();
     if (!body.cruiseId || !body.cabinId) {
       return NextResponse.json({ error: "cruiseId and cabinId are required" }, { status: 400 });
