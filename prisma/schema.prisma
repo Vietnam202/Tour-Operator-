@@ -52,6 +52,13 @@ enum PaymentRequestStatus {
   CANCELLED
 }
 
+enum StaffRole {
+  ADMIN
+  OPERATIONS
+  SALES
+  FINANCE
+}
+
 model Cruise {
   id          String       @id @default(cuid())
   slug        String       @unique
@@ -197,4 +204,28 @@ model PaymentRequest {
 
   @@index([bookingId, createdAt])
   @@index([status, expiresAt])
+}
+
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         StaffRole @default(OPERATIONS)
+  isActive     Boolean   @default(true)
+  sessions     StaffSession[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model StaffSession {
+  id        String    @id @default(cuid())
+  userId    String
+  user      StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
 }
