@@ -53,6 +53,8 @@ export async function POST(request: Request) {
         quotedSubtotal: quote.passengerSubtotal,
         quotedSurcharge: quote.holidaySurcharge + quote.singleSupplement,
         quotedTransfer: quote.transfer,
+        quotedCost: quote.quotedCost,
+        quotedMargin: quote.quotedMargin,
         currency: quote.currency
       }
     });
