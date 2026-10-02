@@ -49,6 +49,8 @@ model Cabin {
   description String?
   capacity    Int      @default(2)
   basePrice   Int
+  childRatePct Int     @default(70)
+  singleSupplement Int @default(0)
   currency    String   @default("USD")
   image       String?
   isActive    Boolean  @default(true)
@@ -65,6 +67,7 @@ model Departure {
   departureDate  DateTime
   durationNights Int
   priceFrom      Int
+  holidaySurcharge Int    @default(0)
   currency       String   @default("USD")
   cabinsLeft     Int?
   isAvailable    Boolean  @default(true)
@@ -92,6 +95,9 @@ model BookingInquiry {
   transferType    String?
   specialRequests String?
   estimatedTotal  Int?
+  quotedSubtotal  Int?
+  quotedSurcharge Int?
+  quotedTransfer  Int?
   currency        String        @default("USD")
   status          BookingStatus @default(NEW)
   createdAt       DateTime      @default(now())
