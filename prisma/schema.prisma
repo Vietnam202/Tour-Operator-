@@ -390,3 +390,26 @@ model VoucherGrant {
 
   @@index([bookingId, expiresAt])
 }
+
+
+model NotificationOutbox {
+  id             String   @id @default(cuid())
+  eventType      String
+  aggregateType  String?
+  aggregateId    String?
+  idempotencyKey String   @unique
+  payload        Json
+  status         String   @default("PENDING")
+  attemptCount   Int      @default(0)
+  nextAttemptAt  DateTime @default(now())
+  lastAttemptAt  DateTime?
+  lastError      String?
+  lockedAt       DateTime?
+  lockedBy       String?
+  deliveredAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId])
+}
