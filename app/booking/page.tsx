@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type BookingCruise = {
@@ -11,7 +11,7 @@ type BookingCruise = {
   departures: { id: string; departureDate: string; durationNights: number; priceFrom: number }[];
 };
 
-export default function BookingPage() {
+function BookingContent() {
   const params = useSearchParams();
   const cruiseSlug = params.get("cruise") || "stellar-of-the-seas";
   const requestedCabin = params.get("cabin") || "";
@@ -237,4 +237,13 @@ export default function BookingPage() {
       </aside>
     </div>
   </main>;
+}
+
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<main className="checkoutPage"><div className="shell">Loading booking options...</div></main>}>
+      <BookingContent />
+    </Suspense>
+  );
 }
