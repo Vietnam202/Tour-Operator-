@@ -1,9 +1,9 @@
 import { PaymentEventStatus, PaymentKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { refreshBookingPaymentStatus } from "@/lib/payments";
-import { notifyPaymentUpdated } from "@/lib/notifications";
-import { syncPaymentTasks } from "@/lib/booking-automation";
+
+import { enqueueNotificationTx } from "@/lib/notification-outbox";
+
 
 // This generic integration is not a production payment-provider signature verifier.
 export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
@@ -28,17 +28,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
           currency: body.currency || "USD", metadata: body.metadata || undefined },
         update: { status: body.status as PaymentEventStatus, providerRef: body.providerRef || null },
       });
+      const payments = await tx.paymentTransaction.findMany({ where: { bookingId: body.bookingId } });
+      const paid = payments.filter(p => p.status === PaymentEventStatus.SUCCEEDED && p.kind !== PaymentKind.REFUND).reduce((sum, p) => sum + p.amount, 0);
+      const refunded = payments.filter(p => p.kind === PaymentKind.REFUND && p.status === PaymentEventStatus.REFUNDED).reduce((sum, p) => sum + p.amount, 0);
+      const currentBooking = await tx.bookingInquiry.findUniqueOrThrow({ where: { id: body.bookingId } });
+      const net = Math.max(0, paid - refunded);
+      const total = currentBooking.estimatedTotal ?? 0;
+      const paymentStatus = refunded > 0 && net === 0 ? "REFUNDED"
+        : refunded > 0 ? "PARTIALLY_REFUNDED"
+        : net >= total && total > 0 ? "PAID"
+        : net > 0 ? "PARTIALLY_PAID" : "UNPAID";
+      const booking = await tx.bookingInquiry.update({
+        where: { id: body.bookingId },
+        data: { amountPaid: paid, amountRefunded: refunded, paymentStatus },
+      });
+      if (paymentStatus === "PAID") {
+        await tx.bookingTask.updateMany({ where: { bookingId: booking.id, type: "PAYMENT", status: { in: ["OPEN", "IN_PROGRESS"] } }, data: { status: "DONE", completedAt: new Date() } });
+      } else if (paymentStatus !== "UNPAID") {
+        await tx.bookingTask.updateMany({ where: { bookingId: booking.id, type: "PAYMENT", status: "OPEN" }, data: { status: "IN_PROGRESS" } });
+      }
+      await enqueueNotificationTx(tx, {
+        eventType: "payment.updated",
+        idempotencyKey: `payment.updated:${provider}:${externalEventId}`,
+        aggregateType: "BookingInquiry",
+        aggregateId: booking.id,
+        payload: { bookingId: booking.id, reference: booking.reference, paymentStatus: booking.paymentStatus,
+          amountPaid: booking.amountPaid, amountRefunded: booking.amountRefunded, currency: booking.currency,
+          voucherLinkRequiresStaffIssuance: true },
+      });
       await tx.webhookEvent.update({ where: { id: event.id }, data: { processedAt: new Date() } });
       return { duplicate: false, bookingId: body.bookingId };
     });
-    if (!result.duplicate) {
-      const booking = await refreshBookingPaymentStatus(result.bookingId);
-      await syncPaymentTasks(booking.id, booking.paymentStatus);
-      await notifyPaymentUpdated({ reference: booking.reference, paymentStatus: booking.paymentStatus,
-        amountPaid: booking.amountPaid, amountRefunded: booking.amountRefunded, currency: booking.currency,
-        // Never send a reference-only URL as a guest credential. Staff must issue a private grant.
-        voucherUrl: null, voucherLinkRequiresStaffIssuance: true });
-    }
     return NextResponse.json({ received: true, duplicate: result.duplicate });
   } catch {
     return NextResponse.json({ error: "Unable to process payment event" }, { status: 400 });
