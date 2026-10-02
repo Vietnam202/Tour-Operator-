@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { paymentPlan } from "@/lib/payments";
+import { sameOrigin } from "@/lib/csrf";
 
 
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   if (!(await requireAdminPermission(request,"payments:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   const booking = await prisma.bookingInquiry.findUnique({ where: { id: body.bookingId } });
