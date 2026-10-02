@@ -13,7 +13,9 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
       payments:{orderBy:{createdAt:"desc"}},
       paymentRequests:{orderBy:{createdAt:"desc"}},
       expenses:{orderBy:{createdAt:"desc"}},
-      supplierPayables:{include:{supplier:{select:{id:true,name:true,email:true,phone:true}}},orderBy:{createdAt:"desc"}}
+      supplierPayables:{include:{supplier:{select:{id:true,name:true,email:true,phone:true}}},orderBy:{createdAt:"desc"}},
+      tasks:{include:{owner:{select:{id:true,name:true,role:true}}},orderBy:[{status:"asc"},{dueAt:"asc"}]},
+      activities:{include:{actor:{select:{id:true,name:true,role:true}}},orderBy:{createdAt:"desc"},take:100}
     }
   });
   if(!booking) return NextResponse.json({error:"Booking not found"},{status:404});
