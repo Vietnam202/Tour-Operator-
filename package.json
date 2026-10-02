@@ -11,7 +11,8 @@
     "db:seed": "prisma db seed",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate deploy",
-    "db:migrate:dev": "prisma migrate dev"
+    "db:migrate:dev": "prisma migrate dev",
+    "smoke": "sh scripts/smoke.sh"
   },
   "dependencies": {
     "next": "15.5.4",
