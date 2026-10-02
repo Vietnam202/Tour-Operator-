@@ -11,7 +11,7 @@ English-first cruise booking MVP for international travellers visiting Halong Ba
 
 ## Core flow
 
-Cruise inventory → dynamic cruise page → server quote → booking enquiry → operations confirmation → inventory reservation → deposit/balance request → payment webhook → travel voucher.
+Cruise inventory → server quote → booking enquiry → CRM assignment/follow-up → operations confirmation → automated supplier/payment/passport/pre-departure tasks → inventory reservation → deposit/balance request → payment webhook → supplier payable/expenses → travel voucher → finance reporting.
 
 ## Local setup
 
@@ -25,7 +25,7 @@ Cruise inventory → dynamic cruise page → server quote → booking enquiry �
 ## Required environment variables
 
 - `DATABASE_URL` — PostgreSQL connection string.
-- `ADMIN_API_KEY` — long random secret used by the MVP admin APIs.
+- `ADMIN_API_KEY` — optional legacy migration fallback for admin APIs; remove after staff-session rollout is complete.
 - `NEXT_PUBLIC_SITE_URL` — canonical application URL.
 - `BOOKING_WEBHOOK_URL` — optional automation endpoint for booking/payment events.
 - `PAYMENT_WEBHOOK_SECRET` — shared secret for the generic payment webhook until a provider-specific signature verifier is implemented.
@@ -48,14 +48,17 @@ GitHub Actions runs Prisma validation, TypeScript checking and a production buil
 
 ## Admin
 
-- `/admin` — booking enquiries, lead status and payment status.
-- `/admin/inventory` — cruise, cabin, departure and rate management.
+- `/admin` — booking CRM, assignment, follow-up and status.
+- `/admin/operations` — daily exception queue for overdue work and upcoming departures.
+- `/admin/bookings/[id]` — end-to-end booking operations workspace, tasks and audit timeline.
+- `/admin/inventory` — suppliers, cruises, cabins, departures, selling rates and contract net costs.
+- `/admin/finance` — revenue, quoted/actual margin, supplier payable and guest outstanding balances.
 
-The current admin API-key mechanism is an MVP safeguard, not final staff authentication. Before exposing the admin publicly, replace it with authenticated staff sessions and role-based access control.
+Admin uses staff sessions with role-based access control. `ADMIN_API_KEY` remains only as a temporary legacy fallback and should be removed before public production launch.
 
 ## Payments
 
-The data model supports deposits, balances, refunds, idempotent transactions and expiring customer payment requests. No real payment provider is connected yet. Provider-specific signature verification and checkout session creation must be implemented before accepting card payments.
+The data model supports deposits, balances, refunds, idempotent transactions, expiring customer payment requests, supplier payables and booking expenses. No real payment provider is connected yet. Provider-specific signature verification and checkout session creation must be implemented before accepting card payments.
 
 ## Production notes
 
