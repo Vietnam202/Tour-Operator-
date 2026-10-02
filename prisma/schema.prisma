@@ -86,6 +86,8 @@ model BookingInquiry {
   cabinName       String?
   departureDate   DateTime
   durationNights  Int
+  departureId     String?
+  inventoryCommitted Boolean @default(false)
   adults          Int
   children        Int           @default(0)
   primaryGuest    String
