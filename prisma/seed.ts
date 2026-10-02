@@ -1,7 +1,22 @@
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scryptSync } from "crypto";
 const prisma = new PrismaClient();
 
+function passwordHash(password:string) {
+  const salt=randomBytes(16).toString("hex");
+  return salt+":"+scryptSync(password,salt,64).toString("hex");
+}
+
 async function main() {
+  const adminEmail=process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword=process.env.SEED_ADMIN_PASSWORD;
+  if(adminEmail&&adminPassword) {
+    await prisma.staffUser.upsert({
+      where:{email:adminEmail},
+      update:{name:"Administrator",role:"ADMIN",isActive:true},
+      create:{email:adminEmail,name:"Administrator",role:"ADMIN",passwordHash:passwordHash(adminPassword)}
+    });
+  }
   const cruise = await prisma.cruise.upsert({
     where: { slug: "stellar-of-the-seas" },
     update: {},
