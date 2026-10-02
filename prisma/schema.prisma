@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CruiseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BookingStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  CONFIRMED
+  CANCELLED
+}
+
+model Cruise {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  summary     String?
+  route       String
+  stars       Int          @default(5)
+  rating      Float        @default(0)
+  reviewCount Int          @default(0)
+  badge       String?
+  heroImage   String?
+  status      CruiseStatus @default(DRAFT)
+  cabins      Cabin[]
+  departures  Departure[]
+  bookings    BookingInquiry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Cabin {
+  id          String   @id @default(cuid())
+  cruiseId    String
+  cruise      Cruise   @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  name        String
+  sizeSqm     Int?
+  description String?
+  capacity    Int      @default(2)
+  basePrice   Int
+  currency    String   @default("USD")
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([cruiseId])
+}
+
+model Departure {
+  id             String   @id @default(cuid())
+  cruiseId       String
+  cruise         Cruise   @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  departureDate  DateTime
+  durationNights Int
+  priceFrom      Int
+  currency       String   @default("USD")
+  cabinsLeft     Int?
+  isAvailable    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([cruiseId, departureDate])
+}
+
+model BookingInquiry {
+  id              String        @id @default(cuid())
+  reference       String        @unique
+  cruiseId        String?
+  cruise          Cruise?       @relation(fields: [cruiseId], references: [id], onDelete: SetNull)
+  cruiseName      String
+  cabinName       String?
+  departureDate   DateTime
+  durationNights  Int
+  adults          Int
+  children        Int           @default(0)
+  primaryGuest    String
+  nationality     String?
+  email           String
+  phone           String?
+  transferType    String?
+  specialRequests String?
+  estimatedTotal  Int?
+  currency        String        @default("USD")
+  status          BookingStatus @default(NEW)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
