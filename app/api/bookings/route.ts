@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         cabinName: quote.cabin.name,
         departureDate: quote.departure?.departureDate ?? new Date(body.departureDate),
         durationNights: quote.departure?.durationNights ?? Number(body.durationNights || 1),
+        departureId: quote.departure?.id ?? null,
         adults: quote.adults,
         children: quote.children,
         primaryGuest: body.primaryGuest,
