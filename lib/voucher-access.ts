@@ -7,13 +7,13 @@ export const voucherBookingSelect = {
   durationNights: true, adults: true, children: true, primaryGuest: true, transferType: true,
   estimatedTotal: true, amountPaid: true, amountRefunded: true, depositAmount: true,
   currency: true, status: true, paymentStatus: true, inventoryCommitted: true,
-  supplierConfirmationStatus: true,
+  supplierConfirmationStatus: true, supplierConfirmationRef: true,
 } satisfies Prisma.BookingInquirySelect;
 export type VoucherBooking = Prisma.BookingInquiryGetPayload<{ select: typeof voucherBookingSelect }>;
 
 export function voucherReadiness(booking: VoucherBooking, now = new Date()): string | null {
   if (booking.status !== "CONFIRMED" || !booking.inventoryCommitted) return "Confirm the booking and its cabin allocation first.";
-  if (booking.supplierConfirmationStatus !== "CONFIRMED") return "Record the cruise operator's confirmation first.";
+  if (booking.supplierConfirmationStatus !== "CONFIRMED" || !booking.supplierConfirmationRef?.trim()) return "Record the cruise operator's confirmation and reservation reference first.";
   const total = booking.estimatedTotal;
   if (total === null || !Number.isSafeInteger(total) || total <= 0) return "A verified positive booking total is required.";
   if (booking.amountRefunded !== 0 || !["PAID", "PARTIALLY_PAID"].includes(booking.paymentStatus)) return "Review the recorded payment and any refunds before issuing a voucher.";
@@ -60,15 +60,13 @@ export async function issueVoucherGrant(bookingId: string, actorId: string) {
     const expiresAt = new Date(Math.min(now.getTime() + 72 * 3600000,
       booking.departureDate.getTime() + (booking.durationNights + 1) * 86400000));
     const token = randomBytes(32).toString("hex");
-    // One current customer link per booking. Rotation and issuance are atomic.
     await tx.voucherGrant.updateMany({ where: { bookingId, revokedAt: null }, data: { revokedAt: now } });
     const grant = await tx.voucherGrant.create({ data: { bookingId, tokenHash: hashVoucherToken(token), expiresAt } });
     await tx.bookingActivity.create({ data: {
       bookingId, actorId, type: "VOUCHER_LINK_ISSUED", message: "A time-limited customer voucher link was issued; older links were revoked.",
       metadata: { grantId: grant.id, expiresAt: expiresAt.toISOString() },
     } });
-    // Fragments are not sent with the initial page request. The client removes the fragment
-    // and sends the token only in the Authorization header, never in a query parameter.
+    // The page removes this fragment and sends its secret only in Authorization.
     return { grantId: grant.id, expiresAt: expiresAt.toISOString(),
       voucherUrl: `${origin}/voucher/${encodeURIComponent(booking.reference)}#access=${token}` };
   });

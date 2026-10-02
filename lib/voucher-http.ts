@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getStaffSession } from "@/lib/admin-auth";
 import { BookingOperationError } from "@/lib/booking-lock";
+import { isTrustedStaffOrigin } from "@/lib/trusted-staff-origin";
 
 export const voucherHeaders = {
   "Cache-Control": "private, no-store, max-age=0",
   "Referrer-Policy": "no-referrer",
   "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet",
-  "Vary": "Cookie, Authorization",
+  "Vary": "Cookie, Authorization, Origin, Sec-Fetch-Site",
 };
 export const canManageVoucher = (role: string) => ["ADMIN", "OPERATIONS", "SALES"].includes(role);
 
@@ -19,12 +20,7 @@ export async function requireVoucherStaff(request: Request, write = false) {
 }
 
 export function requireVoucherOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  const trusted = new Set([new URL(request.url).origin]);
-  try { trusted.add(new URL(process.env.NEXT_PUBLIC_SITE_URL || "").origin); } catch { /* Request URL remains available locally. */ }
-  if (!origin || !trusted.has(origin) || request.headers.get("sec-fetch-site") === "cross-site") {
-    throw new BookingOperationError("Invalid request origin.", 403);
-  }
+  if (!isTrustedStaffOrigin(request)) throw new BookingOperationError("Invalid request origin.", 403);
 }
 
 export function voucherError(error: unknown) {
