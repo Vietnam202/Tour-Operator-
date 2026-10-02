@@ -118,6 +118,8 @@ model Cruise {
   bookings    BookingInquiry[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([supplierId])
 }
 
 model Supplier {
