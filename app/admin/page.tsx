@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Booking = {
   id: string; reference: string; cruiseName: string; departureDate: string; adults: number;
@@ -9,15 +10,16 @@ type Booking = {
 };
 
 export default function AdminPage() {
-  const [key, setKey] = useState("");
+  const router = useRouter();
+  const [staff,setStaff]=useState<{name:string;role:string}|null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function load(e: FormEvent) {
-    e.preventDefault(); setLoading(true); setError("");
+  async function load() {
+    setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/bookings", { headers: { "x-admin-key": key } });
+      const res = await fetch("/api/admin/bookings");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to load bookings");
       setBookings(data.bookings || []);
@@ -26,11 +28,15 @@ export default function AdminPage() {
     } finally { setLoading(false); }
   }
 
+  useEffect(()=>{fetch("/api/admin/auth/me").then(async r=>{if(!r.ok){router.replace("/admin/login");return null}return r.json()}).then(d=>{if(d?.user){setStaff(d.user);load()}}).catch(()=>router.replace("/admin/login"))},[router]);
+
+  async function logout(){await fetch("/api/admin/auth/logout",{method:"POST"});router.replace("/admin/login");router.refresh()}
+
   async function createPaymentRequest(b: Booking, kind: "DEPOSIT"|"BALANCE") {
     const total=b.estimatedTotal||0; const paid=b.amountPaid||0;
     const amount=kind==="DEPOSIT"?(b.depositAmount||Math.max(1,Math.round(total*.3))):Math.max(1,total-paid);
     setError("");
-    const res=await fetch("/api/admin/payments/request",{method:"POST",headers:{"content-type":"application/json","x-admin-key":key},body:JSON.stringify({bookingId:b.id,kind,amount})});
+    const res=await fetch("/api/admin/payments/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bookingId:b.id,kind,amount})});
     const data=await res.json();
     if(!res.ok){setError(data.error||"Unable to create payment request");return}
     const url=window.location.origin+data.paymentUrl;
@@ -42,7 +48,7 @@ export default function AdminPage() {
     setError("");
     const res = await fetch("/api/admin/bookings/" + id, {
       method: "PATCH",
-      headers: { "content-type": "application/json", "x-admin-key": key },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ status }),
     });
     const data = await res.json();
@@ -56,7 +62,7 @@ export default function AdminPage() {
     <header className="adminHeader"><div className="shell"><a className="brand" href="/"><span className="brandMark">≋</span><span><b>HALONG CRUISE<br/>ADVISOR</b><small>Operations</small></span></a><nav className="adminNav"><a className="active" href="/admin">Bookings</a><a href="/admin/inventory">Inventory</a><a href="/">Website</a></nav></div></header>
     <div className="shell adminWrap">
       <div className="adminTitle"><span className="eyebrow">OPERATIONS MVP</span><h1>Booking enquiries</h1><p>Review the latest international guest requests and follow up through email or WhatsApp.</p></div>
-      <form className="adminLogin" onSubmit={load}><label><span>Admin API key</span><input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder="Enter admin key"/></label><button className="darkButton" disabled={loading}>{loading ? "Loading..." : "Load bookings"}</button></form>
+      <div className="staffBar"><span>{staff?staff.name+" · "+staff.role:"Checking session..."}</span><div><button onClick={()=>load()} disabled={loading}>{loading?"Refreshing...":"Refresh"}</button><button onClick={logout}>Sign out</button></div></div>
       {error && <div className="adminError">{error}</div>}
       <div className="adminStats"><div><span>Total loaded</span><strong>{bookings.length}</strong></div><div><span>New enquiries</span><strong>{bookings.filter(b => b.status === "NEW").length}</strong></div><div><span>Estimated pipeline</span><strong>US$ {pipeline.toLocaleString()}</strong></div></div>
       <div className="adminTableWrap"><table className="adminTable"><thead><tr><th>Reference</th><th>Guest</th><th>Cruise / Date</th><th>Guests</th><th>Contact</th><th>Value</th><th>Payment</th><th>Status</th></tr></thead><tbody>
