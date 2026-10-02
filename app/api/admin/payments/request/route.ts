@@ -1,6 +1,7 @@
 import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyPaymentRequested } from "@/lib/notifications";
 
 function authorized(request: Request) {
   const configured = process.env.ADMIN_API_KEY;
@@ -39,5 +40,15 @@ export async function POST(request: Request) {
     return { transaction, paymentRequest };
   });
 
-  return NextResponse.json({ ...result, paymentUrl: `/pay/${token}` }, { status: 201 });
+  const paymentUrl = `/pay/${token}`;
+  await notifyPaymentRequested({
+    reference: booking.reference,
+    primaryGuest: booking.primaryGuest,
+    email: booking.email,
+    kind,
+    amount,
+    currency: booking.currency,
+    paymentUrl
+  });
+  return NextResponse.json({ ...result, paymentUrl }, { status: 201 });
 }
