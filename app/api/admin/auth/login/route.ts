@@ -2,6 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashSessionToken } from "@/lib/admin-auth";
+import { sameOrigin } from "@/lib/csrf";
 
 function verifyPassword(password:string,stored:string) {
   const [salt,hash]=stored.split(":");
@@ -12,6 +13,7 @@ function verifyPassword(password:string,stored:string) {
 }
 
 export async function POST(request:Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   const body=await request.json();
   const email=String(body.email||"").trim().toLowerCase();
   const password=String(body.password||"");
