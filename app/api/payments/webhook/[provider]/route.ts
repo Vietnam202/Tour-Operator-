@@ -2,6 +2,7 @@ import { PaymentEventStatus, PaymentKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { refreshBookingPaymentStatus } from "@/lib/payments";
+import { notifyPaymentUpdated } from "@/lib/notifications";
 
 export async function POST(
   request: Request,
@@ -53,7 +54,17 @@ export async function POST(
       return { duplicate: false, bookingId: body.bookingId };
     });
 
-    if (!result.duplicate) await refreshBookingPaymentStatus(result.bookingId);
+    if (!result.duplicate) {
+      const booking = await refreshBookingPaymentStatus(result.bookingId);
+      await notifyPaymentUpdated({
+        reference: booking.reference,
+        paymentStatus: booking.paymentStatus,
+        amountPaid: booking.amountPaid,
+        amountRefunded: booking.amountRefunded,
+        currency: booking.currency,
+        voucherUrl: booking.paymentStatus === "PAID" || booking.paymentStatus === "PARTIALLY_PAID" ? `/voucher/${booking.reference}` : null
+      });
+    }
     return NextResponse.json({ received: true, duplicate: result.duplicate });
   } catch {
     return NextResponse.json({ error: "Unable to process payment event" }, { status: 400 });
