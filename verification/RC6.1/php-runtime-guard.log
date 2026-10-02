@@ -1,0 +1,6 @@
+PASS nested file recognized
+PASS sibling prefix is not public root
+PASS public-root configuration rejected
+PASS private local test configuration accepted
+PASS production configuration rejected without connecting
+

@@ -1,0 +1,114 @@
+VS1 local HTTP fixtures prepared: scoped roles, explicit deny, tenant links, reviewed identity candidates and permission-projection canaries.
+PASS Customer360 requires authenticated dispatcher session
+PASS VS1 admin login
+PASS login scoped VS1 lead-manager
+PASS login scoped VS1 sales-accept
+PASS login scoped VS1 sales-read
+PASS login scoped VS1 crm-reader
+PASS login scoped VS1 finance-one
+PASS login scoped VS1 finance-full
+PASS login scoped VS1 convert-no-create
+PASS login scoped VS1 lead-read
+PASS login scoped VS1 admin-deny
+PASS VS1 qualify requires CSRF
+PASS qualify rejects foreign or inactive owner before writes
+PASS qualify rejects foreign or inactive owner before writes
+PASS foreign request qualification remains hidden
+PASS failed qualify/CSRF/tenant checks leave no partial lead/history/task/event
+PASS qualify request 318
+PASS resolve scoped lead for request 318
+PASS MQL starts PENDING without an inquiry
+PASS qualify exact command retry reuses same MQL
+PASS qualify retry does not duplicate internal tasks or events
+PASS PENDING MQL cannot bypass Sales acceptance
+PASS accept validates same-company active Sales owner
+PASS lead-manager cannot accept without effective Sales handover permission
+PASS lead-read cannot accept without effective Sales handover permission
+PASS admin-deny cannot accept without effective Sales handover permission
+PASS blocked acceptance/early conversion has no downstream effects
+PASS Sales accepts lead 7
+PASS resolve scoped lead for request 318
+PASS Sales acceptance records owner and stage
+PASS accept exact key replay succeeds
+PASS accept retry has exactly one effect set
+PASS accept retry key reused with different payload conflicts
+PASS stale handover version blocks mutation
+PASS identity candidate review receives version-bound nonce
+PASS duplicate suggestions use exact contacts and exclude same-name foreign/inactive customers
+PASS candidate contact list needs sales.view as well as lead.view
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS conversion requires explicit reviewed identity and active same-company links
+PASS failed identity/link checks create no customer/trip/inquiry/tasks/event
+PASS accepted reviewed identity converts using shared customer/trip/inquiry
+PASS LINK_EXISTING produces exactly one trip/inquiry and no duplicate customer
+PASS convert command retry replays original downstream identities
+PASS historical converted retry without new payload remains readable
+PASS all converted retries leave customer/trip/inquiry/task/outbox counts unchanged
+PASS existing inquiry dispatcher receives the converted opportunity
+PASS resolve scoped lead for request 318
+PASS source/campaign attribution survives full handover
+PASS qualify request 319
+PASS resolve scoped lead for request 319
+PASS Sales return requires a nonempty review reason
+PASS invalid return reason leaves state and effects unchanged
+PASS authorized Sales-only role returns MQL with reason
+PASS resolve scoped lead for request 319
+PASS returned stage preserves reason and original lead
+PASS Sales return exact retry replays receipt
+PASS return retry adds no history/event/task
+PASS returned lead must be requalified before acceptance
+PASS Marketing resubmits returned lead using original identity
+PASS resolve scoped lead for request 319
+PASS resubmit restores PENDING review gate
+PASS resubmit exact retry succeeds
+PASS resubmit retry does not duplicate effects
+PASS Sales accepts lead 8
+PASS resolve scoped lead for request 319
+PASS identity candidate review receives version-bound nonce
+PASS return/requalify/accept reaches existing opportunity flow
+PASS qualify request 320
+PASS resolve scoped lead for request 320
+PASS Sales accepts lead 9
+PASS resolve scoped lead for request 320
+PASS identity candidate review receives version-bound nonce
+PASS CREATE_NEW requires customer.manage beyond conversion permissions
+PASS customer permission denial creates no partial opportunity
+PASS identity candidate review receives version-bound nonce
+PASS explicit reviewed new identity creates customer and shared opportunity
+PASS new reviewed identity is persisted once in each shared table
+PASS CREATE_NEW retry replays shared identity
+PASS CREATE_NEW retry has no duplicate customer or effects
+PASS sales-read can open permitted Customer360 projection
+PASS sales-read expanded projection omits passport snapshots costs payments conversations and raw audit canaries
+PASS sales-read section leads is explicitly redacted
+PASS sales-read section bookings is explicitly redacted
+PASS sales-read section tasks is explicitly redacted
+PASS sales-read section documents is explicitly redacted
+PASS sales-read section finance is explicitly redacted
+PASS activity does not expose events from redacted sections
+PASS Customer360 activity uses the shared inquiry entity type
+PASS sales-read cannot read finance without both required permissions
+PASS crm-reader can open permitted Customer360 projection
+PASS crm-reader expanded projection omits passport snapshots costs payments conversations and raw audit canaries
+PASS CRM reader receives permitted leads metadata
+PASS CRM reader receives permitted bookings metadata
+PASS CRM reader receives permitted tasks metadata
+PASS CRM reader receives permitted documents metadata
+PASS Customer360 task section preserves owner scope without approval.manage
+PASS crm-reader cannot read finance without both required permissions
+PASS finance-one can open permitted Customer360 projection
+PASS finance-one expanded projection omits passport snapshots costs payments conversations and raw audit canaries
+PASS finance-one cannot read finance without both required permissions
+PASS finance-full can open permitted Customer360 projection
+PASS finance-full expanded projection omits passport snapshots costs payments conversations and raw audit canaries
+PASS USD finance excludes draft cancelled receipt and credit-note documents
+PASS Customer360 finance groups VND independently without raw currency sum
+PASS lead-read cannot bypass sales.view on Customer360
+PASS admin-deny cannot bypass sales.view on Customer360
+PASS Customer360 foreign tenant customer returns no metadata
+PASS Customer360 read projection does not accept mutations
+VS1 actual-dispatcher checks complete: 112 passed assertions.

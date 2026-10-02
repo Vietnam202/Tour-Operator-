@@ -1,0 +1,8 @@
+PASS preview shows campaigns, content and clear demo label
+PASS create campaign stays in memory and escapes user text
+PASS seven channels and new draft creation
+PASS simulated DRAFT to PENDING to APPROVED flow
+PASS revision preserves original approved content
+PASS simulated rejection
+PASS data survives navigation and reset restores samples
+PASS complete demo flow makes no backend, AI or publishing calls

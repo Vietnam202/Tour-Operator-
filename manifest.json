@@ -1,0 +1,17 @@
+{
+  "id":"./",
+  "name":"VTA Tour Operator OS",
+  "short_name":"VTA OS",
+  "description":"VTA workspace with private AI drafts",
+  "lang":"vi",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f5f7fb",
+  "theme_color":"#0b1f3a",
+  "prefer_related_applications":false,
+  "icons":[
+    {"src":"assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

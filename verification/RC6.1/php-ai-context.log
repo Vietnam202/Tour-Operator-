@@ -1,0 +1,57 @@
+PASS workspace guidance includes no inferred business data
+PASS campaign resolves explicit company-scoped reference
+PASS campaign allowlist removes confidential columns and nested fields
+PASS campaign rejects another company entity
+PASS content resolves explicit company-scoped reference
+PASS content allowlist removes confidential columns and nested fields
+PASS content rejects another company entity
+PASS inquiry resolves explicit company-scoped reference
+PASS inquiry allowlist removes confidential columns and nested fields
+PASS inquiry rejects another company entity
+PASS customer resolves explicit company-scoped reference
+PASS customer allowlist removes confidential columns and nested fields
+PASS customer rejects another company entity
+PASS quote resolves explicit company-scoped reference
+PASS quote allowlist removes confidential columns and nested fields
+PASS quote rejects another company entity
+PASS booking resolves explicit company-scoped reference
+PASS booking allowlist removes confidential columns and nested fields
+PASS booking rejects another company entity
+PASS service resolves explicit company-scoped reference
+PASS service allowlist removes confidential columns and nested fields
+PASS service rejects another company entity
+PASS quote context retains structured customer itinerary
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS malformed or mismatched reference rejected
+PASS explicit sales denial blocks quote context
+PASS campaign respects its source permission denial
+PASS content respects its source permission denial
+PASS inquiry respects its source permission denial
+PASS customer respects its source permission denial
+PASS quote respects its source permission denial
+PASS booking respects its source permission denial
+PASS service respects its source permission denial
+PASS inquiry cannot pull a cross-company related trip
+PASS content cannot pull a cross-company campaign
+PASS bounded itinerary context declares omitted days
+PASS long reference text is bounded with explicit limit metadata
+PASS AI permission required even for empty workspace reference
+PASS missing entity rejects without placeholder data
+PASS thread freezes server reference and ignores client-injected context
+PASS legacy campaign_id preserves four-field context contract
+PASS ambiguous references rejected
+PASS thread creation retains AI permission gate
+PASS context assistant remains stateless draft-only with no tools
+55 context checks passed. SQLite query fixtures; no provider, MariaDB, or live HTTP calls.
+

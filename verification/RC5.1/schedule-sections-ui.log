@@ -1,0 +1,10 @@
+PASS commercial section editors present
+PASS atomic save includes edits and explicit clear
+PASS preview and apply do not save; absent sections retained
+PASS append sections and days independently
+PASS no detected heading keeps existing section
+PASS cancel preserves editor
+PASS section text escaped
+PASS import keeps current unsaved editor content
+PASS upload uses shared preview and applies reviewed terms
+PASS immutable quote versions remain read only

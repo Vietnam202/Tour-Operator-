@@ -1,0 +1,14 @@
+PASS UTC+7 roundtrip, invalid date and unsafe URLs
+PASS multichannel recurrence and batch size cap
+PASS eight studio tabs and clear demo state
+PASS campaign creation and escaped content
+PASS review editable per-channel variants and save four drafts
+PASS approval changes state without publishing
+PASS new revision preserves approved snapshot
+PASS save reusable template and recurring-plan entry
+PASS calendar and day filtering
+PASS manual note, reply draft and staff assignment
+PASS demo lead handoff is deduplicated
+PASS transparent sample reports and disconnected channels
+PASS no network/provider calls in demo
+PASS read-only account hides write controls

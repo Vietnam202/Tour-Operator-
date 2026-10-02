@@ -1,0 +1,25 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/finance-flow.php';
+require_once __DIR__.'/../api/lib/OperationsControl.php';
+$service=(int)$db->query('SELECT id FROM booking_services WHERE booking_id='.$bid.' LIMIT 1')->fetchColumn();
+$db->exec("UPDATE booking_services SET category='TRANSPORT',service_date='2027-01-02',start_time='08:00:00',end_time='17:00:00' WHERE id=$service");
+$db->exec("INSERT INTO operation_resources(company_id,kind,name,capacity,created_by) VALUES(1,'DRIVER','Test driver',NULL,1),(1,'VEHICLE','Test vehicle',16,1),(2,'DRIVER','Other company',NULL,2)");
+$body=['resource_id'=>1,'starts_at'=>'2027-01-02 08:00:00','ends_at'=>'2027-01-02 17:00:00'];
+$assignment=OperationsControl::assign($db,$user,$service,$body);
+check(OperationsControl::assign($db,$user,$service,$body)===$assignment,'assignment retry idempotent');
+rejects(fn()=>OperationsControl::assign($db,$user,$service,array_replace($body,['starts_at'=>'2027-01-02 07:00:00'])),DomainException::class,'overlapping resource assignment rejected');
+rejects(fn()=>OperationsControl::assign($db,$user,$service,array_replace($body,['resource_id'=>2,'ends_at'=>'2027-01-02 12:00:00'])),DomainException::class,'partial service coverage rejected');
+rejects(fn()=>OperationsControl::assign($db,$user,$service,array_replace($body,['resource_id'=>3])),OutOfBoundsException::class,'cross-company resource rejected');
+rejects(fn()=>OperationsControl::assign($db,$user,$service,array_replace($body,['resource_id'=>2,'starts_at'=>'2027-01-03 08:00:00','ends_at'=>'2027-01-03 17:00:00'])),DomainException::class,'wrong service date rejected');
+check(!OperationsControl::readiness($db,1,$bid)['checks']['resource_assignment'],'driver alone does not satisfy transport readiness');
+OperationsControl::assign($db,$user,$service,array_replace($body,['resource_id'=>2]));
+check(OperationsControl::readiness($db,1,$bid)['checks']['resource_assignment'],'driver and vehicle capacity satisfy transport readiness');
+$db->exec("UPDATE operation_resources SET status='INACTIVE' WHERE id=2");
+check(!OperationsControl::readiness($db,1,$bid)['checks']['resource_assignment'],'inactive vehicle cannot satisfy readiness');
+$issue=OperationsControl::createIssue($db,$user,$bid,['category'=>'TRANSPORT','severity'=>'HIGH','title'=>'Vehicle breakdown','description'=>'Replacement required']);
+check(!OperationsControl::readiness($db,1,$bid)['checks']['no_critical_issues'],'high severity incident blocks readiness');
+rejects(fn()=>OperationsControl::resolveIssue($db,$user,$issue['id'],['resolution'=>'Fixed']),InvalidArgumentException::class,'resolution requires root cause and lessons');
+OperationsControl::resolveIssue($db,$user,$issue['id'],['root_cause'=>'Engine failure','resolution'=>'Replacement vehicle supplied','lessons_learned'=>'Confirm maintenance before departure','financial_impact'=>'15.00','currency'=>'USD']);
+check(OperationsControl::readiness($db,1,$bid)['checks']['no_critical_issues'],'resolved incident clears readiness block');
+echo "Operations assignment, conflict, capacity, tenant isolation and incident tests passed.\n";

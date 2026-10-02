@@ -1,0 +1,68 @@
+PASS nine counts follow real schema and exclude foreign records
+PASS configured timezone returned
+PASS half-open day range excludes next midnight
+PASS preview bounded to six rows while count exceeds legacy 300
+PASS new_leads count matches filtered queue
+PASS new_leads selected queue only
+PASS need_qualification count matches filtered queue
+PASS need_qualification selected queue only
+PASS followup_today count matches filtered queue
+PASS followup_today selected queue only
+PASS overdue_followup count matches filtered queue
+PASS overdue_followup selected queue only
+PASS draft_quotes count matches filtered queue
+PASS draft_quotes selected queue only
+PASS sent_quotes count matches filtered queue
+PASS sent_quotes selected queue only
+PASS waiting_client count matches filtered queue
+PASS waiting_client selected queue only
+PASS confirmed_today count matches filtered queue
+PASS confirmed_today selected queue only
+PASS lost count matches filtered queue
+PASS lost selected queue only
+PASS pagination reaches records beyond legacy limit
+PASS stable timestamp and id order keeps oldest record reachable
+PASS lead request links use stable record id
+PASS inquiry links target exact inquiry
+PASS quote links target quote id
+PASS confirmation links target actual booking
+PASS confirmation proxy is explicitly described
+PASS home metrics reflect scoped actionable data with no monetary totals
+PASS operations attention uses union without duplicate bookings
+PASS tasks owned by current user exclude done cancelled undated future and foreign
+PASS today and earlier inquiry next actions included
+PASS dashboard production queries are read-only
+PASS denied quote count is unavailable not zero
+PASS denied quote rows omitted
+PASS denied queue explicitly unavailable
+PASS denied sales and booking domains are never queried
+PASS restricted home hides task count
+PASS restricted home hides operations rows
+PASS lead-view role can open the read-only Marketing workspace
+PASS Marketing count follows existing lead-view GET permission
+PASS campaign-manage alone cannot open read-only Marketing API
+PASS write permission does not imply Marketing read access
+PASS sales API rejects user without domain permission
+PASS sales permission does not grant lead visibility
+PASS booking-only role sees its one permitted sales queue
+PASS invalid queue/pagination rejected 0
+PASS invalid queue/pagination rejected 1
+PASS invalid queue/pagination rejected 2
+PASS invalid queue/pagination rejected 3
+PASS invalid queue/pagination rejected 4
+PASS invalid queue/pagination rejected 5
+PASS invalid queue/pagination rejected 6
+PASS explicit clock keeps supplied timezone
+PASS request id fetch returns oldest request beyond300
+PASS exact request lookup remains tenant scoped
+PASS lead lookup follows exact request link
+PASS exact lead lookup remains tenant scoped
+PASS request array id rejected
+PASS inquiry id fetch returns exact inquiry
+PASS inquiry id lookup remains tenant scoped
+PASS inquiry array id rejected
+PASS LOW rejected because RC5 schema only NORMAL HIGH CRITICAL
+PASS control tasks use existing OPEN SNOOZED enum states
+PASS control query does not invent IN_PROGRESS state
+Workspace Center: 66 checks passed using actual SQLite SQL and permission doubles. MariaDB migrations and staging E2E were not run.
+

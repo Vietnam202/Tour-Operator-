@@ -1,0 +1,17 @@
+'use strict';
+const CACHE='vta-os-3.4.0-RC6.2-VS1.1';
+const CORE=['./ai-drawer.css?v=3.4.0-RC6.2','./workspace-demo.js?v=3.4.0-RC6.2','./workspace-centers.js?v=3.4.0-RC6.2','./workspace-centers.css?v=3.4.0-RC6.2','./rc6-shell.css?v=3.4.0-RC6.2','./tour-library-demo.js?v=3.4.0-RC6.2','./tour-library.js?v=3.4.0-RC6.2','./tour-library.css?v=3.4.0-RC6.2','./operations-center.js?v=3.4.0-RC6.2','./operations-demo.js?v=3.4.0-RC6.2','./operations-center.css?v=3.4.0-RC6.2','./landing-extensions.js?v=3.4.0-RC6.2','./landing-model.js?v=3.4.0-RC6.2','./landing-builder.js?v=3.4.0-RC6.2','./landing-builder.css?v=3.4.0-RC6.2','./marketing-model.js?v=3.4.0-RC6.2','./marketing-demo.js?v=3.4.0-RC6.2','./marketing-studio.js?v=3.4.0-RC6.2','./marketing-studio.css?v=3.4.0-RC6.2','./offline.html','./styles.css?v=3.4.0-RC6.2','./app-platform.css?v=3.4.0-RC6.2','./app.js?v=3.4.0-RC6.2','./ai-chat.js?v=3.4.0-RC6.2','./platform.js?v=3.4.0-RC6.2','./marketing.js?v=3.4.0-RC6.2','./i18n.js?v=3.4.0-RC6.2','./assets/brand-logo.png','./assets/icon-192.png','./assets/icon-512.png'];
+const ALLOWED=new Set(CORE.map(x=>new URL(x,self.registration.scope).href));
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE))));
+self.addEventListener('message',e=>{if(e.data?.type==='ACTIVATE_UPDATE')self.skipWaiting();});
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('vta-os-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{
+ const u=new URL(e.request.url);
+ if(e.request.method!=='GET'||u.origin!==self.location.origin)return;
+ // API, customer exports, arbitrary URLs and private records must never enter the cache.
+ if(u.pathname.includes('/api/'))return;
+ if(e.request.mode==='navigate'){
+  e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match(new URL('./offline.html',self.registration.scope).href)));return;
+ }
+ if(ALLOWED.has(u.href))e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request)));
+});

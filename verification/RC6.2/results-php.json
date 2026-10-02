@@ -1,0 +1,264 @@
+{
+  "date": "2026-10-01T16:02:03.014Z",
+  "version": "3.4.0-RC6.2",
+  "node": "v24.19.0",
+  "php": "8.3.30 native",
+  "results": [
+    {
+      "name": "php-tour-library",
+      "status": "PASS",
+      "pass_groups": 142,
+      "exit_code": 0
+    },
+    {
+      "name": "php-schedule-sections",
+      "status": "PASS",
+      "pass_groups": 20,
+      "exit_code": 0
+    },
+    {
+      "name": "php-php-lint-all",
+      "status": "PASS",
+      "pass_groups": 1,
+      "exit_code": 0
+    },
+    {
+      "name": "php-runtime-guard",
+      "status": "PASS",
+      "pass_groups": 5,
+      "exit_code": 0
+    },
+    {
+      "name": "php-workspace-center",
+      "status": "PASS",
+      "pass_groups": 66,
+      "exit_code": 0
+    },
+    {
+      "name": "php-ai-context",
+      "status": "PASS",
+      "pass_groups": 55,
+      "exit_code": 0
+    },
+    {
+      "name": "php-ai-provider",
+      "status": "PASS",
+      "pass_groups": 27,
+      "exit_code": 0
+    },
+    {
+      "name": "php-vs0-commercial",
+      "status": "PASS",
+      "pass_groups": 76,
+      "exit_code": 0
+    },
+    {
+      "name": "php-vs0-finance-operations",
+      "status": "PASS",
+      "pass_groups": 64,
+      "exit_code": 0
+    },
+    {
+      "name": "php-documents-extended",
+      "status": "PASS",
+      "pass_groups": 123,
+      "exit_code": 0
+    },
+    {
+      "name": "php-legacy-costs",
+      "status": "PASS",
+      "pass_groups": 44,
+      "exit_code": 0
+    },
+    {
+      "name": "php-upgrade",
+      "status": "PASS",
+      "pass_groups": 7,
+      "exit_code": 0
+    },
+    {
+      "name": "php-install-cli",
+      "status": "PASS",
+      "pass_groups": 4,
+      "exit_code": 0
+    },
+    {
+      "name": "php-vs1-handover",
+      "status": "PASS",
+      "pass_groups": 120,
+      "exit_code": 0
+    }
+  ],
+  "production_js_syntax": [
+    {
+      "file": "ai-chat.js",
+      "status": "PASS"
+    },
+    {
+      "file": "app.js",
+      "status": "PASS"
+    },
+    {
+      "file": "embed.js",
+      "status": "PASS"
+    },
+    {
+      "file": "i18n.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-builder.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-extensions.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-model.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-demo.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-model.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-studio.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing.js",
+      "status": "PASS"
+    },
+    {
+      "file": "operations-center.js",
+      "status": "PASS"
+    },
+    {
+      "file": "operations-demo.js",
+      "status": "PASS"
+    },
+    {
+      "file": "platform.js",
+      "status": "PASS"
+    },
+    {
+      "file": "request.js",
+      "status": "PASS"
+    },
+    {
+      "file": "service-worker.js",
+      "status": "PASS"
+    },
+    {
+      "file": "tour-library-demo.js",
+      "status": "PASS"
+    },
+    {
+      "file": "tour-library.js",
+      "status": "PASS"
+    },
+    {
+      "file": "workspace-centers.js",
+      "status": "PASS"
+    },
+    {
+      "file": "workspace-demo.js",
+      "status": "PASS"
+    }
+  ],
+  "migration_preservation": [
+    {
+      "file": "001_phase1_core.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "002_phase1_rate_rules_import.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "003_phase1_contracting_rules_reconciliation.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "004_sales_core.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "005_booking_operations.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "006_finance_control.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "007_lead_attribution.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "008_tour_inventory.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "009_quote_options.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "010_travel_documents.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "011_finance_ledgers.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "012_operations_resources_issues.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "013_invoice_schedules.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "014_service_travel_details.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "015_commercial_invoice_documents.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "016_rc1_editing.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "017_campaignpilot.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "018_ai_chat.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "019_marketing_studio.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "020_landing_pages.sql",
+      "status": "PASS"
+    },
+    {
+      "file": "021_tour_library.sql",
+      "status": "PASS"
+    }
+  ],
+  "new_migrations": [
+    "022_lead_sales_handover.sql"
+  ],
+  "pass_groups": 754
+}

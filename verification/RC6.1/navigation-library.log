@@ -1,0 +1,17 @@
+PASS RC6 grouped navigation exposes three workspaces and shared/control services
+PASS Home works for every role and ADMIN honors effective deny permissions
+PASS Mobile has Home and three workflows plus More without AI department
+PASS Library opens reused module and maps inventory to shared Product
+PASS Sales opens command center while old salesTab link opens classic list
+PASS Focused inquiry read targets server ID rather than first300 rows
+PASS CRM reads same customer and agent entities with manage controls scoped
+PASS Legacy today/bookings route reaches matching operational tile
+PASS Legacy Product supplier route reads only permitted Supplier entity
+PASS Shared Documents avoids requesting forbidden booking/supplier domains
+PASS Finance overview groups currencies and uses modern AR/AP rather than legacy totals
+PASS Finance overview role does not fetch AR/AP without their independent permissions
+PASS Apps lists accessible shared services and global AI trigger without AI module
+PASS AI opens globally preserving workspace, closes with Escape, and rejects late results
+PASS Context sends only active quote/booking references and navigation closes drawer
+PASS Forbidden deep link cannot call API or replace active view
+16 RC6 navigation integration groups passed

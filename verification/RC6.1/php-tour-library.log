@@ -1,0 +1,144 @@
+PASS tags deduplicated without losing order
+PASS stored days renumbered consistently
+PASS operational notes preserved
+PASS language codes normalized
+PASS title required
+PASS language restricted
+PASS tag count bounded
+PASS tags must be a list
+PASS tag values must be text
+PASS maximum 90 days
+PASS invalid calendar date rejected
+PASS binary NUL rejected
+PASS source text bounded
+PASS manual unreadable source can remain draft
+PASS active program requires itinerary
+PASS archive must use explicit action
+PASS Drive provenance requires link
+PASS non Drive source cannot claim Drive link
+PASS PC fakepath removed
+PASS source filenames strip traversal and header controls
+PASS Drive file share URL recognized
+PASS Drive share source and resource key retained
+PASS download uses reconstructed allowlisted endpoint
+PASS legacy file share recognized
+PASS Docs export uses documented PDF endpoint
+PASS account-scoped Docs link accepted without inheriting login
+PASS unsupported/unsafe source link 0
+PASS unsupported/unsafe source link 1
+PASS unsupported/unsafe source link 2
+PASS unsupported/unsafe source link 3
+PASS unsupported/unsafe source link 4
+PASS unsupported/unsafe source link 5
+PASS unsupported/unsafe source link 6
+PASS unsupported/unsafe source link 7
+PASS unsupported/unsafe source link 8
+PASS unsupported/unsafe source link 9
+PASS unsupported/unsafe source link 10
+PASS unsupported/unsafe source link 11
+PASS unsupported/unsafe source link 12
+PASS Drive blob redirect allowlisted
+PASS Docs export CDN restricted host allowed
+PASS unsafe remote destination 0
+PASS unsafe remote destination 1
+PASS unsafe remote destination 2
+PASS unsafe remote destination 3
+PASS unsafe remote destination 4
+PASS unsafe remote destination 5
+PASS unsafe remote destination 6
+PASS unsafe remote destination 7
+PASS unsafe remote destination 8
+PASS root relative redirect resolves on verified host
+PASS protocol relative redirect constrained to HTTPS
+PASS redirect to localhost blocked
+PASS backslash authority ambiguity blocked
+PASS public IP accepted for DNS pinning
+PASS private/reserved DNS address blocked 127.0.0.1
+PASS private/reserved DNS address blocked 10.0.0.1
+PASS private/reserved DNS address blocked 172.16.0.1
+PASS private/reserved DNS address blocked 192.168.0.1
+PASS private/reserved DNS address blocked 169.254.169.254
+PASS private/reserved DNS address blocked 0.0.0.0
+PASS private/reserved DNS address blocked 100.64.0.1
+PASS private/reserved DNS address blocked 192.0.0.8
+PASS private/reserved DNS address blocked 198.18.0.1
+PASS private/reserved DNS address blocked 224.0.0.1
+PASS private/reserved DNS address blocked 240.0.0.1
+PASS private/reserved DNS address blocked 255.255.255.255
+PASS private/reserved DNS address blocked ::1
+PASS private/reserved DNS address blocked not-an-ip
+PASS source heading becomes suggested title
+PASS preview extracts included
+PASS preview extracts excluded
+PASS preview extracts terms
+PASS commercial sections kept outside schedule
+PASS full extracted source retained
+PASS English day headings suggest English program language
+PASS Vietnamese day headings suggest Vietnamese program language
+PASS unstructured source stays available for manual editing
+PASS unstructured source warns user
+PASS scanned source supports manual draft
+PASS instructions in uploaded text retained only as data
+PASS empty editable quote accepted
+PASS copy cannot overwrite quote_status
+PASS copy cannot overwrite version_status
+PASS copy cannot overwrite schedule_json
+PASS copy cannot overwrite proposal_json
+PASS copy cannot overwrite cost_json
+PASS copy cannot overwrite included_text
+PASS copy cannot overwrite excluded_text
+PASS copy cannot overwrite terms_text
+PASS copy cannot overwrite total_cost
+PASS copy cannot overwrite total_selling
+PASS copy blocked by stored cost lines
+PASS copy blocked by priced options
+PASS copy blocked by historical sent bundle
+PASS copy rebases itinerary to target travel dates
+PASS copy retains program notes
+PASS copy cannot exceed quote travel dates
+PASS copy requires itinerary
+PASS copy requires target start date
+PASS public id numeric
+PASS list exposes day count
+PASS preserved original source availability explicit
+PASS private storage path never sent to clients
+PASS internal file checksum not leaked
+PASS list excludes heavy content
+PASS detail retains source text
+PASS detail retains commercial content
+PASS update foreign/missing program fails
+PASS program update lookup scoped to acting company
+PASS program update SQL contains tenant predicate
+PASS foreign/missing program does not write
+PASS failed scoped update rolled back
+PASS foreign/missing import token cannot be consumed
+PASS staged token checked against company and importer
+PASS staged token query includes tenant and user predicates
+PASS invalid staged source does not write program
+PASS foreign/missing copy source fails
+PASS copy source scoped to acting company
+PASS foreign/missing copy source never writes target
+PASS identical creation retry returns original id
+PASS creation replay explicitly reported
+PASS creation replay never inserts or updates
+PASS creation replay does not consume staged source again
+PASS creation replay query scoped to acting company
+PASS successful replay completes transaction
+PASS successful replay does not roll back
+PASS creation key cannot replay different program content
+PASS mismatched creation replay never mutates saved program
+PASS mismatched creation replay rolls back
+PASS mismatched creation replay does not commit
+PASS foreign tenant creation key cannot replay its program
+PASS foreign creation key proceeds to own scoped token validation
+PASS foreign creation replay produces no writes
+PASS creation key minimum length enforced
+PASS creation key restricted character set enforced
+PASS UTF-8 TXT validated
+PASS binary renamed TXT rejected
+PASS login HTML renamed PDF rejected
+PASS PDF signature validated
+PASS empty uploaded file rejected
+PASS unsupported executable extension rejected
+Tour library PHP contract: 142 checks passed. No live Google Drive or MariaDB integration exercised.
+

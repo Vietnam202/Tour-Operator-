@@ -1,0 +1,245 @@
+{
+  "version": "3.4.0-RC6.1",
+  "slice": "VS0",
+  "built_at": "2026-10-01T14:41:49.191287+00:00",
+  "migration_count": 21,
+  "new_migrations": 0,
+  "historical_migrations_byte_identical": true,
+  "phase_js_php_wasm": [
+    {
+      "name": "frontend",
+      "status": "PASS",
+      "pass_groups": 16
+    },
+    {
+      "name": "marketing-unit",
+      "status": "PASS",
+      "pass_groups": 9
+    },
+    {
+      "name": "marketing-preview",
+      "status": "PASS",
+      "pass_groups": 8
+    },
+    {
+      "name": "marketing-studio-ui",
+      "status": "PASS",
+      "pass_groups": 14
+    },
+    {
+      "name": "landing-ui",
+      "status": "PASS",
+      "pass_groups": 15
+    },
+    {
+      "name": "landing-pro",
+      "status": "PASS",
+      "pass_groups": 10
+    },
+    {
+      "name": "ai-ui",
+      "status": "PASS",
+      "pass_groups": 9
+    },
+    {
+      "name": "pwa",
+      "status": "PASS",
+      "pass_groups": 5
+    },
+    {
+      "name": "schedule-sections-ui",
+      "status": "PASS",
+      "pass_groups": 10
+    },
+    {
+      "name": "operations-center",
+      "status": "PASS",
+      "pass_groups": 20
+    },
+    {
+      "name": "operations-demo",
+      "status": "PASS",
+      "pass_groups": 18
+    },
+    {
+      "name": "tour-library-ui",
+      "status": "PASS",
+      "pass_groups": 22
+    },
+    {
+      "name": "tour-library-demo",
+      "status": "PASS",
+      "pass_groups": 12
+    },
+    {
+      "name": "navigation-library",
+      "status": "PASS",
+      "pass_groups": 16
+    },
+    {
+      "name": "workspace-centers-ui",
+      "status": "PASS",
+      "pass_groups": 25
+    },
+    {
+      "name": "workspace-demo",
+      "status": "PASS",
+      "pass_groups": 18
+    },
+    {
+      "name": "ai-drawer",
+      "status": "PASS",
+      "pass_groups": 13
+    },
+    {
+      "name": "vs0-shell",
+      "status": "PASS",
+      "pass_groups": 17
+    },
+    {
+      "name": "php-tour-library",
+      "status": "PASS",
+      "pass_groups": 142
+    },
+    {
+      "name": "php-schedule-sections",
+      "status": "PASS",
+      "pass_groups": 20
+    },
+    {
+      "name": "php-php-lint-all",
+      "status": "PASS",
+      "pass_groups": 1
+    },
+    {
+      "name": "php-runtime-guard",
+      "status": "PASS",
+      "pass_groups": 5
+    },
+    {
+      "name": "php-workspace-center",
+      "status": "PASS",
+      "pass_groups": 66
+    },
+    {
+      "name": "php-ai-context",
+      "status": "PASS",
+      "pass_groups": 55
+    },
+    {
+      "name": "php-ai-provider",
+      "status": "PASS",
+      "pass_groups": 27
+    },
+    {
+      "name": "php-vs0-commercial",
+      "status": "PASS",
+      "pass_groups": 76
+    },
+    {
+      "name": "php-vs0-finance-operations",
+      "status": "PASS",
+      "pass_groups": 64
+    }
+  ],
+  "native_database_fixtures": [
+    {
+      "name": "documents-extended",
+      "status": "PASS",
+      "pass_groups": 123,
+      "exit_code": 0
+    },
+    {
+      "name": "legacy-costs",
+      "status": "PASS",
+      "pass_groups": 44,
+      "exit_code": 0
+    },
+    {
+      "name": "upgrade",
+      "status": "PASS",
+      "pass_groups": 7,
+      "exit_code": 0
+    },
+    {
+      "name": "install-cli",
+      "status": "PASS",
+      "pass_groups": 4,
+      "exit_code": 0
+    },
+    {
+      "name": "runtime-guard",
+      "status": "PASS",
+      "pass_groups": 5,
+      "exit_code": 0
+    }
+  ],
+  "additional_native": [
+    {
+      "name": "native-vs0-finance-operations",
+      "status": "PASS",
+      "pass_groups": 70,
+      "log": "native-vs0-finance-operations.log"
+    },
+    {
+      "name": "native-vs0-http",
+      "status": "PASS",
+      "pass_groups": 256,
+      "log": "native-vs0-http.log"
+    },
+    {
+      "name": "native-document-review",
+      "status": "PASS",
+      "pass_groups": 8,
+      "log": "native-document-review.log"
+    },
+    {
+      "name": "native-php-lint-all",
+      "status": "PASS",
+      "pass_groups": 1,
+      "log": "native-php-lint-all.log"
+    }
+  ],
+  "browser_smoke": [
+    {
+      "screen": "Home / Sales",
+      "mode": "Preview",
+      "result": "PASS: nine Sales queues; no horizontal overflow at initial 1280px DOM; compact screenshot uses mobile navigation",
+      "artifact": "sales-desktop.png"
+    },
+    {
+      "screen": "Operations",
+      "mode": "Preview",
+      "result": "PASS: all fifteen requested tool cards displayed"
+    },
+    {
+      "screen": "Home",
+      "mode": "Preview, 390px iframe",
+      "result": "PASS: responsive single-column cards and mobile navigation visible",
+      "artifact": "home-mobile.png"
+    },
+    {
+      "screen": "Login / Reports",
+      "mode": "native PHP / MariaDB",
+      "result": "PASS: admin sign-in, month change to 2027-01, booked USD137.50, expected27.50, forecast17.50, finalizedactual12.50",
+      "artifact": "reports-native.png"
+    },
+    {
+      "screen": "Documents review",
+      "mode": "native PHP / MariaDB",
+      "result": "PASS: supplier1 and REJECTED remain selected in review dialog",
+      "artifact": "documents-native.png"
+    }
+  ],
+  "pass_assertions": 1231,
+  "limits": [
+    "This is the RC6.1 VS0 stabilization slice; VS1 and later slices remain planned.",
+    "Verified against disposable local MariaDB 11.4.8 and PHP 8.3.30; no remote hosting deployment or production dataset restore performed.",
+    "No live OpenAI, Google Drive OAuth/download, social publishing, supplier SmartLink delivery, or external provider concurrency request.",
+    "Real CSV multipart document upload and scoped review verified; multi-format parser/library checks are separate PHP fixtures.",
+    "390px browser iframe and desktop/compact browser smoke are not physical iPhone/Android installation tests.",
+    "Preview is sample data held in memory; it does not save production records.",
+    "PASS assertion totals include regression cases repeated on different runtimes.",
+    "Older RC1–RC5 verification and documentation are historical evidence."
+  ]
+}

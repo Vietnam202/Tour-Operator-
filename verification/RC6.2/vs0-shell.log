@@ -1,0 +1,19 @@
+PASS Home New Leads forwards initialQueue into real Sales card/API filter
+PASS Readonly Sales disables create controls and guards direct create handlers/forms
+PASS Shared Document review preserves association/status with empty supplier list
+PASS Shared Document review preserves association/status with missing associated supplier
+PASS Shared Document review preserves association/status with no supplier read permission
+PASS Booking role finance deep link cannot fetch ledger, statement or profit
+PASS Finance ar rows cannot deep link booking without booking.view
+PASS Finance profitability rows cannot deep link booking without booking.view
+PASS Reports separate currencies and distinguish pending actual from actual zero
+PASS Report without profit permission hides returned private profit data
+PASS Report month form changes persisted period and API query
+PASS Delayed report cannot replace Home after navigation
+PASS Newer report month wins when older response resolves later
+PASS Delayed booking detail cannot replace Home
+PASS Delayed booking detail cannot replace newer record ID
+PASS Delayed quote detail cannot replace Home
+PASS Delayed quote detail cannot replace newer record ID
+PASS CRM customer button passes numeric ID into the actual Customer360 mount
+18 VS0/VS1 shell interaction groups passed

@@ -1,0 +1,16 @@
+PASS builder opens offline file preview with tour template
+PASS palette drag inserts block before the actual drop target
+PASS drag handle reorders existing block to page end
+PASS undo and redo restore document order
+PASS touch and keyboard buttons move, duplicate with fresh ID and delete
+PASS editor escapes text and rejects script URLs before export
+PASS responsive preview uses sandboxed, trusted runtime with isolated preview document
+PASS demo save updates same record and exports JSON plus standalone HTML
+PASS saved page reopens with original content and block order
+PASS JSON import restores editable design
+PASS Pro template, fixed UTC+7 deadline, tablet preview and editable pricing items
+PASS import validates type allowlist, duplicate IDs, size, links and image attribution
+PASS demo makes no API or provider call
+PASS read-only account cannot save or add blocks
+PASS real preview shell loads builder from Marketing Landing Pages tab
+NOTE: jsdom event simulation, not a real browser/device or live-host test.

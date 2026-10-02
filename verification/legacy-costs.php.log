@@ -1,0 +1,45 @@
+Disposable database: vta_test_2d60e929ee
+PASS fresh migrations 001–016
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one sales follow-up task
+PASS request qualification conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS legacy rate-backed cost ignores caller price and currency
+PASS legacy cost deletion invalidates quote approval
+PASS legacy manual cost requires reason (InvalidArgumentException)
+PASS legacy write rejects unapproved rate (DomainException)
+PASS legacy cost write cannot alter sent quote (DomainException)
+PASS legacy public schedule strips private fields

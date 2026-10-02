@@ -1,0 +1,21 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const base=path.join(__dirname,'..');
+const nodes=new Map();
+const root={innerHTML:'',querySelector(s){if(!nodes.has(s))nodes.set(s,{});return nodes.get(s);},querySelectorAll(selector){const attribute=selector.slice(1,-1);return [...this.innerHTML.matchAll(new RegExp(attribute+'="(.*?)"','g'))].map(m=>{const node={dataset:{[attribute.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]:m[1]}};nodes.set(selector+':'+m[1],node);return node;});}};
+let permissions=['campaign.manage','marketing.approve'],calls=[],view;
+const data={campaigns:[{id:1,name:'<img onerror=bad()>',offer:'Test tour'}],items:[{id:1,campaign_id:1,campaign_name:'Test',channel:'Facebook',body:'<script>bad()</script>',status:'DRAFT'},{id:2,campaign_id:1,campaign_name:'Test',channel:'TikTok',body:'Review',status:'PENDING'},{id:3,campaign_id:1,campaign_name:'Test',channel:'Gmail',body:'Approved',status:'APPROVED'}]};
+const context={window:{VTA_I18N:{language:'vi'}},document:{querySelector:()=>root},navigator:{},console};vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(base,'marketing.js'),'utf8'),context);
+const options={api:{request:async(route,opt)=>{calls.push({route,opt});return data;}},esc:v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])),can:p=>permissions.includes(p),navigate:async v=>{view=v;},closeModal:()=>{},toast:()=>{}};
+(async()=>{
+ await context.window.VTAMarketing(options);
+ assert(!root.innerHTML.includes('<script>bad()'));assert(root.innerHTML.includes('&lt;script&gt;'));console.log('PASS escaped content in generated markup');
+ assert(root.innerHTML.includes('data-submit="1"'));assert(!root.innerHTML.includes('data-submit="3"'));assert(root.innerHTML.includes('data-approve="2"'));console.log('PASS status-dependent controls');
+ await nodes.get('[data-submit]:1').onclick();assert.equal(calls.at(-1).route,'marketing/submit');assert.equal(calls.at(-1).opt.body.id,1);console.log('PASS submit handler');
+ await nodes.get('[data-approve]:2').onclick();assert.equal(calls.at(-1).route,'marketing/decision');assert.equal(calls.at(-1).opt.body.decision,'APPROVED');console.log('PASS approval handler');
+ await nodes.get('[data-reject]:2').onclick();assert.equal(calls.at(-1).opt.body.decision,'REJECTED');console.log('PASS rejection handler');
+ permissions=[];await context.window.VTAMarketing(options);assert(!/data-(compose|approve|submit|reject)=/.test(root.innerHTML));console.log('PASS read-only controls');
+ await nodes.get('#marketingLeads').onclick();assert.equal(view,'leads');console.log('PASS Lead Hub navigation');
+ calls=[];context.window.VTA_PREVIEW=true;await context.window.VTAMarketing(options);assert.equal(calls.length,0);console.log('PASS preview no API calls');
+ const app=fs.readFileSync(path.join(base,'app.js'),'utf8'),preview=fs.readFileSync(path.join(base,'preview.html'),'utf8');assert(app.includes("['home','marketing','sales','operations','modules'].filter"));assert(preview.indexOf('src="marketing.js')<preview.indexOf('src="app.js'));console.log('PASS mobile and preview wiring');
+ console.log('NOTE: simulated DOM/API tests; not browser, authorization or MariaDB integration tests.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

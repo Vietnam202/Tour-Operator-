@@ -1,0 +1,18 @@
+PASS EN/VI toggle preserves unsaved input and returns to English
+PASS duplicate reorder delete retain current form edits
+PASS import preview has no database side effect
+PASS paste preview applies full description meals overnight and saves
+PASS cost default paying pax and inline Qty edit persist and reprice
+PASS quick duplicate marks cost review-required
+PASS Excel paste previews and atomically saves multiple rows
+PASS program.txt multipart upload extracts complete preview
+PASS program.docx multipart upload extracts complete preview
+PASS program.pdf multipart upload extracts complete preview
+PASS upload button uses DRAFT preview before applying and saving
+PASS approval blocked while copied rates still need review
+PASS Full Quote Draft UI creates safe target clone with mandatory rate review
+PASS PROGRAM_ONLY API behavior
+PASS PROGRAM_COST API behavior
+PASS reuse leaves source content unchanged
+PASS option editor defaults pax by basis, edits and duplicates rows, saves reviewed prices
+PASS no browser JavaScript exceptions

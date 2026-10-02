@@ -1,0 +1,6 @@
+PASS all precache assets exist; app HTML and API absent
+PASS API, writes, cross-origin and arbitrary exports are not intercepted
+PASS navigation always uses network with generic offline fallback
+PASS VS1.1 cache activation removes released VS0 and draft VS1 assets and preserves current/unrelated apps
+PASS install manifest and PNG icon dimensions
+NOTE: service worker simulation; browser installation requires device testing.

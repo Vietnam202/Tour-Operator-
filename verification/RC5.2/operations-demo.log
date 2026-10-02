@@ -1,0 +1,18 @@
+PASS Unhandled routes are delegated without fabricating success
+PASS Default date uses current UTC+7 and does not move November demo services to today
+PASS Both query styles return selected-day production-shaped movement and readiness
+PASS Legacy departures honors the actual date window and timeline date
+PASS Resource creation validates types and seat capacity
+PASS Assignment retries are stable and readiness uses actual assigned resource capacity
+PASS Overlapping assignments, wrong dates, invalid timestamps and incomplete intervals are rejected
+PASS Cancellation removes assignments from readiness and updates legacy contacts
+PASS Incident creation validates owner, severity, required content and booking
+PASS Incident resolution requires follow-up details and updates live readiness
+PASS Travel detail defaults use every customer-facing production field
+PASS Travel detail partial edits preserve old values and validate dates before mutation
+PASS Supplier payments update AP and record one in-memory payment with integer cents
+PASS Payment retry accepts equivalent amount formatting without reducing balance twice
+PASS Invalid payment requests leave AP and payment lists untouched
+PASS Full payment marks the payable paid and its retry succeeds after the balance reaches zero
+PASS Preview state is isolated per DemoApi and does not persist across a new instance
+17 operations preview behavior groups passed

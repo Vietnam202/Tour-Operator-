@@ -1,0 +1,77 @@
+Disposable database: vta_test_72e9a44ea4
+PASS fresh migrations 001–016
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one sales follow-up task
+PASS request qualification conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS 20 percent markup on cost
+PASS 20 percent target margin differs from markup
+PASS manual override recomputes real loss
+PASS 100 percent target margin rejected (InvalidArgumentException)
+PASS quote transport costing includes approved overtime and extra kilometres
+PASS each transport cost line preserves pax times qty times unit
+PASS each transport cost line preserves pax times qty times unit
+PASS recosting does not duplicate transport supplements
+PASS option uses seasonal approved amount from server
+PASS three hotel options in one quote
+PASS unapproved bundle cannot send (DomainException)
+PASS content change invalidates approval fingerprint (DomainException)
+PASS customer snapshot strips internal fields including nested schedule
+PASS sent customer snapshot contains all options
+PASS send retry returns unchanged snapshot
+PASS sent option immutable (DomainException)
+PASS sent bundle cannot be reapproved (DomainException)
+PASS foreign option cannot be accepted (InvalidArgumentException)
+PASS accepted option cannot be switched (DomainException)
+PASS booking retry idempotent
+PASS booking selling from accepted 4-star snapshot
+PASS booking services copied from accepted cost snapshot
+PASS later supplier rate change cannot rewrite booking cost
+Multi-option quote and accepted-booking checks complete.
+PASS full reuse retains three options as draft
+PASS cloned option headline pricing recalculated
+PASS copied option rates block approval (DomainException)
+PASS option clone strips rate approvals and snapshots
+PASS option save preserves review gate without explicit acknowledgement
+PASS option clone strips rate approvals and snapshots
+PASS option save preserves review gate without explicit acknowledgement
+PASS option clone strips rate approvals and snapshots
+PASS option save preserves review gate without explicit acknowledgement
+PASS issued cloned options remain customer-safe
+PASS option reuse never rewrites confirmed source
+RC1 option reuse checks complete.
+PASS legacy travel-document snapshot shape preserved without new language key
+PASS new travel-document snapshots carry language hook

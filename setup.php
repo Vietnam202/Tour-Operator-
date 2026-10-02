@@ -1,0 +1,48 @@
+<?php
+declare(strict_types=1);
+// Staging v3 is provisioned through the private CLI installer only.
+http_response_code(403);exit('Use the staging CLI installation guide.');
+$privateDir=dirname(__DIR__).'/vta_private';
+$configPath=$privateDir.'/config.php';
+$installed=is_file($configPath);
+session_start();
+if(empty($_SESSION['vta_setup_csrf']))$_SESSION['vta_setup_csrf']=bin2hex(random_bytes(24));
+$error='';$success='';
+if(!$installed && $_SERVER['REQUEST_METHOD']==='POST'){
+  if(!hash_equals($_SESSION['vta_setup_csrf'],(string)($_POST['csrf']??'')))$error='Security token expired. Refresh and try again.';
+  else{
+    $host=trim((string)($_POST['db_host']??'127.0.0.1'));$port=(int)($_POST['db_port']??3306);$dbName=trim((string)($_POST['db_name']??''));$dbUser=trim((string)($_POST['db_user']??''));$dbPass=(string)($_POST['db_pass']??'');
+    $adminName=trim((string)($_POST['admin_name']??'VTA Administrator'));$adminEmail=strtolower(trim((string)($_POST['admin_email']??'')));$adminPass=(string)($_POST['admin_password']??'');$baseUrl=rtrim(trim((string)($_POST['base_url']??'')),'/');$parts=parse_url($baseUrl);$origin=(is_array($parts)&&!empty($parts['scheme'])&&!empty($parts['host']))?$parts['scheme'].'://'.$parts['host'].(isset($parts['port'])?':'.$parts['port']:''):'';
+    if(!$dbName||!$dbUser||!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)||strlen($adminPass)<10||!preg_match('#^https?://#',$baseUrl)||!$origin)$error='Please complete all required fields. Admin password must be at least 10 characters and Base URL must start with https:// or http://.';
+    if(!$error){
+      try{
+        $pdo=new PDO("mysql:host=$host;port=$port;dbname=$dbName;charset=utf8mb4",$dbUser,$dbPass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+        if(!is_dir($privateDir)&&!mkdir($privateDir,0770,true)&&!is_dir($privateDir))throw new RuntimeException('Cannot create private configuration directory.');
+        $config=[
+          'app'=>['name'=>'VTA Tour Operator OS','env'=>'production','timezone'=>'Asia/Ho_Chi_Minh','base_url'=>$baseUrl,'session_name'=>'vta_session','session_lifetime'=>28800],
+          'db'=>['host'=>$host,'port'=>$port,'database'=>$dbName,'username'=>$dbUser,'password'=>$dbPass,'charset'=>'utf8mb4'],
+          'storage'=>['driver'=>'local','google_oauth_client_id'=>'','google_oauth_client_secret'=>'','google_oauth_refresh_token'=>'','google_service_account_json'=>$privateDir.'/google-service-account.json','google_drive_folder_id'=>'','local_path'=>$privateDir.'/documents'],
+          'security'=>['allowed_origin'=>$origin,'max_upload_bytes'=>20971520,'allowed_extensions'=>['pdf','docx','xlsx','csv','txt','jpg','jpeg','png']]
+        ];
+        file_put_contents($configPath,"<?php\nreturn ".var_export($config,true).";\n");chmod($configPath,0640);
+        $files=glob(__DIR__.'/api/migrations/*.sql')?:[];sort($files,SORT_STRING);
+        foreach($files as $file){$sql=file_get_contents($file);if($sql===false)throw new RuntimeException('Cannot read migration '.basename($file));foreach(array_filter(array_map('trim',preg_split('/;\s*(?:\r?\n|$)/',$sql))) as $statement)$pdo->exec($statement);}
+        $pdo->beginTransaction();
+        $pdo->exec("INSERT INTO companies(code,name,timezone,base_currency) VALUES('VTA','Vietnam Travel Advisor','Asia/Ho_Chi_Minh','USD') ON DUPLICATE KEY UPDATE name=VALUES(name)");$companyId=(int)$pdo->query("SELECT id FROM companies WHERE code='VTA'")->fetchColumn();
+        $roles=['ADMIN'=>'CEO / Admin','SALES'=>'Sales','PRODUCT'=>'Product / Contracting','OPERATIONS'=>'Operations','FINANCE'=>'Finance'];$roleIds=[];$st=$pdo->prepare('INSERT INTO roles(company_id,code,name,is_system) VALUES(?,?,?,1) ON DUPLICATE KEY UPDATE name=VALUES(name)');foreach($roles as $code=>$label){$st->execute([$companyId,$code,$label]);$q=$pdo->prepare('SELECT id FROM roles WHERE company_id=? AND code=?');$q->execute([$companyId,$code]);$roleIds[$code]=(int)$q->fetchColumn();}
+        $all=array_column($pdo->query('SELECT code FROM permissions')->fetchAll(),'code');
+        $map=[
+          'ADMIN'=>$all,
+          'PRODUCT'=>['supplier.view','supplier.create','supplier.edit','supplier.archive','document.view','document.upload','document.review','rate.view','rate.create','rate.edit','rate.approve','rate.archive','rate.reconcile','rate.compare','task.view','audit.view'],
+          'SALES'=>['sales.view','customer.manage','inquiry.manage','quote.create','quote.edit','quote.send','quote.confirm','quote.view_cost','supplier.view','document.view','rate.view','booking.view','task.view'],
+          'OPERATIONS'=>['booking.view','booking.manage','guest.manage','operations.view','service.manage','supplier_order.create','supplier_order.send','supplier_order.confirm','document.booking_upload','booking.complete','supplier.view','document.view','rate.view','supplier_ap.view','task.view'],
+          'FINANCE'=>['booking.view','finance.view','customer_ar.view','customer_payment.record','supplier_ap.view','supplier_payment.record','profit.view','finance.close','document.booking_upload','report.view','supplier.view','document.view','rate.view','task.view']
+        ];
+        $permId=[];foreach($pdo->query('SELECT id,code FROM permissions')->fetchAll() as $p)$permId[$p['code']]=(int)$p['id'];$ins=$pdo->prepare('INSERT IGNORE INTO role_permissions(role_id,permission_id) VALUES(?,?)');foreach($map as $role=>$perms)foreach($perms as $perm)if(isset($permId[$perm]))$ins->execute([$roleIds[$role],$permId[$perm]]);
+        $find=$pdo->prepare('SELECT id FROM users WHERE company_id=? AND email=?');$find->execute([$companyId,$adminEmail]);$uid=$find->fetchColumn();$hash=password_hash($adminPass,PASSWORD_DEFAULT);if($uid)$pdo->prepare("UPDATE users SET role_id=?,full_name=?,password_hash=?,status='ACTIVE' WHERE id=?")->execute([$roleIds['ADMIN'],$adminName,$hash,$uid]);else{$pdo->prepare("INSERT INTO users(company_id,role_id,full_name,email,password_hash,status) VALUES(?,?,?,?,?,'ACTIVE')")->execute([$companyId,$roleIds['ADMIN'],$adminName,$adminEmail,$hash]);}
+        $pdo->commit();if(!is_dir($privateDir.'/documents'))mkdir($privateDir.'/documents',0770,true);$success='Installation completed. You can sign in now.';$installed=true;
+      }catch(Throwable $e){if(isset($pdo)&&$pdo instanceof PDO&&$pdo->inTransaction())$pdo->rollBack();$error='Installation failed: '.$e->getMessage();if(is_file($configPath))@unlink($configPath);}
+    }
+  }
+}
+?><!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VTA Setup</title><style>body{font-family:Inter,Segoe UI,system-ui,sans-serif;background:#f4f7fb;color:#15263d;margin:0}.wrap{max-width:760px;margin:40px auto;background:#fff;border-radius:18px;padding:28px;box-shadow:0 16px 50px #0b1f3a1a}h1{font-size:30px;margin:0 0 8px}p{line-height:1.6}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:6px}.wide{grid-column:1/-1}label{font-weight:700;font-size:14px}input{font:inherit;padding:12px 13px;border:1px solid #c9d4e3;border-radius:10px;min-height:22px}button,a.btn{display:inline-block;background:#0b1f3a;color:#fff;border:0;border-radius:10px;padding:13px 18px;font-weight:700;text-decoration:none;cursor:pointer}.msg{padding:12px 14px;border-radius:10px;margin:14px 0}.err{background:#fff1f1;color:#9b1c1c}.ok{background:#ecfdf3;color:#11683d}.note{background:#f7f1df;padding:14px;border-radius:10px}.small{font-size:13px;color:#5d6d80}@media(max-width:650px){.wrap{margin:0;border-radius:0}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}</style></head><body><div class="wrap"><h1>VTA Tour Operator OS</h1><p>Final Core Complete · One-time server setup</p><?php if($error):?><div class="msg err"><?=htmlspecialchars($error)?></div><?php endif;?><?php if($success):?><div class="msg ok"><?=htmlspecialchars($success)?></div><?php endif;?><?php if($installed):?><div class="note"><strong>VTA is installed.</strong><p>The setup page is now disabled because the private configuration exists.</p><a class="btn" href="./">Open VTA</a></div><?php else:?><form method="post"><input type="hidden" name="csrf" value="<?=htmlspecialchars($_SESSION['vta_setup_csrf'])?>"><div class="grid"><div class="field"><label>Database host</label><input name="db_host" value="127.0.0.1" required></div><div class="field"><label>Database port</label><input name="db_port" value="3306" required></div><div class="field"><label>Database name</label><input name="db_name" placeholder="vta_os" required></div><div class="field"><label>Database user</label><input name="db_user" placeholder="vta_user" required></div><div class="field wide"><label>Database password</label><input type="password" name="db_pass" required></div><div class="field wide"><label>VTA Base URL</label><input name="base_url" placeholder="https://vta2.yourdomain.com" required></div><div class="field"><label>Admin name</label><input name="admin_name" value="VTA Administrator" required></div><div class="field"><label>Admin email</label><input type="email" name="admin_email" required></div><div class="field wide"><label>Admin password</label><input type="password" name="admin_password" minlength="10" required><span class="small">At least 10 characters.</span></div></div><p class="note">For immediate use, documents are stored privately outside <code>public_html</code>. Google Drive can be enabled later by editing the private configuration; the app does not require Drive to start operating.</p><button type="submit">Install VTA</button></form><?php endif;?></div></body></html>

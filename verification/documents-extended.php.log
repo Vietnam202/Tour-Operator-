@@ -1,0 +1,129 @@
+Disposable database: vta_test_1cf9e794fb
+PASS fresh migrations 001–016
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one sales follow-up task
+PASS request qualification conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS 20 percent markup on cost
+PASS 20 percent target margin differs from markup
+PASS manual override recomputes real loss
+PASS 100 percent target margin rejected (InvalidArgumentException)
+PASS quote transport costing includes approved overtime and extra kilometres
+PASS each transport cost line preserves pax times qty times unit
+PASS each transport cost line preserves pax times qty times unit
+PASS recosting does not duplicate transport supplements
+PASS option uses seasonal approved amount from server
+PASS three hotel options in one quote
+PASS unapproved bundle cannot send (DomainException)
+PASS content change invalidates approval fingerprint (DomainException)
+PASS customer snapshot strips internal fields including nested schedule
+PASS sent customer snapshot contains all options
+PASS send retry returns unchanged snapshot
+PASS sent option immutable (DomainException)
+PASS sent bundle cannot be reapproved (DomainException)
+PASS foreign option cannot be accepted (InvalidArgumentException)
+PASS accepted option cannot be switched (DomainException)
+PASS booking retry idempotent
+PASS booking selling from accepted 4-star snapshot
+PASS booking services copied from accepted cost snapshot
+PASS later supplier rate change cannot rewrite booking cost
+Multi-option quote and accepted-booking checks complete.
+PASS new procurement creates DRAFT
+PASS repeated order generation creates no duplicate
+PASS draft cannot be confirmed before explicit send (DomainException)
+PASS unconfirmed services block Travel Pack (DomainException)
+PASS unrelated service confirmation rejected (InvalidArgumentException)
+PASS AP uses explicit confirmed cost rather than planned amount
+PASS confirmation retry does not duplicate AP
+PASS reconfirmation cannot silently desynchronize AP (DomainException)
+PASS document cannot skip review (DomainException)
+PASS Travel Pack issued
+PASS Travel Pack contains full itinerary and confirmation voucher
+PASS hidden-price Travel Pack excludes financial internals
+PASS issued document remains unchanged after service edits
+PASS stale reviewed document cannot issue (DomainException)
+PASS new issue supersedes old without overwriting content
+PASS superseded version retains exact original content
+PASS travel documents enforce tenant ownership (OutOfBoundsException)
+Procurement and versioned Travel Pack integration checks complete.
+PASS ledger uses exact minor units
+PASS fractional cents rejected (InvalidArgumentException)
+PASS schedule cannot exceed booking value (DomainException)
+PASS invoiced schedule cannot be replaced (DomainException)
+PASS duplicate commercial/proforma billing rejected (DomainException)
+PASS commercial invoice carries required disclaimer
+PASS receipt retry creates one bank transaction
+PASS receipt retry with changed amount rejected (DomainException)
+PASS allocation updates linked schedule
+PASS allocation updates booking payment status
+PASS one receipt allocated to two invoices without duplicate bank transactions
+PASS receipt over-allocation rejected (DomainException)
+PASS partner statement reconciles issued invoices minus one receipt
+PASS historical statement excludes later receipt and allocations
+PASS supplier invoice variance needs review
+PASS unreconciled supplier invoice prevents final actual profit
+PASS supplier payment retry idempotent
+PASS supplier overpayment rejected (DomainException)
+PASS paid proforma alone does not establish commercial actual profit
+PASS commercial issuance retry is idempotent
+PASS commercial date immutable after issuance (DomainException)
+PASS commercial document tenant isolation (OutOfBoundsException)
+PASS commercial document does not create another receivable
+PASS commercial issuance preserves statement and allocations
+PASS expected forecast actual profit use distinct planned confirmed actual costs
+PASS financial settlement alone does not finalize unfinished operations
+PASS settled reconciled completed booking has final actual profit
+PASS payment allocation preserves issued invoice snapshot
+Lead to selected quote, booking, supplier confirmation, Travel Pack, invoices, allocation, statement, supplier payment and profit integration chain passed.
+PASS assignment retry idempotent
+PASS overlapping resource assignment rejected (DomainException)
+PASS partial service coverage rejected (DomainException)
+PASS cross-company resource rejected (OutOfBoundsException)
+PASS wrong service date rejected (DomainException)
+PASS driver alone does not satisfy transport readiness
+PASS driver and vehicle capacity satisfy transport readiness
+PASS inactive vehicle cannot satisfy readiness
+PASS high severity incident blocks readiness
+PASS resolution requires root cause and lessons (InvalidArgumentException)
+PASS resolved incident clears readiness block
+Operations assignment, conflict, capacity, tenant isolation and incident tests passed.
+PASS voucher detail schema excludes unknown internal fields
+PASS voucher checkout must follow check-in (InvalidArgumentException)
+PASS Travel Pack includes voucher details and flights
+PASS Travel Pack excludes flight notes and escapes guest text
+PASS issued customer quotation renders all options and full itinerary
+PASS customer quotation never renders private cost fields
+Detailed voucher, flight and issued customer quotation checks passed.

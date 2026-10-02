@@ -1,0 +1,8 @@
+PASS upgrade manifest includes the RC5.3 baseline
+PASS upgrade applies every manifest migration after the legacy baseline
+PASS upgrade preserves existing users and password hashes
+PASS existing sales role gets additive permissions
+PASS upgraded schema rerun is a no-op
+PASS every legacy and new migration checksum recorded by filename
+PASS partial migration blocks automatic retry
+Upgrade fixture verified; deployed staging schema has not been inspected.

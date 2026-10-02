@@ -1,0 +1,10 @@
+PASS escaped content in generated markup
+PASS status-dependent controls
+PASS submit handler
+PASS approval handler
+PASS rejection handler
+PASS read-only controls
+PASS Lead Hub navigation
+PASS preview no API calls
+PASS mobile and preview wiring
+NOTE: simulated DOM/API tests; not browser, authorization or MariaDB integration tests.

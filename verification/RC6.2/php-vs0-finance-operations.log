@@ -1,0 +1,66 @@
+PASS closed booking rejects invoice draft (DomainException)
+PASS rejected invoice draft rolls back without changing historical or ledger records
+PASS closed booking rejects invoice issue (DomainException)
+PASS rejected invoice issue rolls back without changing historical or ledger records
+PASS closed booking rejects commercial issue retry (DomainException)
+PASS rejected commercial issue retry rolls back without changing historical or ledger records
+PASS closed booking rejects receipt (DomainException)
+PASS rejected receipt rolls back without changing historical or ledger records
+PASS closed booking rejects allocation (DomainException)
+PASS rejected allocation rolls back without changing historical or ledger records
+PASS closed booking rejects payment schedule (DomainException)
+PASS rejected payment schedule rolls back without changing historical or ledger records
+PASS closed booking rejects supplier reconciliation (DomainException)
+PASS rejected supplier reconciliation rolls back without changing historical or ledger records
+PASS closed booking rejects reconciliation approval (DomainException)
+PASS rejected reconciliation approval rolls back without changing historical or ledger records
+PASS closed booking rejects supplier payment (DomainException)
+PASS rejected supplier payment rolls back without changing historical or ledger records
+PASS closed booking rejects generate supplier orders (DomainException)
+PASS rejected generate supplier orders rolls back without changing historical or ledger records
+PASS closed booking rejects send supplier order (DomainException)
+PASS rejected send supplier order rolls back without changing historical or ledger records
+PASS closed booking rejects confirm supplier order (DomainException)
+PASS rejected confirm supplier order rolls back without changing historical or ledger records
+PASS closed booking rejects resource assignment (DomainException)
+PASS rejected resource assignment rolls back without changing historical or ledger records
+PASS closed booking rejects cancel assignment (DomainException)
+PASS rejected cancel assignment rolls back without changing historical or ledger records
+PASS closed booking rejects service operations update (DomainException)
+PASS rejected service operations update rolls back without changing historical or ledger records
+PASS closed booking rejects customer travel details (DomainException)
+PASS rejected customer travel details rolls back without changing historical or ledger records
+PASS closed booking rejects issue financial resolution (DomainException)
+PASS rejected issue financial resolution rolls back without changing historical or ledger records
+PASS financial guard cannot run outside a transaction (LogicException)
+PASS parent lookup does not disclose a foreign-company invoice (OutOfBoundsException)
+PASS closed booking historical readiness remains readable
+PASS closed booking statements are read-only and historical snapshots remain intact
+PASS closed booking customer travel details remain readable without locking or mutation
+PASS reopened booking accepts an idempotent receipt
+PASS closed marker also gates a mutating receipt retry (DomainException)
+PASS blocked retry preserves the existing bank transaction
+PASS reopened booking service updates use the real writer
+PASS supplier confirmation rejects a service attached from another booking (DomainException)
+PASS invalid supplier service ownership produces no AP or service mutation
+PASS supplier reconciliation cannot write actual cost to another booking service (DomainException)
+PASS foreign service reconciliation leaves payable and service costs unchanged
+PASS API and persisted readiness share all five canonical checks
+PASS ready canonical policy clears departure check
+PASS stale issued Travel Pack requires departure check even while stored phase is READY
+PASS stale document removes READY using the same policy
+PASS same-date assignment with insufficient interval cannot satisfy readiness
+PASS foreign-company active driver cannot satisfy readiness
+PASS inactive vehicle cannot satisfy readiness
+PASS cancelled service is excluded consistently from supplier and pack readiness
+PASS overnight service requires resource coverage after midnight
+PASS full overnight coverage satisfies the same resource policy
+PASS opening an incident immediately persists the readiness block
+PASS resolved incident immediately restores canonical readiness
+PASS readiness refresh preserves ON_TOUR lifecycle and closes departure tasks
+PASS readiness refresh preserves OPERATION_COMPLETED lifecycle and closes departure tasks
+PASS readiness refresh preserves COMPLETED lifecycle and closes departure tasks
+PASS readiness refresh preserves CANCELLED lifecycle and closes departure tasks
+PASS projection and operational mutations preserve issued document snapshots
+LIMIT SQLite fixture verifies real mutation guards and readiness SQL; InnoDB row-lock concurrency and HTTP permission/session dispatch require separate MariaDB/HTTP verification.
+VS0 finance/operations checks passed: 64 (SQLite).

@@ -1,0 +1,22 @@
+{
+  "baseline": "RC3 Library version 2",
+  "purpose": "Marketing Preview 1",
+  "added": [
+    "docs/TEST_PREVIEW_VI.md",
+    "tests/marketing-preview.cjs",
+    "verification/rc3-preview1/REPORT_VI.md",
+    "verification/rc3-preview1/ai-ui.log",
+    "verification/rc3-preview1/frontend.log",
+    "verification/rc3-preview1/marketing-preview.log",
+    "verification/rc3-preview1/marketing-unit.log",
+    "verification/rc3-preview1/pwa.log"
+  ],
+  "modified": [
+    "README.md",
+    "START_HERE_UNIFIED_VI.md",
+    "marketing.js",
+    "preview.html",
+    "tests/package.json"
+  ],
+  "server_api_and_index_unchanged": true
+}

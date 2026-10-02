@@ -1,0 +1,10 @@
+PASS user, assistant and title text escaped
+PASS consent required before AI request
+PASS retry preserves text and key; duplicate submit blocked
+PASS marketing handoff creates editable draft without approval or delivery call
+PASS create disables submit and leaves close control usable
+PASS missing server configuration disables send
+PASS preview explicitly labeled and makes no AI calls
+PASS late response cannot replace another workspace
+PASS real preview shell exposes global AI drawer without an AI department or replacing the workspace
+NOTE: jsdom with simulated API. Real-device and live API tests remain required.

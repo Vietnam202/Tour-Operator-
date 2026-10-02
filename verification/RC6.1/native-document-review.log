@@ -1,0 +1,8 @@
+PASS document test administrator login
+PASS use an existing same-company supplier
+PASS real multipart document upload succeeds
+PASS document-only reviewer login
+PASS document review permission does not grant supplier list access
+PASS document-only reader sees the existing association
+PASS scoped reviewer saves status and notes without supplier field
+PASS native review preserves supplier and selected status after save

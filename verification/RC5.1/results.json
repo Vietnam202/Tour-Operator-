@@ -1,0 +1,78 @@
+{
+  "date": "2026-09-30T15:37:53.627Z",
+  "node": "v24.19.0",
+  "php": "8.3.33 WASM",
+  "results": [
+    {
+      "suite": "frontend",
+      "status": "PASS",
+      "assertions": 16
+    },
+    {
+      "suite": "marketing-unit",
+      "status": "PASS",
+      "assertions": 9
+    },
+    {
+      "suite": "marketing-preview",
+      "status": "PASS",
+      "assertions": 8
+    },
+    {
+      "suite": "marketing-studio-ui",
+      "status": "PASS",
+      "assertions": 14
+    },
+    {
+      "suite": "landing-ui",
+      "status": "PASS",
+      "assertions": 15
+    },
+    {
+      "suite": "landing-pro",
+      "status": "PASS",
+      "assertions": 10
+    },
+    {
+      "suite": "ai-ui",
+      "status": "PASS",
+      "assertions": 9
+    },
+    {
+      "suite": "pwa",
+      "status": "PASS",
+      "assertions": 5
+    },
+    {
+      "suite": "schedule-sections-ui",
+      "status": "PASS",
+      "assertions": 10
+    },
+    {
+      "suite": "schedule-sections",
+      "status": "PASS",
+      "assertions": 20
+    },
+    {
+      "suite": "php-lint-all",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "suite": "runtime-guard",
+      "status": "PASS",
+      "assertions": 5
+    },
+    {
+      "suite": "ai-provider",
+      "status": "PASS",
+      "assertions": 27
+    }
+  ],
+  "limitations": [
+    "No MariaDB integration: disposable test database not configured.",
+    "No live upload/PDF extraction or real HTTP authentication test.",
+    "Website comparison blocked by certificate name mismatch.",
+    "Earlier verification folders are inherited RC5 evidence, not rerun claims."
+  ]
+}

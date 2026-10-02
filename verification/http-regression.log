@@ -1,0 +1,125 @@
+PASS unauthenticated Lead Hub blocked
+PASS admin login
+PASS mutation without CSRF rejected
+PASS campaign API create
+PASS form API create
+PASS public form submission over HTTP
+PASS request visible in Lead Hub
+PASS qualify over HTTP
+PASS convert to inquiry over HTTP
+PASS existing v2.4 inquiry creates quote
+PASS guest counts survive through existing quote API
+PASS tour program create
+PASS component create
+PASS day itinerary and blueprint create
+PASS publish tour version
+PASS copy published program into draft quote
+PASS Product Health reports missing rate
+PASS quote itinerary persists after logout and login
+PASS test supplier created
+PASS set quote travel dates
+PASS save 3* cost and price snapshot
+PASS save 4* cost and price snapshot
+PASS save 5* cost and price snapshot
+PASS approve multi-option bundle
+PASS issue three-option customer snapshot
+PASS issued quote omits internal pricing
+PASS sent bundle cannot be reopened
+PASS confirm 4-star option
+PASS booking from exact accepted option
+PASS booking contains accepted services and selling value
+PASS supplier order starts DRAFT
+PASS supplier confirmation cannot bypass send
+PASS explicit order send
+PASS confirm each order service with explicit cost
+PASS prepare FULL_ITINERARY
+PASS FULL_ITINERARY review
+PASS FULL_ITINERARY ready
+PASS FULL_ITINERARY issue
+PASS FULL_ITINERARY customer-safe HTML
+PASS prepare HOTEL_VOUCHER
+PASS HOTEL_VOUCHER review
+PASS HOTEL_VOUCHER ready
+PASS HOTEL_VOUCHER issue
+PASS HOTEL_VOUCHER customer-safe HTML
+PASS prepare TRANSFER_VOUCHER
+PASS TRANSFER_VOUCHER review
+PASS TRANSFER_VOUCHER ready
+PASS TRANSFER_VOUCHER issue
+PASS TRANSFER_VOUCHER customer-safe HTML
+PASS prepare ACTIVITY_VOUCHER
+PASS ACTIVITY_VOUCHER review
+PASS ACTIVITY_VOUCHER ready
+PASS ACTIVITY_VOUCHER issue
+PASS ACTIVITY_VOUCHER customer-safe HTML
+PASS prepare CRUISE_VOUCHER
+PASS CRUISE_VOUCHER review
+PASS CRUISE_VOUCHER ready
+PASS CRUISE_VOUCHER issue
+PASS CRUISE_VOUCHER customer-safe HTML
+PASS prepare TRAVEL_PACK
+PASS TRAVEL_PACK review
+PASS TRAVEL_PACK ready
+PASS TRAVEL_PACK issue
+PASS TRAVEL_PACK customer-safe HTML
+PASS create proforma instalment
+PASS issue immutable invoice
+PASS invoice disclaimer rendered
+PASS create proforma instalment
+PASS issue immutable invoice
+PASS invoice disclaimer rendered
+PASS record one bank receipt
+PASS allocate one receipt across two invoices
+PASS partner statement closing reconciles to zero
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS issue commercial document for existing proforma receivable
+PASS commercial document renders linked obligation and disclaimer
+PASS issue commercial document for existing proforma receivable
+PASS commercial document renders linked obligation and disclaimer
+PASS commercial issuance does not duplicate invoice ledger
+PASS commercial issuance preserves zero partner balance
+PASS profit separates planned confirmed actual costs and remains provisional
+PASS complete synthetic booking operations
+PASS final profit requires completed operations and settlement
+PASS financial result persists after re-login
+Full local HTTP chain passed for booking 1. This is synthetic local verification, not a remote staging deployment.
+PASS backend RBAC denies viewer access
+Full local HTTP regression run complete.
+PASS search hides domains without permission
+PASS viewer denied v3/control-center
+PASS viewer denied v3/reports/attribution
+PASS viewer denied v3/operations
+PASS viewer denied v3/resources
+PASS shared control queues load
+PASS attribution report follows campaign to booking
+PASS global AR includes allocated receipts
+PASS service update cannot bypass supplier invoice reconciliation
+PASS service update cannot erase confirmed cost
+PASS create operational resource
+PASS assign driver to service
+PASS assignment retry idempotent over HTTP
+PASS open operational issue
+PASS open high issue blocks readiness
+PASS resolve issue with cause and lessons
+PASS movement date query returns all four booking services
+PASS create quote revision after confirmation
+PASS revision retains three costed options
+PASS new quote revision preserves accepted booking economics
+Extended Operations, control center, revisions, AR and permission regression passed.
+PASS issued customer quote HTML uses only public snapshot
+PASS voucher details reject internal field propagation
+PASS voucher details persist
+PASS changed voucher details make readiness require a new Travel Pack
+PASS resource assignment can be cancelled with reason
+PASS cancelled resource interval can be reassigned

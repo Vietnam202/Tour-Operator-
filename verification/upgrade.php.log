@@ -1,0 +1,7 @@
+PASS upgrade applies only 007 through 016
+PASS upgrade preserves existing users and password hashes
+PASS existing sales role gets additive permissions
+PASS upgraded schema rerun is a no-op
+PASS legacy and new migration checksums recorded
+PASS partial migration blocks automatic retry
+Upgrade fixture verified; deployed staging schema has not been inspected.
