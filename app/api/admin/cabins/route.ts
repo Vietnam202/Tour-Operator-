@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         description: body.description || null,
         capacity: Number(body.capacity || 2),
         basePrice: Number(body.basePrice),
+        netCost: body.netCost === "" || body.netCost == null ? null : Math.max(0, Number(body.netCost)),
         childRatePct: Number(body.childRatePct || 70),
         singleSupplement: Number(body.singleSupplement || 0),
         currency: body.currency || "USD",
