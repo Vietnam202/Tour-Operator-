@@ -45,6 +45,13 @@ enum PaymentEventStatus {
   REFUNDED
 }
 
+enum PaymentRequestStatus {
+  ACTIVE
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
 model Cruise {
   id          String       @id @default(cuid())
   slug        String       @unique
@@ -132,6 +139,7 @@ model BookingInquiry {
   amountPaid      Int           @default(0)
   amountRefunded  Int           @default(0)
   payments        PaymentTransaction[]
+  paymentRequests PaymentRequest[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -170,4 +178,23 @@ model WebhookEvent {
 
   @@unique([provider, externalEventId])
   @@index([createdAt])
+}
+
+
+model PaymentRequest {
+  id          String               @id @default(cuid())
+  bookingId   String
+  booking     BookingInquiry       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  token       String               @unique
+  kind        PaymentKind
+  amount      Int
+  currency    String               @default("USD")
+  status      PaymentRequestStatus @default(ACTIVE)
+  expiresAt   DateTime?
+  providerUrl String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([status, expiresAt])
 }
