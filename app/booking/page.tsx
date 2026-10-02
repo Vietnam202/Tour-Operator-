@@ -1,8 +1,18 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+type BookingCruise={id:string;slug:string;name:string;cabins:{id:string;name:string;basePrice:number}[];departures:{id:string;departureDate:string;durationNights:number;priceFrom:number}[]};
 
 export default function BookingPage(){
+  const params=useSearchParams();
+  const cruiseSlug=params.get("cruise")||"stellar-of-the-seas";
+  const requestedCabin=params.get("cabin")||"";
+  const requestedDeparture=params.get("departure")||"";
+  const [cruise,setCruise]=useState<BookingCruise|null>(null);
+  const [selectedCabin,setSelectedCabin]=useState(requestedCabin);
+  const [selectedDeparture,setSelectedDeparture]=useState(requestedDeparture);
   const [adults,setAdults]=useState(2);
   const [children,setChildren]=useState(0);
   const [transfer,setTransfer]=useState("shared");
@@ -10,8 +20,11 @@ export default function BookingPage(){
   const [error,setError]=useState("");
   const [submitting,setSubmitting]=useState(false);
 
-  const cabinPrice=320;
-  const childPrice=220;
+  useEffect(()=>{fetch("/api/booking-context?cruise="+encodeURIComponent(cruiseSlug)).then(r=>r.ok?r.json():Promise.reject()).then(d=>{setCruise(d.cruise);if(!selectedCabin&&d.cruise.cabins[0])setSelectedCabin(d.cruise.cabins[0].id);if(!selectedDeparture&&d.cruise.departures[0])setSelectedDeparture(d.cruise.departures[0].id)}).catch(()=>setError("Live inventory is unavailable. Please return to the cruise page and try again."))},[cruiseSlug]);
+  const cabin=cruise?.cabins.find(c=>c.id===selectedCabin)||cruise?.cabins[0];
+  const departure=cruise?.departures.find(d=>d.id===selectedDeparture);
+  const cabinPrice=departure?.priceFrom??cabin?.basePrice??320;
+  const childPrice=Math.round(cabinPrice*0.7);
   const transferPrice=transfer==="shared"?35:transfer==="private"?95:0;
   const subtotal=useMemo(()=>adults*cabinPrice+children*childPrice+transferPrice,[adults,children,transferPrice]);
 
@@ -23,10 +36,11 @@ export default function BookingPage(){
         method:"POST",
         headers:{"content-type":"application/json"},
         body:JSON.stringify({
-          cruiseName:"Stellar of the Seas",
-          cabinName:"Junior Suite",
+          cruiseId:cruise?.id,
+          cruiseName:cruise?.name||"{cruise?.name||"Selected cruise"}",
+          cabinName:cabin?.name||"Selected cabin",
           departureDate:form.get("departureDate"),
-          durationNights:Number(form.get("durationNights")||1),
+          durationNights:Number(form.get("durationNights")||departure?.durationNights||1),
           adults,children,
           primaryGuest:form.get("primaryGuest"),
           nationality:form.get("nationality"),
@@ -50,20 +64,20 @@ export default function BookingPage(){
     return <main className="bookingSuccess"><div className="shell successCard">
       <div className="successIcon">✓</div><span className="eyebrow">REQUEST RECEIVED</span>
       <h1>Thanks — our cruise team will confirm availability.</h1>
-      <p>We’ve received your booking request for Stellar of the Seas. A Vietnam-based cruise expert will review cabin availability, final pricing and transfer details before payment.</p>
+      <p>We’ve received your booking request for {cruise?.name||"Selected cruise"}. A Vietnam-based cruise expert will review cabin availability, final pricing and transfer details before payment.</p>
       <div className="successMeta"><div><b>Reference</b><span>{reference}</span></div><div><b>Estimated total</b><span>US$ {subtotal}</span></div><div><b>Payment</b><span>Not charged yet</span></div></div>
       <a className="button" href="/">Back to Homepage</a>
     </div></main>
   }
 
   return <main className="checkoutPage">
-    <div className="shell detailNav"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>›</span><a href="/cruises/stellar-of-the-seas">Stellar of the Seas</a><span>›</span><b>Booking</b></div>
+    <div className="shell detailNav"><a href="/">Home</a><span>›</span><a href="/cruises">Cruises</a><span>›</span><a href="/cruises/stellar-of-the-seas">{cruise?.name||"Selected cruise"}</a><span>›</span><b>Booking</b></div>
     <section className="shell checkoutHeader"><span className="eyebrow">SECURE BOOKING REQUEST</span><h1>Complete your cruise details</h1><p>No payment is taken at this stage. We confirm live cabin availability and the final total first.</p></section>
     <div className="shell checkoutLayout">
       <form className="checkoutForm" onSubmit={submitBooking}>
         <section className="checkoutSection"><div className="stepTitle"><span>1</span><div><h2>Trip details</h2><p>Tell us when you plan to travel.</p></div></div><div className="formGrid">
-          <label><span>Departure date</span><input required name="departureDate" type="date"/></label>
-          <label><span>Duration</span><select name="durationNights" defaultValue="1"><option value="1">2 days / 1 night</option><option value="2">3 days / 2 nights</option></select></label>
+          <label><span>Departure date</span><input required name="departureDate" type="date" defaultValue={departure?departure.departureDate.slice(0,10):""}/></label>
+          <label><span>Duration</span><select name="durationNights" defaultValue={String(departure?.durationNights||1)}><option value="1">2 days / 1 night</option><option value="2">3 days / 2 nights</option></select></label>
         </div></section>
         <section className="checkoutSection"><div className="stepTitle"><span>2</span><div><h2>Guests</h2><p>Passenger details help us confirm the correct cabin setup.</p></div></div>
           <div className="guestCounter"><div><b>Adults</b><small>Age 12+</small></div><div><button type="button" onClick={()=>setAdults(Math.max(1,adults-1))}>−</button><strong>{adults}</strong><button type="button" onClick={()=>setAdults(adults+1)}>+</button></div></div>
@@ -88,7 +102,7 @@ export default function BookingPage(){
           <button className="button checkoutSubmit" type="submit" disabled={submitting}>{submitting?"Submitting request...":"Request Booking Confirmation →"}</button>
         </section>
       </form>
-      <aside className="summaryCard"><div className="summaryImage"></div><div className="summaryBody"><span className="eyebrow">YOUR CRUISE</span><h2>Stellar of the Seas</h2><div className="rating">★ 4.9 <span>(328 reviews)</span></div><p>Junior Suite · Private balcony</p><div className="summaryRows"><div><span>Adults × {adults}</span><b>US$ {adults*cabinPrice}</b></div>{children>0&&<div><span>Children × {children}</span><b>US$ {children*childPrice}</b></div>}<div><span>{transfer==="shared"?"Shared limousine":transfer==="private"?"Private car":"No transfer"}</span><b>US$ {transferPrice}</b></div></div><div className="summaryTotal"><span>Estimated total</span><strong>US$ {subtotal}</strong></div><small>Final pricing may vary by travel date, cabin availability, child age and operator supplements.</small><div className="secureList"><span>✓ Secure booking process</span><span>✓ No payment before confirmation</span><span>✓ Vietnam-based support</span></div></div></aside>
+      <aside className="summaryCard"><div className="summaryImage"></div><div className="summaryBody"><span className="eyebrow">YOUR CRUISE</span><h2>{cruise?.name||"Selected cruise"}</h2><div className="rating">★ International guest support</div><p>{cabin?.name||"Select cabin"} · {departure?new Date(departure.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Choose your date"}</p>{cruise&&cruise.cabins.length>1&&<label className="summaryCabinSelect"><span>Cabin</span><select value={selectedCabin} onChange={e=>setSelectedCabin(e.target.value)}>{cruise.cabins.map(c=><option key={c.id} value={c.id}>{c.name} - US$ {c.basePrice}</option>)}</select></label>}<div className="summaryRows"><div><span>Adults × {adults}</span><b>US$ {adults*cabinPrice}</b></div>{children>0&&<div><span>Children × {children}</span><b>US$ {children*childPrice}</b></div>}<div><span>{transfer==="shared"?"Shared limousine":transfer==="private"?"Private car":"No transfer"}</span><b>US$ {transferPrice}</b></div></div><div className="summaryTotal"><span>Estimated total</span><strong>US$ {subtotal}</strong></div><small>Final pricing may vary by travel date, cabin availability, child age and operator supplements.</small><div className="secureList"><span>✓ Secure booking process</span><span>✓ No payment before confirmation</span><span>✓ Vietnam-based support</span></div></div></aside>
     </div>
   </main>
 }
