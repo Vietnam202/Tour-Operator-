@@ -63,7 +63,7 @@ export default function AdminPage() {
   const pipeline = bookings.reduce((n, b) => n + (b.estimatedTotal || 0), 0);
 
   return <main className="adminPage">
-    <header className="adminHeader"><div className="shell"><a className="brand" href="/"><span className="brandMark">≋</span><span><b>HALONG CRUISE<br/>ADVISOR</b><small>Operations</small></span></a><nav className="adminNav"><a className="active" href="/admin">Bookings</a><a href="/admin/inventory">Inventory</a><a href="/">Website</a></nav></div></header>
+    <header className="adminHeader"><div className="shell"><a className="brand" href="/"><span className="brandMark">≋</span><span><b>HALONG CRUISE<br/>ADVISOR</b><small>Operations</small></span></a><nav className="adminNav"><a className="active" href="/admin">Bookings</a><a href="/admin/inventory">Inventory</a><a href="/admin/finance">Finance</a><a href="/">Website</a></nav></div></header>
     <div className="shell adminWrap">
       <div className="adminTitle"><span className="eyebrow">OPERATIONS MVP</span><h1>Booking enquiries</h1><p>Review the latest international guest requests and follow up through email or WhatsApp.</p></div>
       <div className="staffBar"><span>{staff?staff.name+" · "+staff.role:"Checking session..."}</span><div><button onClick={()=>load()} disabled={loading}>{loading?"Refreshing...":"Refresh"}</button><button onClick={logout}>Sign out</button></div></div>
