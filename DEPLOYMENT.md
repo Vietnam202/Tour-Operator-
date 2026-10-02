@@ -46,3 +46,26 @@ Database rollback: Prisma production migrations are forward-oriented. Take a dat
 
 ## 6. Before accepting real payments
 Remove the legacy API-key fallback, use a shared Redis/KV rate limiter, configure provider-specific webhook signature verification, enable error monitoring, configure database backups, and verify transactional email delivery.
+
+
+## Notification outbox worker
+
+Booking and payment HTTP handlers only persist notification events; they never depend on the external webhook being available.
+
+Run one delivery batch:
+
+```bash
+npm run notifications:once
+```
+
+Run a long-lived worker:
+
+```bash
+npm run notifications:process
+```
+
+The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Run at least one worker process in production. Multiple workers are supported.
+
+Delivery is at-least-once across network ambiguity. Receivers should honor the stable `Idempotency-Key` header (and `X-Notification-Id`) so a webhook accepted upstream but followed by a lost response can be safely retried without duplicating side effects.
+
+Do not place secrets, session tokens, authorization headers, cookies, or payment bearer tokens in notification payloads.
