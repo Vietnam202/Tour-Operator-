@@ -29,6 +29,11 @@ export default function InventoryAdmin(){
    catch(err){setError(err instanceof Error?err.message:"Unable to load inventory")}
    finally{setLoading(false)}
  }
+ async function createSupplier(e:FormEvent<HTMLFormElement>){
+   e.preventDefault();setError("");const f=new FormData(e.currentTarget);
+   try{await request("/api/admin/suppliers",{method:"POST",body:JSON.stringify(Object.fromEntries(f))});e.currentTarget.reset();setMessage("Supplier created.");await load()}
+   catch(err){setError(err instanceof Error?err.message:"Unable to create supplier")}
+ }
  async function createCruise(e:FormEvent<HTMLFormElement>){
    e.preventDefault(); setError(""); const f=new FormData(e.currentTarget);
    try{await request("/api/admin/cruises",{method:"POST",body:JSON.stringify(Object.fromEntries(f))});e.currentTarget.reset();setMessage("Cruise created.");await load()}
@@ -61,6 +66,18 @@ export default function InventoryAdmin(){
    {error&&<div className="adminError">{error}</div>}{message&&<div className="adminSuccess">{message}</div>}
 
    <div className="inventoryGrid">
+    <section className="inventoryPanel">
+     <div className="panelTitle"><h2>Cruise operators</h2><span>Supplier contracts and operations contacts.</span></div>
+     {canWrite?<form className="inventoryForm" onSubmit={createSupplier}>
+      <label><span>Supplier name</span><input name="name" required placeholder="e.g. Stellar Cruise JSC"/></label>
+      <label><span>Legal name</span><input name="legalName" placeholder="Contract entity"/></label>
+      <label><span>Contact person</span><input name="contactName" placeholder="Operations / Sales contact"/></label>
+      <div className="miniGrid"><input name="email" type="email" placeholder="supplier@example.com"/><input name="phone" placeholder="+84..."/></div>
+      <label><span>Contract notes</span><textarea name="notes" placeholder="Payment terms, blackout dates, cancellation terms..."/></label>
+      <button className="darkButton">Add supplier</button>
+     </form>:<div className="inventoryEmpty">Your role has read-only supplier access.</div>}
+     <div className="inventoryItems">{suppliers.map(s=><div className="inventoryItem" key={s.id}><b>{s.name}</b></div>)}{!suppliers.length&&<p className="muted">No suppliers yet.</p>}</div>
+    </section>
     <section className="inventoryPanel">
      <div className="panelTitle"><h2>Create cruise</h2><span>Start as DRAFT until content is ready.</span></div>
      {canWrite?<form className="inventoryForm" onSubmit={createCruise}>
