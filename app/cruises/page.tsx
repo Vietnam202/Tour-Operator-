@@ -24,7 +24,7 @@ export default function CruisesPage(){
        <div className="filterGroup"><span>Route</span><label><input type="checkbox"/> Halong Bay</label><label><input type="checkbox"/> Lan Ha Bay</label><label><input type="checkbox"/> Bai Tu Long Bay</label></div>
        <div className="filterGroup"><span>Popular features</span><label><input type="checkbox"/> Balcony cabin</label><label><input type="checkbox"/> Pool</label><label><input type="checkbox"/> Family friendly</label><label><input type="checkbox"/> Hanoi transfer</label></div>
      </aside>
-     <div className="results">
+     <div className="results"><div className="compareBanner"><span>Comparing several options?</span><a href="/compare">Compare our top cruises →</a></div>
        <div className="resultsTop"><div><span className="eyebrow">CURATED CRUISES</span><h2>{cruises.length} recommended cruises</h2></div><label>Sort by <select><option>Recommended</option><option>Price: low to high</option><option>Guest rating</option></select></label></div>
        <div className="listingCards">
          {cruises.map(c=><article className="listingCard" key={c.slug}>
