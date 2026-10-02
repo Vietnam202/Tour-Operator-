@@ -17,8 +17,14 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const nextStatus = String(body.status || "") as BookingStatus;
-  if (!allowed.has(nextStatus)) return NextResponse.json({ error: "Invalid booking status" }, { status: 400 });
+  const hasStatus=body.status!==undefined;
+  const nextStatus=hasStatus?String(body.status) as BookingStatus:null;
+  if (nextStatus && !allowed.has(nextStatus)) return NextResponse.json({ error: "Invalid booking status" }, { status: 400 });
+  const operationalData={
+    ...(body.assignedToId!==undefined?{assignedToId:body.assignedToId||null}:{}),
+    ...(body.followUpAt!==undefined?{followUpAt:body.followUpAt?new Date(body.followUpAt):null}:{}),
+    ...(body.internalNotes!==undefined?{internalNotes:String(body.internalNotes).trim().slice(0,5000)||null}:{})
+  };
 
   try {
     const booking = await prisma.$transaction(async tx => {
@@ -44,13 +50,13 @@ export async function PATCH(
 
         return tx.bookingInquiry.update({
           where: { id },
-          data: { status: nextStatus, inventoryCommitted: true }
+          data: { ...operationalData, status: nextStatus, inventoryCommitted: true }
         });
       }
 
       // Once inventory is committed we do not automatically restore it on cancellation.
       // Operations should explicitly reopen inventory after checking supplier terms.
-      return tx.bookingInquiry.update({ where: { id }, data: { status: nextStatus } });
+      return tx.bookingInquiry.update({ where: { id }, data: { ...operationalData, ...(nextStatus?{status:nextStatus}:{}) } });
     });
 
     if (nextStatus === "CONFIRMED") {
