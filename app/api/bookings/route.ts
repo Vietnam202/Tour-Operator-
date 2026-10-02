@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyNewBooking } from "@/lib/notifications";
 import { calculateQuote } from "@/lib/pricing";
+import { validateBookingInput } from "@/lib/validation";
+import { rateLimit } from "@/lib/rate-limit";
 
 function bookingReference() {
   const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
@@ -11,18 +13,22 @@ function bookingReference() {
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(request,"booking",8,60_000);
+    if (!limit.allowed) return NextResponse.json({ error:"Too many booking attempts. Please try again shortly." },{status:429,headers:{"retry-after":String(limit.retryAfter)}});
     const body = await request.json();
     const required = ["cruiseId", "cabinId", "departureDate", "primaryGuest", "email"];
     for (const field of required) {
       if (!body[field]) return NextResponse.json({ error: `Missing ${field}` }, { status: 400 });
     }
 
+    const valid = validateBookingInput(body);
+
     const quote = await calculateQuote({
       cruiseId: body.cruiseId,
       cabinId: body.cabinId,
       departureId: body.departureId || null,
-      adults: Number(body.adults || 1),
-      children: Number(body.children || 0),
+      adults: valid.adults,
+      children: valid.children,
       transferType: body.transferType || "none"
     });
 
@@ -37,12 +43,12 @@ export async function POST(request: Request) {
         departureId: quote.departure?.id ?? null,
         adults: quote.adults,
         children: quote.children,
-        primaryGuest: body.primaryGuest,
-        nationality: body.nationality || null,
-        email: body.email,
-        phone: body.phone || null,
+        primaryGuest: valid.primaryGuest,
+        nationality: valid.nationality || null,
+        email: valid.email,
+        phone: valid.phone || null,
         transferType: body.transferType || null,
-        specialRequests: body.specialRequests || null,
+        specialRequests: valid.specialRequests || null,
         estimatedTotal: quote.total,
         quotedSubtotal: quote.passengerSubtotal,
         quotedSurcharge: quote.holidaySurcharge + quote.singleSupplement,
