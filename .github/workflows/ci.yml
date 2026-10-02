@@ -16,6 +16,8 @@ jobs:
           cache: npm
       - run: npm install
       - run: npx prisma validate
+      - run: npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --exit-code
+        continue-on-error: true
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/placeholder
       - run: npm run typecheck
