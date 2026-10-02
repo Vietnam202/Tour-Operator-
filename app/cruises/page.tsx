@@ -5,13 +5,18 @@ type CruiseApi = {
   departures:{priceFrom:number;durationNights:number}[];
 };
 
-const fallback=[
+type CruiseCard = {
+  slug:string; name:string; rating:number; reviews:number; route:string; duration:string;
+  price:number; oldPrice:number; stars:number; tag:string; features:string[]; image:string;
+};
+
+const fallback:CruiseCard[]=[
  {slug:"stellar-of-the-seas",name:"Stellar of the Seas",rating:4.9,reviews:328,route:"Halong Bay - Lan Ha Bay",duration:"2D1N / 3D2N",price:320,oldPrice:480,stars:5,tag:"Best Seller",features:["All meals included","Hanoi transfer available","Balcony cabins"],image:"https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=85"},
  {slug:"la-casta-regal",name:"La Casta Regal Cruise",rating:4.8,reviews:216,route:"Lan Ha Bay - Dark & Bright Cave",duration:"2D1N / 3D2N",price:315,oldPrice:450,stars:5,tag:"New Cruise",features:["All meals included","Kayaking","Outdoor pool"],image:"https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1200&q=85"},
  {slug:"heritage-binh-chuan",name:"Heritage Binh Chuan",rating:4.9,reviews:412,route:"Halong Bay - Lan Ha Bay",duration:"2D1N / 3D2N",price:450,oldPrice:590,stars:5,tag:"Luxury Choice",features:["Fine dining","Spa","Large suites"],image:"https://images.unsplash.com/photo-1504457047772-27faf1c00561?auto=format&fit=crop&w=1200&q=85"}
 ];
 
-async function getCruises(){
+async function getCruises():Promise<CruiseCard[]>{
  try{
   const base=process.env.NEXT_PUBLIC_SITE_URL;
   if(!base)return fallback;
@@ -19,7 +24,7 @@ async function getCruises(){
   if(!res.ok)return fallback;
   const data=await res.json();
   if(!data.cruises?.length)return fallback;
-  return data.cruises.map((c:CruiseApi)=>({
+  return data.cruises.map((c:CruiseApi):CruiseCard=>({
     slug:c.slug,name:c.name,rating:c.rating,reviews:c.reviewCount,route:c.route,
     duration:c.departures.some(d=>d.durationNights===2)?"2D1N / 3D2N":"2D1N",
     price:c.departures[0]?.priceFrom??c.cabins[0]?.basePrice??0,
