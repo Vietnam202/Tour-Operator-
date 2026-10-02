@@ -1,0 +1,4 @@
+PASS fresh CLI install
+PASS fresh installer applies all 16 migrations
+PASS fresh admin account initialized
+PASS installer rerun refuses to reset existing users

@@ -1,0 +1,27 @@
+PASS legacy AI handoff receives metadata defaults
+PASS UTC planning is stored without server timezone conversion
+PASS ambiguous or invalid planned date rejected
+PASS ambiguous or invalid planned date rejected
+PASS ambiguous or invalid planned date rejected
+PASS unsafe media reference rejected
+PASS unsafe media reference rejected
+PASS unsafe media reference rejected
+PASS media reference requires rights note
+PASS unknown format rejected
+PASS invalid idempotency key rejected
+PASS oversize batch rejected
+PASS valid review transitions
+PASS unsubmitted content cannot be approved
+PASS content inserted as real stored draft
+PASS foreign or archived campaign cannot receive drafts
+PASS foreign or archived campaign cannot receive drafts
+PASS missing revision parent rejected
+PASS batch replay returns same records without duplicates
+PASS same batch key with changed payload rejected
+PASS failed multichannel batch rolls back all new drafts
+PASS other company conversation cannot be handed off
+PASS handoff requires confirmed positive guest counts
+PASS handoff preserves stored contact, message and campaign attribution
+PASS manual social source clearly identified
+PASS handoff replay creates no duplicate request
+NOTE: SQLite sequential storage checks do not validate MariaDB DDL, locks, concurrency, HTTP sessions or publishing.

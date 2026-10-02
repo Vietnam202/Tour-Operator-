@@ -1,0 +1,20 @@
+PASS all 15 operations cards open functional modules and return home
+PASS changing booking reloads the right record and preserves selection across modules
+PASS a late booking response cannot replace a newer navigation
+PASS late task completion leaves an external booking workspace intact
+PASS late incident loader cannot open a dialog after returning home
+PASS actual attraction category and guest room preference are displayed
+PASS movement date and refresh request the selected date with correct route contract
+PASS malformed list endpoints and booking detail arrays show a visible retry
+PASS booking modules deep-link to the selected booking and relevant tab
+PASS missing and non-array API fields render empty or retry states without map crashes
+PASS restricted cards stay disabled and do not fetch forbidden data
+PASS resource assignment submits typed IDs and local timestamps through existing API
+PASS tasks complete and incident resolution use existing mutation contracts
+PASS failed assignment retains form and re-enables retry
+PASS supplier payment records amount, date and reference with fixed original currency and an idempotency key
+PASS failed payment retains typed fields; unchanged retries reuse their key and changed payments receive a new key
+PASS AP-only users record supplier payments without booking, customer AR or operations requests
+PASS late supplier payment preserves another workspace and its dialog without refreshing it
+PASS API text is escaped across operations modules
+PASS API failure remains visible and retry restores the module

@@ -1,0 +1,137 @@
+{
+  "verifiedAt": "2026-09-30T22:14:34.980Z",
+  "node": "v24.19.0",
+  "results": [
+    {
+      "suite": "frontend",
+      "status": "PASS",
+      "passGroups": 16
+    },
+    {
+      "suite": "marketing-unit",
+      "status": "PASS",
+      "passGroups": 9
+    },
+    {
+      "suite": "marketing-preview",
+      "status": "PASS",
+      "passGroups": 8
+    },
+    {
+      "suite": "marketing-studio-ui",
+      "status": "PASS",
+      "passGroups": 14
+    },
+    {
+      "suite": "landing-ui",
+      "status": "PASS",
+      "passGroups": 15
+    },
+    {
+      "suite": "landing-pro",
+      "status": "PASS",
+      "passGroups": 10
+    },
+    {
+      "suite": "ai-ui",
+      "status": "PASS",
+      "passGroups": 9
+    },
+    {
+      "suite": "pwa",
+      "status": "PASS",
+      "passGroups": 5
+    },
+    {
+      "suite": "schedule-sections-ui",
+      "status": "PASS",
+      "passGroups": 10
+    },
+    {
+      "suite": "operations-center",
+      "status": "PASS",
+      "passGroups": 20
+    },
+    {
+      "suite": "operations-demo",
+      "status": "PASS",
+      "passGroups": 17
+    }
+  ],
+  "productionJsSyntax": [
+    {
+      "file": "ai-chat.js",
+      "status": "PASS"
+    },
+    {
+      "file": "app.js",
+      "status": "PASS"
+    },
+    {
+      "file": "embed.js",
+      "status": "PASS"
+    },
+    {
+      "file": "i18n.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-builder.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-extensions.js",
+      "status": "PASS"
+    },
+    {
+      "file": "landing-model.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-demo.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-model.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing-studio.js",
+      "status": "PASS"
+    },
+    {
+      "file": "marketing.js",
+      "status": "PASS"
+    },
+    {
+      "file": "operations-center.js",
+      "status": "PASS"
+    },
+    {
+      "file": "operations-demo.js",
+      "status": "PASS"
+    },
+    {
+      "file": "platform.js",
+      "status": "PASS"
+    },
+    {
+      "file": "request.js",
+      "status": "PASS"
+    },
+    {
+      "file": "service-worker.js",
+      "status": "PASS"
+    }
+  ],
+  "passGroups": 133,
+  "browser": [
+    "Desktop preview: 15 cards, daily movement on 2026-11-15.",
+    "Mobile 390x844: two columns, no document/workspace horizontal overflow."
+  ],
+  "limitations": [
+    "Tests use jsdom/API doubles and in-memory preview data.",
+    "MariaDB/authenticated live HTTP staging and real device installation have not been tested.",
+    "Previous RC5.1 evidence is inherited and not counted as fresh RC5.2 PHP testing."
+  ]
+}

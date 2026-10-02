@@ -1,0 +1,7 @@
+PASS JavaScript syntax app.js
+PASS JavaScript syntax request.js
+PASS JavaScript syntax embed.js
+PASS JavaScript syntax service-worker.js
+PASS query parameters preserved separately from API route
+PASS mutation sends CSRF token and JSON body
+PASS API conflict is surfaced to UI

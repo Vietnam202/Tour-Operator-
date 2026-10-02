@@ -1,0 +1,24 @@
+PASS scoped Marketing cards count actual new/pending records without foreign tenant data
+PASS qualification uses named active owner, explicit note/SLA, optimistic version and action key
+PASS pending leads cannot convert; accepted conversion presents unselected contact suggestions without name-only auto matching
+PASS checkbox and deliberate identity selection gate conversion and preserve campaign/source with existing customer
+PASS replay of conversion does not duplicate identity, trip, inquiry, tasks or events
+PASS return requires visible reason and resubmission retains source/history with one open shared follow-up and completed task history
+PASS read-only UI has no mutation controls and Preview enforces command permission independently
+PASS handover without lead.view makes no protected API requests
+PASS stage, tenant owner, stale version and reused-key conflicts do not partially mutate a lead
+PASS customer suggestions changed after review require renewed review rather than stale conversion
+PASS deliberate new customer with matching contact requires a distinct-identity reason
+PASS existing identity linking remains available while create-new controls follow customer.manage
+PASS failed command keeps reviewed form and retries with the same action key
+PASS delayed handover response cannot overwrite a different workspace
+PASS changing queue cancels delayed identity review rendering
+PASS handover counts include all scoped records and pagination reaches beyond first thirty
+PASS untrusted lead text is escaped and permission revocation stops an already-open command
+PASS Customer360 navigates typed shared objects and keeps currency-separated issued balances, own tasks and metadata only
+PASS Customer360 section permissions redact forbidden metadata and money from API and UI
+PASS delayed Customer360 cannot replace a subsequent page
+PASS Customer360 uses company-scoped identity and read projection does not mutate source records
+PASS Vietnamese labels expose people and explicit handover stages
+PASS create-new conversion preserves singular seeded trip IDs and isolates both customers’ inquiries, bookings and invoice balances
+PASS VS1 workspace complete: 23 groups

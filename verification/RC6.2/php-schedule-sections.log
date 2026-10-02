@@ -1,0 +1,20 @@
+PASS extract included
+PASS extract excluded
+PASS extract booking terms
+PASS commercial sections excluded from day body
+PASS travel date preserved
+PASS meals preserved
+PASS section presence explicit
+PASS Vietnamese inline section before itinerary
+PASS Vietnamese standalone section
+PASS Vietnamese sections keep day separate
+PASS terms subheadings retain context
+PASS ordinary prose is not a heading
+PASS ordinary prose preserved
+PASS explicit empty section is empty
+PASS empty section still detected
+PASS empty section warning
+PASS days after preamble section preserved
+PASS terms and conditions alias
+PASS source text preserved
+PASS sections alone cannot replace itinerary

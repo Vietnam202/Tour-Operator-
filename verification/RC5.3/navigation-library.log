@@ -1,0 +1,9 @@
+PASS Admin sidebar and mobile omit four removed duplicate sections
+PASS Default workspace is Operations; role fallback remains accessible
+PASS Library navigation reaches new module; active menu maps child routes
+PASS Legacy today and booking list route opens matching Operations tile
+PASS Bell opens Today Operations inside center without duplicate navigation
+PASS Module catalogue has localized Library and no removed sections
+PASS Old supplier deep links use Supplier Vault with permission-scoped GETs
+PASS Finance and approval permissions have a utility on Operations home
+8 navigation integration groups passed

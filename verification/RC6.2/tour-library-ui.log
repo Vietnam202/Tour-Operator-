@@ -1,0 +1,23 @@
+PASS library title, metadata search, destination/language filters and archived visibility
+PASS no library data requested without view permission
+PASS legacy supplier view gives read-only library; no manage or quote actions
+PASS legacy document.upload grants import/manage without advanced inventory
+PASS preview requires explicit save and retains edited Included/Excluded/Terms with import token
+PASS Drive batch isolates errors, saves valid items and retries failed item without duplicate saves
+PASS unsafe links and Drive folders rejected before network requests
+PASS multiple PC files use separate multipart previews; unsupported Preview files need real pasted text
+PASS rejected file extension stays rejected on retry
+PASS failed save remains editable and retry preserves draft fields
+PASS unparsed text supports explicit empty DRAFT without invented days
+PASS add/remove day and tab switches preserve edited import schedules
+PASS program fields escaped and unsafe source link omitted; original source route uses trusted numeric id
+PASS quote copy lists draft targets and delegates empty-draft validation to API
+PASS late library load cannot overwrite another workspace
+PASS late edit closes only captured dialog and preserves new workspace/dialog
+PASS old instance response cannot overwrite a newer library instance
+PASS pending later preview locks editors and refresh, preserving prior READY edits
+PASS pending earlier save locks later editors and saves previously collected draft values
+PASS supplier utility remains reachable while Preview hides live-only advanced inventory
+PASS library fetches every metadata page before applying search and filters
+PASS unchanged uncertain-save retry retains creation key; edited payload starts new creation key
+Tour library UI verification complete

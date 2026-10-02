@@ -1,0 +1,37 @@
+{
+  "mariadb": "11.4.8",
+  "scope": "Disposable local database fixtures, not production",
+  "results": [
+    {
+      "name": "documents-extended",
+      "status": "PASS",
+      "pass_groups": 123,
+      "exit_code": 0
+    },
+    {
+      "name": "legacy-costs",
+      "status": "PASS",
+      "pass_groups": 44,
+      "exit_code": 0
+    },
+    {
+      "name": "upgrade",
+      "status": "PASS",
+      "pass_groups": 7,
+      "exit_code": 0
+    },
+    {
+      "name": "install-cli",
+      "status": "PASS",
+      "pass_groups": 4,
+      "exit_code": 0
+    },
+    {
+      "name": "runtime-guard",
+      "status": "PASS",
+      "pass_groups": 5,
+      "exit_code": 0
+    }
+  ],
+  "php": "8.3.30"
+}

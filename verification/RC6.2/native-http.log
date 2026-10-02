@@ -1,0 +1,263 @@
+PASS unauthenticated Lead Hub blocked
+PASS admin login
+PASS mutation without CSRF rejected
+PASS campaign API create
+PASS form API create
+PASS public form submission over HTTP
+PASS request visible in Lead Hub
+PASS qualify over HTTP
+PASS Sales acceptance before conversion over HTTP
+PASS review customer candidates over HTTP
+PASS convert to inquiry over HTTP
+PASS existing v2.4 inquiry creates quote
+PASS guest counts survive through existing quote API
+PASS tour program create
+PASS component create
+PASS day itinerary and blueprint create
+PASS publish tour version
+PASS copy published program into draft quote
+PASS Product Health reports missing rate
+PASS quote itinerary persists after logout and login
+PASS test supplier created
+PASS review explicit passenger segments and quote travel dates
+PASS save 3* cost and price snapshot
+PASS save 4* cost and price snapshot
+PASS save 5* cost and price snapshot
+PASS approve multi-option bundle
+PASS issue three-option customer snapshot
+PASS issued quote omits internal pricing
+PASS sent bundle cannot be reopened
+PASS confirm 4-star option
+PASS booking from exact accepted option
+PASS booking contains accepted services and selling value
+PASS booking preserves accepted passenger segmentation
+PASS supplier order starts DRAFT
+PASS supplier confirmation cannot bypass send
+PASS explicit order send
+PASS confirm each order service with explicit cost
+PASS record reviewed passenger 1
+PASS record reviewed passenger 2
+PASS record reviewed passenger 3
+PASS record reviewed passenger 4
+PASS record reviewed passenger 5
+PASS record reviewed passenger 6
+PASS record reviewed passenger 7
+PASS record reviewed passenger 8
+PASS record reviewed passenger 9
+PASS record reviewed passenger 10
+PASS record reviewed passenger 11
+PASS create active readiness driver
+PASS create vehicle with capacity covering all guests including FOC
+PASS assign active resource covering full service interval
+PASS assign active resource covering full service interval
+PASS missing current Travel Pack still blocks readiness after guest and resource setup
+PASS prepare FULL_ITINERARY
+PASS FULL_ITINERARY review
+PASS FULL_ITINERARY ready
+PASS FULL_ITINERARY issue
+PASS FULL_ITINERARY customer-safe HTML
+PASS prepare HOTEL_VOUCHER
+PASS HOTEL_VOUCHER review
+PASS HOTEL_VOUCHER ready
+PASS HOTEL_VOUCHER issue
+PASS HOTEL_VOUCHER customer-safe HTML
+PASS prepare TRANSFER_VOUCHER
+PASS TRANSFER_VOUCHER review
+PASS TRANSFER_VOUCHER ready
+PASS TRANSFER_VOUCHER issue
+PASS TRANSFER_VOUCHER customer-safe HTML
+PASS prepare ACTIVITY_VOUCHER
+PASS ACTIVITY_VOUCHER review
+PASS ACTIVITY_VOUCHER ready
+PASS ACTIVITY_VOUCHER issue
+PASS ACTIVITY_VOUCHER customer-safe HTML
+PASS prepare CRUISE_VOUCHER
+PASS CRUISE_VOUCHER review
+PASS CRUISE_VOUCHER ready
+PASS CRUISE_VOUCHER issue
+PASS CRUISE_VOUCHER customer-safe HTML
+PASS prepare TRAVEL_PACK
+PASS TRAVEL_PACK review
+PASS TRAVEL_PACK ready
+PASS TRAVEL_PACK issue
+PASS TRAVEL_PACK customer-safe HTML
+PASS fresh Travel Pack after passenger and resource assignments satisfies all five readiness checks
+PASS create proforma instalment
+PASS issue immutable invoice
+PASS invoice disclaimer rendered
+PASS create proforma instalment
+PASS issue immutable invoice
+PASS invoice disclaimer rendered
+PASS record one bank receipt
+PASS allocate one receipt across two invoices
+PASS partner statement closing reconciles to zero
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS supplier invoice submitted for reconciliation
+PASS supplier reconciliation approved
+PASS supplier payment recorded against reconciled AP
+PASS issue commercial document for existing proforma receivable
+PASS commercial document renders linked obligation and disclaimer
+PASS issue commercial document for existing proforma receivable
+PASS commercial document renders linked obligation and disclaimer
+PASS commercial issuance does not duplicate invoice ledger
+PASS commercial issuance preserves zero partner balance
+PASS profit separates planned confirmed actual costs and remains provisional
+PASS complete synthetic booking operations
+PASS final profit requires completed operations and settlement
+PASS financial result persists after re-login
+Full local HTTP chain passed for booking 1. This is synthetic local verification, not a remote staging deployment.
+PASS backend RBAC denies viewer access
+Full local HTTP regression run complete.
+PASS search hides domains without permission
+PASS viewer denied v3/control-center
+PASS viewer denied v3/reports/attribution
+PASS viewer denied v3/operations
+PASS viewer denied v3/resources
+PASS shared control queues load
+PASS attribution report follows campaign to booking
+PASS global AR includes allocated receipts
+PASS service update cannot bypass supplier invoice reconciliation
+PASS service update cannot erase confirmed cost
+PASS create operational resource
+PASS assign driver to service
+PASS assignment retry idempotent over HTTP
+PASS open operational issue
+PASS open high issue blocks readiness
+PASS resolve issue with cause and lessons
+PASS movement date query returns all four booking services
+PASS create quote revision after confirmation
+PASS revision retains three costed options
+PASS revision preserves reviewed passenger segments in every option
+PASS new quote revision preserves accepted booking economics
+Extended Operations, control center, revisions, AR and permission regression passed.
+PASS issued customer quote HTML uses only public snapshot
+PASS voucher details reject internal field propagation
+PASS voucher details persist
+PASS changed voucher details make readiness require a new Travel Pack
+PASS resource assignment can be cancelled with reason
+PASS cancelled resource interval can be reassigned
+PASS prepare replacement Travel Pack after voucher and assignment changes
+PASS replacement Travel Pack review
+PASS replacement Travel Pack ready
+PASS replacement Travel Pack issue
+PASS replacement document restores canonical readiness after changed details
+VS0 HTTP fixtures prepared: scoped roles, explicit ADMIN denies, foreign/inactive CRM links, more than 300 lead requests and inquiry records.
+PASS fixture count exceeds old UI list limit
+PASS anonymous denied workspace/home
+PASS anonymous denied workspace/sales
+PASS login scoped lead-only user
+PASS login scoped campaign-only user
+PASS login scoped task-only user
+PASS login scoped booking-only user
+PASS login scoped sales-only user
+PASS login scoped report-only user
+PASS login scoped admin-deny user
+PASS lead-only Home access follows lead.view
+PASS lead-only counts exclude foreign pending marketing and leads
+PASS lead-only hides sales_followups_due
+PASS lead-only hides departures_today
+PASS lead-only hides bookings_at_risk
+PASS lead-only hides my_tasks_due
+PASS lead-only Sales returns full real lead counts
+PASS bounded six-row queue does not truncate aggregate count
+PASS lead-only hides followup_today queue
+PASS lead-only hides overdue_followup queue
+PASS lead-only hides draft_quotes queue
+PASS lead-only hides sent_quotes queue
+PASS lead-only hides waiting_client queue
+PASS lead-only hides confirmed_today queue
+PASS lead-only hides lost queue
+PASS queue pagination reaches real rows beyond 300
+PASS older request lies outside paged list while full total remains visible
+PASS focused request id resolves an older record
+PASS focused request id resolves its linked lead
+PASS focused foreign id remains hidden in lead-hub/requests
+PASS focused foreign id remains hidden in lead-hub/leads
+PASS lead.view does not grant sales inquiry read
+PASS campaign write permission grants no Marketing or Sales read access
+PASS campaign-only hides marketing_pending
+PASS campaign-only hides new_leads
+PASS campaign-only hides sales_followups_due
+PASS campaign-only hides departures_today
+PASS campaign-only hides bookings_at_risk
+PASS campaign-only hides my_tasks_due
+PASS campaign-only denied workspace/sales
+PASS campaign-only denied lead-hub/requests
+PASS task-only Home counts only own due OPEN and SNOOZED tasks
+PASS task-only attention excludes other owner foreign done future and undated tasks
+PASS task-only denied Sales aggregate
+PASS task-only default task list stays owner scoped
+PASS booking-only opens its Sales queue without operations read access
+PASS booking-only count excludes foreign tenant bookings
+PASS booking-only hides new_leads
+PASS booking-only hides need_qualification
+PASS booking-only hides followup_today
+PASS booking-only hides overdue_followup
+PASS booking-only hides draft_quotes
+PASS booking-only hides sent_quotes
+PASS booking-only hides waiting_client
+PASS booking-only hides lost
+PASS booking list remains tenant scoped
+PASS focused inquiry fixture lies beyond bounded legacy list
+PASS focused inquiry id resolves older record
+PASS focused inquiry id never returns another tenant record
+PASS sales-only reads inquiry/quote domains while hiding lead and booking domains
+PASS ADMIN login exposes effective per-user permission denies
+PASS ADMIN role label cannot bypass explicit domain deny
+PASS denied ADMIN hides marketing_pending
+PASS denied ADMIN hides new_leads
+PASS denied ADMIN hides sales_followups_due
+PASS denied ADMIN hides departures_today
+PASS denied ADMIN hides bookings_at_risk
+PASS denied ADMIN hides my_tasks_due
+PASS explicit ADMIN denies block Sales aggregate
+PASS report-only cannot read profit through Reports
+PASS admin-deny cannot read profit through Reports
+PASS Reports rejects malformed calendar month over dispatcher
+PASS filtered new_leads queue and card share aggregate predicate
+PASS filtered need_qualification queue and card share aggregate predicate
+PASS filtered followup_today queue and card share aggregate predicate
+PASS filtered overdue_followup queue and card share aggregate predicate
+PASS filtered draft_quotes queue and card share aggregate predicate
+PASS filtered sent_quotes queue and card share aggregate predicate
+PASS filtered waiting_client queue and card share aggregate predicate
+PASS filtered confirmed_today queue and card share aggregate predicate
+PASS filtered lost queue and card share aggregate predicate
+PASS settled operation-completed booking closes finance through dispatcher
+PASS finance-close persists marker and completed phase
+PASS financial close blocks dispatcher bookings/1/services
+PASS financial close blocks dispatcher services/2
+PASS financial close blocks dispatcher services/2/travel-details
+PASS financial close blocks dispatcher bookings/1/generate-orders
+PASS financial close blocks dispatcher supplier-orders/1/send
+PASS financial close blocks dispatcher bookings/1/invoices
+PASS financial close blocks dispatcher invoices/1/issue
+PASS financial close blocks dispatcher invoices/1/commercial
+PASS financial close blocks dispatcher bookings/1/receipts
+PASS financial close blocks dispatcher receipts/1/allocate
+PASS financial close blocks dispatcher payables/1/payments
+PASS financial close blocks dispatcher payables/1/reconcile
+PASS financial close blocks dispatcher supplier-reconciliations/4/approve
+PASS financial close blocks dispatcher resource-assignments/3/cancel
+PASS financial close blocks dispatcher bookings/1/complete-operations
+PASS finance reopen requires explicit reason
+PASS authorized reasoned reopen succeeds through dispatcher
+PASS authorized reopen restores service editing without cost mutation
+PASS manual inquiry rejects foreign/inactive sales_owner_id 10 before INSERT
+PASS manual inquiry rejects foreign/inactive sales_owner_id 11 before INSERT
+PASS manual inquiry rejects foreign/inactive customer_id 2 before INSERT
+PASS manual inquiry rejects foreign/inactive customer_id 3 before INSERT
+PASS manual inquiry rejects foreign/inactive agent_id 1 before INSERT
+PASS manual inquiry rejects foreign/inactive agent_id 2 before INSERT
+PASS manual customer rejects foreign/inactive owner 10 before INSERT
+PASS manual customer rejects foreign/inactive owner 11 before INSERT
+PASS database verification: rejected CRM requests inserted no partial records; closed financial writers left ledger and sent snapshots unchanged.
+VS0 HTTP dispatcher regression complete: effective permissions, full counts, focused identities, immutable financial close and CRM preflight.

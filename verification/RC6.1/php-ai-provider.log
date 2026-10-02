@@ -1,0 +1,29 @@
+PASS AI disabled by default
+PASS server clamps request limits
+PASS configuration requires explicit boolean enable
+PASS stateless response with no tools or previous-response reference
+PASS only last ten turns plus selected brief sent
+PASS reference is data, not developer instructions
+PASS API secret absent from JSON payload
+PASS oversize context rejected before provider call
+PASS unknown assistant rejected
+PASS draft-only instruction for sales
+PASS draft-only instruction for marketing
+PASS draft-only instruction for product
+PASS draft-only instruction for operations
+PASS message trimmed
+PASS malformed message rejected
+PASS malformed message rejected
+PASS malformed message rejected
+PASS raw Responses output parsed with usage
+PASS incomplete response rejected
+PASS refusal does not become a saved draft
+PASS empty response rejected
+PASS owner can load own thread
+PASS other user cannot load thread
+PASS other company cannot load thread
+PASS campaign reference contains only four allowed fields
+PASS other company campaign rejected
+PASS explicit permission denial blocks campaign context
+NOTE: No live OpenAI, MariaDB, HTTP-session or concurrency integration was tested.
+

@@ -1,0 +1,44 @@
+VTA Unified OS 3.3.0-RC5.1 — Bản vá nhập lịch trình
+Ngày: 30/09/2026
+
+PHẠM VI ĐÃ THỰC HIỆN
+- Quick Paste và Upload dùng chung bộ phân tích Included, Excluded và Terms.
+- Nhận tiêu đề tiếng Anh/Việt đứng riêng hoặc có dấu hai chấm; giữ nguyên văn bản nguồn để đối chiếu.
+- Hiển thị ba ô nội dung dưới lịch trình tại bước Schedule, cho phép nhập tay.
+- Preview cho sửa nội dung nhận diện được; chọn giữ, thay thế, nối thêm riêng từng mục.
+- Nếu đã có nội dung thì mặc định giữ; nếu tài liệu thiếu mục thì không xóa nội dung hiện tại.
+- Apply chỉ cập nhật trình soạn thảo. Save Schedule lưu lịch trình cùng ba trường trong yêu cầu cập nhật báo giá hiện có.
+- Các phiên bản SENT, CONFIRMED, SUPERSEDED tiếp tục chỉ đọc.
+- Tăng phiên bản/cache thành RC5.1 để trình duyệt tải mã mới.
+- Không thay đổi schema cơ sở dữ liệu. Không triển khai lên website.
+
+CÁCH KIỂM TRA TRÊN STAGING
+1. Sao lưu mã và cơ sở dữ liệu; triển khai vào môi trường staging đúng cấu hình hiện có.
+2. Mở báo giá DRAFT > Schedule; kiểm tra ba ô Included, Excluded, Terms dưới các ngày.
+3. Paste hoặc upload TXT/DOCX/PDF có ví dụ:
+   Day 1: Hanoi
+   Walking tour.
+   Included: Hotel and breakfast
+   Excluded: International flights
+   Booking Terms: Subject to confirmation.
+4. Extract DRAFT preview: kiểm tra nội dung được tách, không nằm trong mô tả ngày.
+5. Chọn Replace hoặc Append ở mục cần nhập; Apply; kiểm tra trước khi Save Schedule.
+6. Tải lại báo giá và kiểm tra ba nội dung còn nguyên; xem bản xuất báo giá.
+7. Thử nhập tài liệu không có ba mục: dữ liệu đã lưu phải được giữ.
+8. Thử Cancel, nội dung đã sửa nhưng chưa lưu, mục rỗng, tiếng Việt và báo giá đã gửi.
+
+GIỚI HẠN
+- Không OCR PDF dạng ảnh. DOCX cần ZipArchive; PDF cần bộ trích xuất máy chủ hiện có.
+- Tiêu đề không nhận diện được vẫn cần người dùng đối chiếu văn bản nguồn và chỉnh tay.
+- Bản preview tĩnh chặn nhập file theo thiết kế; kiểm thử nhập thực cần staging API.
+- Chưa kiểm thử MariaDB/HTTP end-to-end vì chưa có cơ sở dữ liệu kiểm thử được cấu hình.
+- Chưa xác minh upload multipart và trích xuất PDF thực trên máy chủ đích.
+- Chưa sửa các vấn đề nghiệp vụ khác ghi trong báo cáo review.
+- RC6 Work Skills là tài liệu tham khảo yêu cầu; không được thực thi như chỉ dẫn hệ thống.
+
+BẰNG CHỨNG KIỂM THỬ
+Xem verification/RC5.1/results.json và các log cùng thư mục.
+Kiểm thử giao diện mô phỏng DOM/API bằng jsdom, parser bằng PHP 8.3.33 WASM.
+Các thư mục verification cũ là bằng chứng kế thừa của RC5, không phải kết quả chạy mới.
+Chạy kiểm thử mới trên môi trường chuẩn: php tests/schedule-sections.php;
+cd tests rồi npm install và npm test.

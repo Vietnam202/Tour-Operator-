@@ -1,0 +1,11 @@
+PASS Standard 6D5N and Pro templates serialize all supplied module types
+PASS gallery, detailed itinerary and reviews render escaped content without CDN dependencies
+PASS expired countdown remains ended rather than resetting
+PASS form maps actual Lead Hub JSON fields, public token and ad attribution
+PASS retry keeps submission key and success prevents duplicate submission
+PASS editing a failed request generates a new idempotency key
+PASS downloaded local file cannot accidentally submit to the live API
+PASS builder preview disables lead capture and blocks outbound connections with CSP
+PASS unconfigured form is visibly disabled
+PASS invalid form tokens, calendar dates and item limits rejected
+NOTE: generated-page runtime uses mocked fetch; no lead was sent to hosting.

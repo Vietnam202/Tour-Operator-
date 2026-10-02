@@ -1,0 +1,14 @@
+PASS Drawer mounts independently and never replaces the active Operations workspace
+PASS Context resolver receives only a reference and its result is visibly separate from an existing thread
+PASS New chat defaults to the workspace profile and submits server-resolved context_ref
+PASS Existing legacy campaign selection remains available when workspace attachment is deselected
+PASS Frozen thread reference is labelled and never replaced with the currently open workspace
+PASS Missing or forbidden context offers a chat without silent placeholder data
+PASS Consent remains required, successful send reloads the same drawer and preserves workspace
+PASS Failed sends keep request keys for a deliberate retry and block duplicate submission
+PASS Closing while initial requests load cannot reopen or overwrite any workspace
+PASS Closing while a message is being generated discards late UI updates without reopening
+PASS A closed create dialog cannot close an unrelated dialog after its late response
+PASS Preview is illustrative, follows the suggested workspace profile and performs no context/provider calls
+PASS Unconfigured provider preserves setup state and disabled sending in the drawer
+13 AI drawer groups passed. jsdom and simulated API; no provider calls.

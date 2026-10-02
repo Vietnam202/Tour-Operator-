@@ -1,0 +1,3 @@
+supplier_name,category,destination,product_name,option_name,amount,currency,rate_basis,valid_from,valid_to,rate_type,market
+ABC Transport,TRANSPORT,Hanoi,HAN Airport - Hanoi Hotel,16 Seat,650000,VND,PER_TRANSFER,2026-01-01,2026-12-31,CONTRACT,Inbound
+La Siesta Hanoi,HOTEL,Hanoi,La Siesta Hanoi,Deluxe Twin BB,1550000,VND,PER_ROOM_NIGHT,2026-07-01,2026-12-31,CONTRACT,India

@@ -1,0 +1,12 @@
+.env
+.env.*
+api/config.php
+private/
+runtime/
+storage/
+node_modules/
+tests/node_modules/
+*.sqlite
+*.sqlite3
+*.db
+*.log

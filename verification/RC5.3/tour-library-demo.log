@@ -1,0 +1,13 @@
+PASS Unhandled APIs delegated; no library without view permission
+PASS Real Vietnamese itinerary parsed with separate Included Excluded Terms
+PASS Unstructured text returns correctable empty draft; no invented itinerary
+PASS Renumbers source days and rejects over 90 days / oversized text
+PASS Create saves content; source text and commercial sections retained
+PASS Stable creation key retries do not duplicate; changed payload conflicts
+PASS Edit and archive preserve original source data; archive remains reviewable
+PASS Pagination works for many programs and validates bounds
+PASS Private previews have no fake Drive or PDF results
+PASS Preview state isolated across users/instances; view-only cannot mutate
+PASS Copy to quote refuses issued or nonempty drafts without changing content
+PASS Copy to empty draft rebases dates and freezes program/terms
+12 demo behavior groups passed

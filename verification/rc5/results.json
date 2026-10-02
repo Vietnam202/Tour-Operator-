@@ -1,0 +1,67 @@
+[
+  {
+    "suite": "ai-provider",
+    "status": "PASS",
+    "pass_groups": 27
+  },
+  {
+    "suite": "ai-ui",
+    "status": "PASS",
+    "pass_groups": 9
+  },
+  {
+    "suite": "frontend",
+    "status": "PASS",
+    "pass_groups": 16
+  },
+  {
+    "suite": "landing-pages",
+    "status": "PASS",
+    "pass_groups": 29
+  },
+  {
+    "suite": "landing-pro",
+    "status": "PASS",
+    "pass_groups": 10
+  },
+  {
+    "suite": "landing-ui",
+    "status": "PASS",
+    "pass_groups": 15
+  },
+  {
+    "suite": "marketing-preview",
+    "status": "PASS",
+    "pass_groups": 8
+  },
+  {
+    "suite": "marketing-rules",
+    "status": "PASS",
+    "pass_groups": 26
+  },
+  {
+    "suite": "marketing-studio-ui",
+    "status": "PASS",
+    "pass_groups": 14
+  },
+  {
+    "suite": "marketing-unit",
+    "status": "PASS",
+    "pass_groups": 9
+  },
+  {
+    "suite": "php-lint-all",
+    "status": "PASS",
+    "pass_groups": 1
+  },
+  {
+    "suite": "pwa",
+    "status": "PASS",
+    "pass_groups": 5
+  },
+  {
+    "suite": "runtime-guard",
+    "status": "PASS",
+    "pass_groups": 5
+  }
+]

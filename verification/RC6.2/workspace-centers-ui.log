@@ -1,0 +1,25 @@
+PASS Sales has nine attention queues, snapshot date/timezone and metric definitions
+PASS card click requests matching server queue and pagination reaches records past first page
+PASS typed row mapping opens quote editor and ignores arbitrary response routes
+PASS existing inquiry focus, new inquiry callback and shared CRM shortcut
+PASS local permissions hide create/shared actions and block unavailable queues
+PASS booking-only user can access confirmed-today queue
+PASS sales makes no protected request without permission
+PASS home makes no protected request without permission
+PASS initial focused queue remains compatible with other card actions
+PASS queue error preserves card navigation and retry reruns same filter
+PASS incomplete API response shows error rather than fabricated zero metrics
+PASS empty queue has explicit state and no misleading pagination
+PASS response text is escaped and invalid ids do not create navigation actions
+PASS delayed initial response cannot overwrite another workspace
+PASS older same-view renderer cannot replace newer instance
+PASS latest queue click wins over late previous queue response
+PASS Home locally filters workspace, metric and attention data by effective permissions
+PASS lead-view-only Marketing access, focused New Leads link and no unsafe financial totals
+PASS Vietnamese Home labels and existing booking/task navigation
+PASS server-null unavailable Home queues and operations-only plaintext booking rows
+PASS server-null unavailable Sales queues retain permitted card access
+PASS campaign-manage-only Home cannot request or route Marketing read access
+PASS task-view-only Home contains own task attention and routes shared task queue
+PASS booking-view-only Home routes Sales without exposing unrelated attention data
+PASS workspace-centers-ui complete: 24 groups

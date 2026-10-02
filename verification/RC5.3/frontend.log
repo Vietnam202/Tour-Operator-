@@ -1,0 +1,16 @@
+PASS JavaScript syntax app.js
+PASS JavaScript syntax request.js
+PASS JavaScript syntax embed.js
+PASS JavaScript syntax service-worker.js
+PASS JavaScript syntax ai-chat.js
+PASS JavaScript syntax platform.js
+PASS JavaScript syntax marketing.js
+PASS JavaScript syntax marketing-model.js
+PASS JavaScript syntax marketing-demo.js
+PASS JavaScript syntax marketing-studio.js
+PASS JavaScript syntax landing-model.js
+PASS JavaScript syntax landing-extensions.js
+PASS JavaScript syntax landing-builder.js
+PASS query parameters preserved separately from API route
+PASS mutation sends CSRF token and JSON body
+PASS API conflict is surfaced to UI

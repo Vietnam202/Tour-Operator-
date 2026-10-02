@@ -1,0 +1,113 @@
+VTA Unified OS — RC5.3 / 3.3.0-RC5.3
+Ngày phát hành: 01/10/2026
+
+THAY ĐỔI MENU
+
+Đã bỏ bốn mục riêng trên sidebar, thanh điều hướng di động và App & Modules:
+Đặt dịch vụ, Tài chính, Tasks & Approvals, Today.
+Điều hành là trang mặc định cho tài khoản có quyền nghiệp vụ tương ứng.
+Booking Operations, Today Operations, Tasks và Supplier Payments vẫn nằm trong
+15 thẻ Điều hành. Phê duyệt, hóa đơn/tài chính và nhà cung cấp/bảng giá có lối
+truy cập bên trong Điều hành. Quyền tài khoản tiếp tục áp dụng cho từng thao tác.
+Nhà cung cấp/bảng giá cũng mở được từ tiêu đề Kho chương trình tour.
+Các tài khoản không có quyền Điều hành được mở vào màn hình phù hợp với quyền.
+
+Product đã đổi thành KHO CHƯƠNG TRÌNH TOUR. Kho này giữ chương trình tái sử dụng,
+không chứa giá nhà cung cấp. Tour Inventory nâng cao vẫn được giữ trên bản API
+cho tài khoản có product.view; không xuất hiện trong Preview vì cần backend.
+RC5.1 Included/Excluded/Terms và RC5.2 Operations Control Center được giữ lại.
+
+NHẬP CHƯƠNG TRÌNH
+
+Vào Kho chương trình tour → Upload / Nhập chương trình.
+- PC: chọn nhiều DOCX, PDF, TXT; tối đa 20 tệp mỗi đợt, 10 MB mỗi tệp.
+- Drive/Docs: dán liên kết từng tệp được chia sẻ để tải công khai, mỗi dòng một
+  link; tối đa 20 link mỗi đợt. Hỗ trợ file Drive và tài liệu Google Docs.
+- Văn bản: dán nội dung có tiêu đề Day 1 / Ngày 1, Day 2 / Ngày 2...
+
+Mỗi tệp/link tạo một mục xem trước độc lập. Mục lỗi có thể đọc lại hoặc dán văn
+bản thay thế; các mục hợp lệ vẫn lưu được. Chỉnh tên, điểm đến, mã ngôn ngữ,
+tags, lịch trình từng ngày, Included, Excluded và Terms trước khi lưu.
+Ngôn ngữ vi/en được gợi ý theo tiêu đề Ngày/Day; phải kiểm tra lại khi tài liệu
+trộn ngôn ngữ. Lịch trình tối đa 90 ngày; ngày đi có thể để trống trong kho.
+Mỗi mục được lưu thành một chương trình mới. Khi đang xử lý đợt nhập, các ô
+chỉnh sửa được khóa tạm thời để giữ nguyên nội dung đã kiểm tra.
+
+Tệp scan không có văn bản đọc được có thể lưu bản nháp và giữ tệp nguồn để bổ
+sung ngày thủ công. Chưa có OCR tự động. Chương trình ACTIVE cần có lịch trình.
+Không nhập được thư mục Drive hoặc file yêu cầu đăng nhập/cho phép tải xuống:
+hãy tải từ tài khoản Google của bạn về PC rồi upload. Luồng link công khai phụ
+thuộc phản hồi Google và có thể bị chặn bởi hạn mức/trang xác nhận tải xuống.
+Chưa có đăng nhập Google, Google Picker hoặc đồng bộ cả thư mục riêng tư.
+
+TÌM, SỬA VÀ TÁI SỬ DỤNG
+
+Tìm bằng tên tour, điểm đến hoặc tag; lọc điểm đến/ngôn ngữ. Danh sách tải nhiều
+trang từ API để các chương trình sau 100 mục đầu cũng được tìm thấy.
+Mở thẻ để xem chi tiết và nguồn; chọn Sửa để cập nhật nội dung. Lưu trữ ẩn mục
+khỏi danh sách mặc định; “Hiện đã lưu trữ” cho phép xem lại.
+
+“Dùng cho báo giá” chép chương trình cùng Included/Excluded/Terms vào báo giá
+DRAFT trống. Tạo báo giá và ngày đi tại Kinh doanh trước. API kiểm tra lại trạng
+thái, lịch trình, điều kiện, chi phí và option để tránh ghi đè nội dung đã có;
+ngày lịch trình được tính lại theo ngày bắt đầu của báo giá. Không chép giá.
+Một snapshot nguồn được giữ cùng phiên bản báo giá. Sau khi chép phải rà soát
+ngày đi, dịch vụ và lập chi phí/giá bán cho khách cụ thể.
+
+TỆP GỐC VÀ QUYỀN
+
+Bản API giữ tệp PC/Drive gốc trong storage riêng tư; chỉ người có quyền xem kho
+cùng công ty mở được. Token nhập thuộc công ty/người nhập và hết hạn sau 2 giờ.
+Tệp đang chờ chưa lưu: giới hạn 50 tệp / 200 MB cho mỗi người trong mỗi công ty.
+Tệp quá hạn chưa dùng được dọn khi nhập tiếp; tệp đã gắn chương trình được giữ.
+Đọc link Google giới hạn host, địa chỉ Internet công khai, redirect, thời gian,
+dung lượng và kiểm tra TLS. Mọi lịch trình/tài liệu tải lên chỉ là dữ liệu.
+
+Migration bổ sung tour_library.view và tour_library.manage. ADMIN/PRODUCT có
+quyền quản lý; SALES/OPERATIONS có quyền xem. Tài khoản cũ tiếp tục dùng các
+quyền product.view/supplier.view để xem, product.manage/document.upload để quản
+lý. Sao chép vào báo giá còn yêu cầu quote.edit. API luôn kiểm tra công ty.
+Khóa tạo chương trình giữ ổn định khi thử lưu lại cùng nội dung, giúp tránh tạo
+trùng do mất phản hồi mạng. Khi sửa nội dung rồi lưu lại, thao tác có khóa mới.
+
+PREVIEW VÀ NÂNG CẤP API
+
+Preview có dữ liệu mẫu và đọc TXT/dán văn bản ngay trong trình duyệt, không lưu
+tệp gốc hoặc truy cập Google Drive. Mọi thay đổi mất khi tải lại trang. DOCX,
+PDF/Google Docs và link Drive cần bản index.html với API đã cài đặt.
+
+Nâng cấp trên staging/local với cơ sở dữ liệu và config riêng tư hiện có:
+1. Sao lưu cơ sở dữ liệu và thư mục storage hiện tại.
+2. Chép bản RC5.3 vào thư mục thử nghiệm có cấu hình hợp lệ; giữ config ngoài
+   web root theo hướng dẫn triển khai hiện có.
+3. Chạy: php api/bin/migrate.php
+   Migration mới: 021_tour_library.sql. Không chạy install.php lại trên hệ
+   thống đang dùng vì install dành cho khởi tạo. migrate.php giữ tài khoản cũ.
+4. Cần PHP 8.3, PDO MySQL; ZipArchive để đọc DOCX; pdftotext để đọc PDF/Docs;
+   cURL và TLS CA hợp lệ để nhập link Google. upload_max_filesize/post_max_size
+   phải đủ cho file 10 MB và dữ liệu multipart (khuyến nghị tối thiểu 11 MB).
+5. storage.local_path phải là thư mục riêng tư ghi được để lưu tệp tour gốc,
+   kể cả khi kho chứng từ nhà cung cấp dùng driver Google Drive.
+6. Đăng nhập lại, kiểm tra nhập PC/Drive, tải tệp gốc, sửa, lưu trữ, phân quyền
+   và dùng chương trình cho một báo giá nháp thử nghiệm. Service worker dùng
+   cache RC5.3; chấp nhận thông báo cập nhật hoặc tải lại để dùng tài nguyên mới.
+
+Bản này chưa được triển khai lên máy chủ và chưa chạy migration với MariaDB
+thật. Cần nghiệm thu staging trước khi đưa vào hoạt động.
+
+KIỂM CHỨNG
+
+14 bộ JavaScript: 176 nhóm PASS. 142 kiểm tra PHP cho Tour Library PASS;
+20 kiểm tra giữ Included/Excluded/Terms, 5 kiểm tra RuntimeGuard PASS.
+18 script production JavaScript và 62 file PHP qua kiểm tra cú pháp.
+Đã thử trong trình duyệt: menu rút gọn, nhập cùng lúc hai TXT thật, chỉnh mục
+Included trước khi lưu, danh sách tăng từ 3 lên 5, giao diện điện thoại hai cột
+không cuộn ngang. Kiểm thử UI còn bao gồm phân quyền, lỗi/retry, paging, khóa
+lưu ổn định và phản hồi trễ không ghi đè trang/modal khác.
+Chưa kiểm chứng tải Drive thật, HTTP multipart trên PHP có DB, pdftotext với
+tài liệu thật, transaction MariaDB hoặc cài PWA trên thiết bị thật.
+Các thư mục verification trước RC5.3 là bằng chứng kế thừa từ bản trước.
+
+Tài liệu Google được tham khảo:
+https://developers.google.com/workspace/drive/api/guides/manage-downloads
+https://support.google.com/a/users/answer/13004062

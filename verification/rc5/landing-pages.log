@@ -1,0 +1,30 @@
+PASS structured document normalized
+PASS unsafe link rejected
+PASS unsafe link rejected
+PASS unsafe link rejected
+PASS unsafe link rejected
+PASS invalid block type/id/image metadata rejected
+PASS invalid block type/id/image metadata rejected
+PASS invalid block type/id/image metadata rejected
+PASS duplicate block ID rejected
+PASS oversize document rejected
+PASS draft save and load roundtrip
+PASS create retry idempotent
+PASS changed payload cannot reuse original creation key
+PASS update increments version and saves content
+PASS stale save rejected without overwriting newer content
+PASS cross-company read rejected
+PASS cross-company update rejected
+PASS foreign or archived campaign rejected
+PASS foreign or archived campaign rejected
+PASS rejected operations preserve saved document
+PASS same-company campaign form saved
+PASS foreign form host rejected
+PASS unowned form token rejected
+PASS invalid countdown date rejected
+PASS valid fixed countdown date preserved
+PASS gallery image without rights rejected
+PASS extended gallery item roundtrip
+PASS handler requires lead.view before data access
+PASS handler requires campaign.manage before data access
+NOTE: SQLite sequential fixture, not MariaDB DDL/concurrency or HTTP authentication testing.

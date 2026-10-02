@@ -1,0 +1,12 @@
+VTA RC5.3 — Kho chương trình tour
+
+1. Giải nén toàn bộ thư mục, mở preview.html để xem thử.
+2. Menu mở mặc định vào Điều hành. Product đã đổi thành Kho chương trình tour.
+3. Vào Kho chương trình tour → Upload / Nhập chương trình.
+4. Thử chọn đồng thời hai file TXT trong docs/samples, hoặc dán lịch trình.
+5. Xem và chỉnh lịch trình cùng Included / Excluded / Terms → Lưu chương trình.
+
+Preview chỉ giữ dữ liệu trong phiên; tải lại trang sẽ mất các thay đổi mẫu.
+Đọc DOCX/PDF/Google Drive và lưu dữ liệu lâu dài cần máy chủ API.
+Hướng dẫn nâng cấp: docs/RC5.3_TOUR_LIBRARY_VI.txt
+Kết quả kiểm thử mới: verification/RC5.3/results.json

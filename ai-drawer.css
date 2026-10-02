@@ -1,0 +1,9 @@
+#vtaAiRoot .ai-page{width:100%;max-width:none;margin:0}
+#vtaAiRoot .ai-layout{grid-template-columns:185px minmax(0,1fr);min-height:0}
+#vtaAiRoot .ai-history{padding:12px}
+#vtaAiRoot .ai-history>div:first-of-type{max-height:48vh}
+#vtaAiRoot .ai-messages{max-height:42vh;min-height:180px}
+.ai-reference-note{padding:10px 20px;border-bottom:1px solid #e5ecf2;background:#edf4fc;color:#315272;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+#aiNewForm .ai-consent{display:flex;align-items:flex-start}
+#aiNewForm .ai-consent input{width:18px;height:18px;flex:none;margin:2px 6px 0 0}
+@media(max-width:820px){#vtaAiRoot .ai-layout{grid-template-columns:1fr}#vtaAiRoot .ai-history>div:first-of-type{max-height:90px}#vtaAiRoot .ai-messages{max-height:36vh}.ai-reference-note{padding:10px 14px}}

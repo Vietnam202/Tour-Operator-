@@ -1,0 +1,4 @@
+PASS fresh CLI install
+PASS fresh installer applies complete migration filename manifest including RC5.3
+PASS fresh admin account initialized
+PASS installer rerun refuses to reset existing users

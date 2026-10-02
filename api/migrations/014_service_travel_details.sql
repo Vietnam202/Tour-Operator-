@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS service_travel_details (
+ service_id BIGINT UNSIGNED PRIMARY KEY,
+ customer_details_json JSON NOT NULL,
+ updated_by BIGINT UNSIGNED NOT NULL,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(service_id) REFERENCES booking_services(id),
+ FOREIGN KEY(updated_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

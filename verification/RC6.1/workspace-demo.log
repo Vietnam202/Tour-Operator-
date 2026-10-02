@@ -1,0 +1,18 @@
+PASS local UTC+7 day, NEW requests created today and overlapping qualification queue
+PASS follow-up midnight boundaries and terminal inquiry exclusions
+PASS quote queues require current-version and quote lifecycle agreement
+PASS confirmed-today is booking creation date, includes completed and excludes cancelled
+PASS Home derives scoped union of at-risk/today bookings, own OPEN/SNOOZED tasks and no money
+PASS effective permissions redact unavailable counts and row queues, even ADMIN role
+PASS zero-permission Sales rejects while Home returns only redacted metadata without role bypass
+PASS unbounded matching count and stable second-page selection
+PASS unsupported queues and invalid page bounds rejected
+PASS read projection does not mutate source and metrics change with existing-record updates
+PASS singular legacy DemoApi quote/qv records are reused
+PASS lead-view-only Marketing attention reads actual existing preview state
+PASS unrelated routes and mutations remain with their original handler
+PASS focused inquiry/request queries reuse scoped arrays without fabricating leads
+PASS campaign-manage-only Home cannot read Marketing metrics
+PASS task, operations and booking single-permission projections match backend access
+PASS focused leads query filters request_id instead of lead id and keeps tenant scope
+PASS workspace-demo complete: 17 groups

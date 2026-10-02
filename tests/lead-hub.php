@@ -1,0 +1,108 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/../api/lib/Migrations.php';
+require_once __DIR__.'/../api/lib/Http.php';
+require_once __DIR__.'/../api/lib/Auth.php';
+require_once __DIR__.'/../api/lib/Audit.php';
+require_once __DIR__.'/../api/lib/LeadHub.php';
+require_once __DIR__.'/../api/lib/TourInventory.php';
+require_once __DIR__.'/../api/lib/RateEngine.php';
+function check(bool $condition,string $name): void { if(!$condition) throw new RuntimeException('FAIL '.$name);echo "PASS $name\n"; }
+function rejects(callable $fn,string $class,string $name): void {
+    try { $fn(); } catch(Throwable $e) { check($e instanceof $class,$name.' ('.get_class($e).')');return; }
+    throw new RuntimeException('FAIL accepted '.$name);
+}
+$password=getenv('VTA_TEST_DB_PASSWORD');
+if(!$password) throw new RuntimeException('Set VTA_TEST_DB_PASSWORD for a disposable local database server');
+$db=new PDO('mysql:host=127.0.0.1;port=33317;charset=utf8mb4','root',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+$database='vta_test_'.bin2hex(random_bytes(5));
+$db->exec("CREATE DATABASE `$database` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");$db->exec("USE `$database`");
+echo "Disposable database: $database\n";
+$migrationFiles=glob(__DIR__.'/../api/migrations/*.sql')?:[];sort($migrationFiles,SORT_STRING);
+$manifest=array_map(fn($file)=>basename($file,'.sql'),$migrationFiles);
+check(in_array('021_tour_library',$manifest,true),'migration manifest includes the RC5.3 baseline');
+$versions=Migrations::run($db,__DIR__.'/../api/migrations');check($versions===$manifest,'fresh migrations match the complete filename manifest');
+check(Migrations::run($db,__DIR__.'/../api/migrations')===[],'migration rerun is a no-op');
+$db->exec("INSERT INTO companies(code,name) VALUES('TEST','Test'),('OTHER','Other')");
+$db->exec("INSERT INTO roles(company_id,code,name) VALUES(1,'ADMIN','Admin'),(2,'ADMIN','Admin')");
+$db->exec("INSERT INTO users(company_id,role_id,full_name,email,password_hash) VALUES(1,1,'Tester','tester@example.invalid','unused'),(2,2,'Other','other@example.invalid','unused')");
+$db->exec('INSERT INTO role_permissions(role_id,permission_id) SELECT r.id,p.id FROM roles r CROSS JOIN permissions p');
+function fixtureQualifyLead(PDO $db,array $user,int $requestId,string $note): array {
+    return LeadHub::qualify($db,$user,$requestId,['qualification_note'=>$note,'expected_version'=>1,'action_key'=>'fixture-qualify-0001-'.$requestId,'next_action_due'=>'2027-01-01 09:00:00']);
+}
+function fixtureConvertLead(PDO $db,array $user,int $leadId): array {
+    $version=(int)$db->query('SELECT handover_version FROM leads WHERE id='.$leadId)->fetchColumn();
+    $accepted=LeadSalesHandover::accept($db,$user,$leadId,['expected_version'=>$version,'action_key'=>'fixture-accept-0001-'.$leadId,'sales_owner_user_id'=>$user['id'],'next_action_due'=>'2027-01-01 09:00:00']);
+    $review=LeadSalesHandover::customerCandidates($db,$user,$leadId);
+    $q=$db->prepare('SELECT r.contact_name,r.email,r.phone FROM leads l JOIN lead_requests r ON r.id=l.request_id WHERE l.id=?');$q->execute([$leadId]);$r=$q->fetch();
+    return LeadHub::convert($db,$user,$leadId,['expected_version'=>$accepted['handover_version'],'action_key'=>'fixture-convert-0001-'.$leadId,'identity_mode'=>'CREATE_NEW','identity_reviewed'=>true,'identity_review_key'=>$review['identity_review_key'],'duplicate_reason'=>'Fixture explicitly chooses a separate customer','new_customer'=>['full_name'=>$r['contact_name'],'email'=>$r['email']??'','whatsapp'=>$r['phone']??'']]);
+}
+$db->exec("INSERT INTO campaigns(company_id,name,source,created_by) VALUES(1,'Summer','FACEBOOK',1),(2,'Other','WEBSITE',2)");
+$token=str_repeat('a',64);
+$db->prepare('INSERT INTO lead_forms(company_id,campaign_id,name,public_token,created_by) VALUES(1,1,?,?,1)')->execute(['Landing',$token]);
+$body=['contact_name'=>'Test Guest','email'=>'test@example.invalid','total_guests'=>11,'paying_pax'=>10,'foc'=>1,'travel_date'=>'2027-01-02','destination'=>'Hanoi','submission_key'=>'test-submission-0001','utm_campaign'=>'summer-2027','ad_id'=>'ad123'];
+check(LeadHub::submit($db,$token,$body)===['accepted'=>true],'public form accepted');
+LeadHub::submit($db,$token,$body);check((int)$db->query('SELECT COUNT(*) FROM lead_requests')->fetchColumn()===1,'submission retry creates one request');
+rejects(fn()=>LeadHub::submit($db,$token,array_replace($body,['contact_name'=>'Different'])),DomainException::class,'changed retry rejected');
+rejects(fn()=>LeadHub::validateRequest(array_replace($body,['paying_pax'=>11])),InvalidArgumentException::class,'FOC not double counted');
+rejects(fn()=>LeadHub::validateRequest(array_replace($body,['travel_date'=>'2027-02-30'])),InvalidArgumentException::class,'invalid calendar date rejected');
+rejects(fn()=>LeadHub::validateRequest(array_replace($body,['total_guests'=>-1])),InvalidArgumentException::class,'negative guests rejected');
+$user=['id'=>1,'company_id'=>1];
+rejects(fn()=>fixtureQualifyLead($db,['id'=>2,'company_id'=>2],1,'Qualified'),OutOfBoundsException::class,'cross-company request blocked');
+rejects(fn()=>LeadHub::qualify($db,$user,1,['qualification_note'=>'Qualified','owner_user_id'=>2,'expected_version'=>1,'action_key'=>'foreign-owner-00001','next_action_due'=>'2027-01-01 09:00:00']),InvalidArgumentException::class,'cross-company owner blocked');
+$lead=fixtureQualifyLead($db,$user,1,'Travel dates and budget confirmed');
+check(fixtureQualifyLead($db,$user,1,'Travel dates and budget confirmed')===$lead,'identical qualification retry reuses lead');
+$conversion=fixtureConvertLead($db,$user,$lead['id']);
+check(LeadHub::convert($db,$user,$lead['id'])===$conversion,'conversion retry reuses inquiry and trip');
+check((int)$db->query('SELECT COUNT(*) FROM inquiries')->fetchColumn()===1,'one inquiry persisted');
+$trip=$db->query('SELECT * FROM trips')->fetch();check((int)$trip['total_guests']===11 && (int)$trip['paying_pax']===10 && (int)$trip['foc']===1,'guest counts preserved');
+$attribution=json_decode($db->query('SELECT attribution_json FROM lead_requests')->fetchColumn(),true);
+check($attribution['utm_campaign']==='summer-2027' && $attribution['ad_id']==='ad123','attribution preserved');
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='inquiry' AND rule_code='INQUIRY_NEXT_ACTION' AND status='OPEN'")->fetchColumn()===1,'one current sales follow-up task; handover task history retained');
+check((int)$db->query("SELECT COUNT(*) FROM audit_logs WHERE action_code IN ('LEAD_REQUEST_RECEIVED','LEAD_QUALIFIED','LEAD_SALES_ACCEPTED','LEAD_CONVERTED')")->fetchColumn()===4,'request qualification Sales acceptance conversion audited');
+$db->exec("UPDATE lead_forms SET status='ARCHIVED' WHERE id=1");
+rejects(fn()=>LeadHub::submit($db,$token,array_replace($body,['submission_key'=>'test-submission-0002'])),OutOfBoundsException::class,'archived form rejected');
+$db->exec("INSERT INTO tour_programs(company_id,code,name,created_by) VALUES(1,'VN-01','Hanoi',1),(2,'OTHER','Other',2)");
+$db->exec("INSERT INTO tour_components(company_id,name,category,destination,customer_description,created_by) VALUES(1,'Airport transfer','TRANSPORT','Hanoi','Private airport transfer',1),(2,'Other transfer','TRANSPORT','Hanoi','Other',2)");
+$tour=['title'=>'Hanoi arrival','days'=>[['title'=>'Arrival','itinerary'=>'Meet your driver. Transfer to the hotel.','overnight'=>'Hanoi','services'=>[['component_id'=>1,'pax_basis'=>'ONE','quantity'=>1]]]],'variants'=>[['name'=>'Comfort','hotel_level'=>'4*']]];
+rejects(fn()=>TourInventory::createVersion($db,$user,2,$tour),OutOfBoundsException::class,'cross-company program blocked');
+$invalidTour=$tour;$invalidTour['days'][0]['services'][0]['component_id']=2;
+rejects(fn()=>TourInventory::createVersion($db,$user,1,$invalidTour),InvalidArgumentException::class,'cross-company component blocked');
+check((int)$db->query('SELECT COUNT(*) FROM tour_program_versions')->fetchColumn()===0,'invalid version rolled back');
+$version=TourInventory::createVersion($db,$user,1,$tour);
+TourInventory::publish($db,$user,$version['id']);
+$db->exec("UPDATE tour_components SET customer_description='Changed master' WHERE id=1");
+$saved=TourInventory::snapshot($db,1,$version['id']);
+check(json_decode($saved['days'][0]['services'][0]['component_snapshot_json'],true)['customer_description']==='Private airport transfer','component snapshot independent of master');
+$db->prepare("INSERT INTO quotes(company_id,quote_ref,trip_id,inquiry_id,created_by,updated_by) VALUES(1,'QT-TEST',?,?,1,1)")->execute([$conversion['trip_id'],$conversion['inquiry_id']]);
+$qid=(int)$db->lastInsertId();
+$db->prepare("INSERT INTO quote_versions(quote_id,version_no,tour_name,created_by) VALUES(?,1,'Test',1)")->execute([$qid]);$qvid=(int)$db->lastInsertId();
+$copied=TourInventory::useProgram($db,$user,$version['id'],$qvid,(int)$saved['variants'][0]['id']);
+check($copied['schedule'][0]['description']===$tour['days'][0]['itinerary'],'full day itinerary copied to existing quote');
+check(!isset($copied['schedule'][0]['services']),'public itinerary excludes service internals');
+rejects(fn()=>TourInventory::useProgram($db,$user,$version['id'],$qvid,null),DomainException::class,'program copy cannot overwrite itinerary');
+$tour['days'][0]['itinerary']='Revised master itinerary';$newVersion=TourInventory::createVersion($db,$user,1,$tour);
+check($newVersion['version_no']===2,'tour revision numbers increment');
+$quoted=json_decode($db->query('SELECT schedule_json FROM quote_versions')->fetchColumn(),true);
+check($quoted[0]['description']!==$tour['days'][0]['itinerary'],'new program version does not change quote');
+$db->exec("INSERT INTO suppliers(company_id,supplier_ref,name,created_by,updated_by) VALUES(1,'SUP-TEST','Test supplier',1,1)");
+$db->exec("INSERT INTO rates(company_id,rate_ref,supplier_id,category,product_name,rate_type,status,created_by,updated_by,min_pax,max_pax) VALUES(1,'RATE-TEST',1,'TRANSPORT','Airport transfer','CONTRACT','ACTIVE',1,1,1,10)");
+$db->exec("INSERT INTO rate_versions(rate_id,version_no,amount,currency,rate_basis,approval_status,created_by) VALUES(1,1,100,'USD','PER_TRANSFER','APPROVED',1)");
+$criteria=['category'=>'TRANSPORT','destination'=>'Hanoi','travel_date'=>'2027-01-02','pax'=>10];
+check(count(RateEngine::match($db,1,$criteria))===1,'approved matching rate found');
+check(RateEngine::match($db,2,$criteria)===[],'rate matching tenant isolation');
+check(RateEngine::match($db,1,array_replace($criteria,['pax'=>11]))===[],'pax band applied');
+$db->exec("INSERT INTO rate_date_periods(rate_version_id,period_type,start_date,end_date) VALUES(1,'BLACKOUT','2027-01-02','2027-01-02')");
+check(RateEngine::match($db,1,$criteria)===[],'blackout excludes approved rate');
+$db->exec('DELETE FROM rate_date_periods');
+$db->exec("INSERT INTO rate_date_periods(rate_version_id,period_type,start_date,end_date,adjustment_type,adjustment_value) VALUES(1,'SEASON','2027-01-01','2027-01-31','PERCENT',10)");
+check(RateEngine::match($db,1,$criteria)[0]['effective_amount']===110.0,'season adjustment applied');
+check(RateEngine::match($db,1,array_replace($criteria,['travel_date'=>'2027-02-01']))===[],'outside season excluded');
+$db->exec("UPDATE rate_versions SET approval_status='UNREVIEWED' WHERE id=1");
+check(RateEngine::match($db,1,$criteria)===[],'unapproved rate excluded');
+$transport=RateEngine::transportCost(['rate_basis'=>'PER_DAY','amount'=>100,'currency'=>'USD'],['capacity'=>16,'hours_included'=>8,'km_included'=>100,'overtime_rate'=>10,'extra_km_rate'=>2],['vehicles'=>1,'days'=>2,'hours'=>18,'km'=>220,'pax'=>11]);
+check($transport['base_total']===200.0 && $transport['extras']===60.0 && $transport['total']===260.0,'transport day overtime and extra-km costing');
+rejects(fn()=>RateEngine::transportCost(['rate_basis'=>'PER_DAY','amount'=>100,'currency'=>'USD'],['capacity'=>8],['vehicles'=>1,'days'=>1,'pax'=>11]),DomainException::class,'transport capacity uses total guests');
+$db->exec("UPDATE migration_checksums SET sha256=REPEAT('0',64) WHERE version='007_lead_attribution'");
+rejects(fn()=>Migrations::run($db,__DIR__.'/../api/migrations'),RuntimeException::class,'migration drift blocked');
+echo "Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.\n";

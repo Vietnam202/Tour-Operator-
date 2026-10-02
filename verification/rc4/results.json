@@ -1,0 +1,52 @@
+[
+  {
+    "suite": "php-lint-all",
+    "pass": true,
+    "checks": 1
+  },
+  {
+    "suite": "runtime-guard",
+    "pass": true,
+    "checks": 5
+  },
+  {
+    "suite": "ai-provider",
+    "pass": true,
+    "checks": 27
+  },
+  {
+    "suite": "marketing-rules",
+    "pass": true,
+    "checks": 26
+  },
+  {
+    "suite": "frontend",
+    "pass": true,
+    "checks": 13
+  },
+  {
+    "suite": "marketing-unit",
+    "pass": true,
+    "checks": 9
+  },
+  {
+    "suite": "marketing-preview",
+    "pass": true,
+    "checks": 8
+  },
+  {
+    "suite": "marketing-studio-ui",
+    "pass": true,
+    "checks": 14
+  },
+  {
+    "suite": "ai-ui",
+    "pass": true,
+    "checks": 9
+  },
+  {
+    "suite": "pwa",
+    "pass": true,
+    "checks": 5
+  }
+]
