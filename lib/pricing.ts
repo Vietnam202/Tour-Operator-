@@ -25,6 +25,10 @@ export async function calculateQuote(input: QuoteInput) {
       })
     : null;
 
+  if (departure?.cabinsLeft !== null && departure?.cabinsLeft !== undefined && departure.cabinsLeft <= 0) {
+    throw new Error("This departure is sold out");
+  }
+
   const adultRate = departure?.priceFrom ?? cabin.basePrice;
   const childRate = Math.round(adultRate * cabin.childRatePct / 100);
   const occupancy = adults + children;
