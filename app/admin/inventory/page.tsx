@@ -2,8 +2,8 @@
 
 import { FormEvent, useState } from "react";
 
-type Cabin={id:string;name:string;basePrice:number;capacity:number;isActive:boolean};
-type Departure={id:string;departureDate:string;durationNights:number;priceFrom:number;cabinsLeft:number|null;isAvailable:boolean};
+type Cabin={id:string;name:string;basePrice:number;capacity:number;childRatePct:number;singleSupplement:number;isActive:boolean};
+type Departure={id:string;departureDate:string;durationNights:number;priceFrom:number;holidaySurcharge:number;cabinsLeft:number|null;isAvailable:boolean};
 type Cruise={id:string;name:string;slug:string;route:string;status:string;stars:number;badge?:string;cabins:Cabin[];departures:Departure[]};
 
 export default function InventoryAdmin(){
@@ -77,13 +77,13 @@ export default function InventoryAdmin(){
        <div className="inventoryColumns">
         <div>
          <h3>Cabins</h3>
-         <div className="inventoryItems">{current.cabins.map(c=><div className="inventoryItem" key={c.id}><div><b>{c.name}</b><span>Capacity {c.capacity}</span></div><strong>US$ {c.basePrice}</strong></div>)}{!current.cabins.length&&<p className="muted">No cabins yet.</p>}</div>
-         <form className="compactForm" onSubmit={createCabin}><input name="name" required placeholder="Cabin name"/><div className="miniGrid"><input name="basePrice" type="number" required placeholder="Base USD"/><input name="capacity" type="number" defaultValue="2" placeholder="Capacity"/></div><input name="sizeSqm" type="number" placeholder="Size m²"/><input name="description" placeholder="Balcony, deck, view..."/><button className="darkButton">Add cabin</button></form>
+         <div className="inventoryItems">{current.cabins.map(c=><div className="inventoryItem" key={c.id}><div><b>{c.name}</b><span>Capacity {c.capacity} · Child {c.childRatePct}% · Single +US$ {c.singleSupplement}</span></div><strong>US$ {c.basePrice}</strong></div>)}{!current.cabins.length&&<p className="muted">No cabins yet.</p>}</div>
+         <form className="compactForm" onSubmit={createCabin}><input name="name" required placeholder="Cabin name"/><div className="miniGrid"><input name="basePrice" type="number" required placeholder="Base USD"/><input name="capacity" type="number" defaultValue="2" placeholder="Capacity"/></div><div className="miniGrid"><input name="childRatePct" type="number" min="0" max="100" defaultValue="70" placeholder="Child rate %"/><input name="singleSupplement" type="number" min="0" defaultValue="0" placeholder="Single +USD"/></div><input name="sizeSqm" type="number" placeholder="Size m²"/><input name="description" placeholder="Balcony, deck, view..."/><button className="darkButton">Add cabin</button></form>
         </div>
         <div>
          <h3>Departures & rates</h3>
-         <div className="inventoryItems">{current.departures.map(d=><div className="inventoryItem" key={d.id}><div><b>{new Date(d.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b><span>{d.durationNights+1}D{d.durationNights}N · {d.cabinsLeft??"?"} cabins left</span></div><strong>US$ {d.priceFrom}</strong></div>)}{!current.departures.length&&<p className="muted">No departures yet.</p>}</div>
-         <form className="compactForm" onSubmit={createDeparture}><input name="departureDate" type="date" required/><div className="miniGrid"><select name="durationNights" defaultValue="1"><option value="1">2D1N</option><option value="2">3D2N</option></select><input name="priceFrom" type="number" required placeholder="From USD"/></div><input name="cabinsLeft" type="number" placeholder="Cabins left"/><button className="darkButton">Add departure</button></form>
+         <div className="inventoryItems">{current.departures.map(d=><div className="inventoryItem" key={d.id}><div><b>{new Date(d.departureDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b><span>{d.durationNights+1}D{d.durationNights}N · {d.cabinsLeft??"?"} cabins left · Holiday +US$ {d.holidaySurcharge}</span></div><strong>US$ {d.priceFrom}</strong></div>)}{!current.departures.length&&<p className="muted">No departures yet.</p>}</div>
+         <form className="compactForm" onSubmit={createDeparture}><input name="departureDate" type="date" required/><div className="miniGrid"><select name="durationNights" defaultValue="1"><option value="1">2D1N</option><option value="2">3D2N</option></select><input name="priceFrom" type="number" required placeholder="From USD"/></div><div className="miniGrid"><input name="cabinsLeft" type="number" min="0" placeholder="Cabins left"/><input name="holidaySurcharge" type="number" min="0" defaultValue="0" placeholder="Holiday +USD"/></div><button className="darkButton">Add departure</button></form>
         </div>
        </div>
      </>}
