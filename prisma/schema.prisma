@@ -59,6 +59,23 @@ enum StaffRole {
   FINANCE
 }
 
+enum ExpenseCategory {
+  SUPPLIER
+  TRANSFER
+  GUIDE
+  COMMISSION
+  BANK_FEE
+  REFUND_COST
+  OTHER
+}
+
+enum PayableStatus {
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
 model Cruise {
   id          String       @id @default(cuid())
   slug        String       @unique
@@ -91,6 +108,7 @@ model Supplier {
   notes       String?
   isActive    Boolean  @default(true)
   cruises     Cruise[]
+  payables    SupplierPayable[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -174,6 +192,8 @@ model BookingInquiry {
   internalNotes   String?
   payments        PaymentTransaction[]
   paymentRequests PaymentRequest[]
+  expenses        BookingExpense[]
+  supplierPayables SupplierPayable[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -257,4 +277,40 @@ model StaffSession {
   createdAt DateTime  @default(now())
 
   @@index([userId, expiresAt])
+}
+
+
+model BookingExpense {
+  id          String          @id @default(cuid())
+  bookingId   String
+  booking     BookingInquiry  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  description String?
+  amount      Int
+  currency    String          @default("USD")
+  paidAt      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([category, createdAt])
+}
+
+model SupplierPayable {
+  id          String        @id @default(cuid())
+  bookingId   String
+  booking     BookingInquiry @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  supplierId  String
+  supplier    Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  amount      Int
+  paidAmount  Int           @default(0)
+  currency    String        @default("USD")
+  status      PayableStatus @default(OPEN)
+  dueDate     DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([supplierId, status, dueDate])
 }
