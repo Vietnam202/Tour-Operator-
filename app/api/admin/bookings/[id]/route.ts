@@ -13,25 +13,52 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!authorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await request.json();
-  const status = String(body.status || "") as BookingStatus;
-
-  if (!allowed.has(status)) {
-    return NextResponse.json({ error: "Invalid booking status" }, { status: 400 });
-  }
+  const nextStatus = String(body.status || "") as BookingStatus;
+  if (!allowed.has(nextStatus)) return NextResponse.json({ error: "Invalid booking status" }, { status: 400 });
 
   try {
-    const booking = await prisma.bookingInquiry.update({
-      where: { id },
-      data: { status },
+    const booking = await prisma.$transaction(async tx => {
+      const current = await tx.bookingInquiry.findUnique({ where: { id } });
+      if (!current) throw new Error("BOOKING_NOT_FOUND");
+
+      if (nextStatus === "CONFIRMED" && !current.inventoryCommitted && current.departureId) {
+        const departure = await tx.departure.findUnique({ where: { id: current.departureId } });
+        if (!departure || !departure.isAvailable) throw new Error("DEPARTURE_UNAVAILABLE");
+
+        if (departure.cabinsLeft !== null) {
+          const updated = await tx.departure.updateMany({
+            where: { id: departure.id, cabinsLeft: { gt: 0 }, isAvailable: true },
+            data: { cabinsLeft: { decrement: 1 } }
+          });
+          if (updated.count !== 1) throw new Error("SOLD_OUT");
+
+          const refreshed = await tx.departure.findUnique({ where: { id: departure.id } });
+          if (refreshed?.cabinsLeft === 0) {
+            await tx.departure.update({ where: { id: departure.id }, data: { isAvailable: false } });
+          }
+        }
+
+        return tx.bookingInquiry.update({
+          where: { id },
+          data: { status: nextStatus, inventoryCommitted: true }
+        });
+      }
+
+      // Once inventory is committed we do not automatically restore it on cancellation.
+      // Operations should explicitly reopen inventory after checking supplier terms.
+      return tx.bookingInquiry.update({ where: { id }, data: { status: nextStatus } });
     });
+
     return NextResponse.json({ booking });
-  } catch {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "SOLD_OUT") return NextResponse.json({ error: "This departure is sold out and cannot be confirmed." }, { status: 409 });
+    if (code === "DEPARTURE_UNAVAILABLE") return NextResponse.json({ error: "This departure is no longer available." }, { status: 409 });
+    if (code === "BOOKING_NOT_FOUND") return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    return NextResponse.json({ error: "Unable to update booking" }, { status: 400 });
   }
 }
