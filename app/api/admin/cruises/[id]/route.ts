@@ -2,8 +2,10 @@ import { CruiseStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
+import { sameOrigin } from "@/lib/csrf";
 
-export async function PATCH(request: Request,{params}:{params:Promise<{id:string}>}) {
+export async function PATCH(request: Request,{
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });params}:{params:Promise<{id:string}>}) {
   if (!(await requireAdminPermission(request,"inventory:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await request.json();
