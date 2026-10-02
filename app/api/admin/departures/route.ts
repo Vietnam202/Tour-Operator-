@@ -20,6 +20,7 @@ export async function POST(request: Request) {
         departureDate: new Date(body.departureDate),
         durationNights: Number(body.durationNights || 1),
         priceFrom: Number(body.priceFrom),
+        netCostFrom: body.netCostFrom === "" || body.netCostFrom == null ? null : Math.max(0, Number(body.netCostFrom)),
         holidaySurcharge: Number(body.holidaySurcharge || 0),
         currency: body.currency || "USD",
         cabinsLeft: body.cabinsLeft === "" || body.cabinsLeft == null ? null : Number(body.cabinsLeft),
