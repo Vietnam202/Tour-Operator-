@@ -33,7 +33,12 @@ After deployment:
 - `GET /api/health` must return HTTP 200. This verifies PostgreSQL connectivity.
 - Sign in at `/admin/login`.
 - Confirm an Operations user cannot create payment requests.
-- Create a test booking and confirm it. Verify supplier-confirmation, payment, passport and pre-departure tasks are created once only.\n- Create a payment request and verify the PAYMENT task moves to `IN_PROGRESS`.\n- Record a successful full payment event and verify the PAYMENT task becomes `DONE`.\n- Confirm the supplier and verify the SUPPLIER_CONFIRMATION task becomes `DONE`.\n- Verify `/admin/operations` shows overdue work/upcoming departures and `/admin/finance` shows supplier payable, expenses and actual/accrued profit.\n- Verify the voucher remains unavailable until the required payment state is recorded.
+- Create a test booking and confirm it. Verify supplier-confirmation, payment, passport and pre-departure tasks are created once only.
+- Create a payment request and verify the PAYMENT task moves to `IN_PROGRESS`.
+- Record a successful full payment event and verify the PAYMENT task becomes `DONE`.
+- Confirm the supplier and verify the SUPPLIER_CONFIRMATION task becomes `DONE`.
+- Verify `/admin/operations` shows overdue work/upcoming departures and `/admin/finance` shows supplier payable, expenses and actual/accrued profit.
+- Verify the voucher remains unavailable until the required payment state is recorded.
 
 ## 5. Rollback
 Application rollback: redeploy the previous known-good image/commit.
