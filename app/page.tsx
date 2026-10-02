@@ -53,7 +53,7 @@ export default function Home() {
           <span><b>HALONG CRUISE<br/>ADVISOR</b><small>Your Local Cruise Expert</small></span>
         </a>
         <nav>
-          <a href="#cruises">Cruises</a><a href="#destinations">Destinations</a>
+          <a href="/cruises">Cruises</a><a href="#destinations">Destinations</a>
           <a href="#guide">Travel Guide</a><a href="#why-us">About Us</a><a href="#contact">Contact</a>
         </nav>
         <div className="headerActions"><span>USD⌄</span><a className="button small" href="#search">Plan Your Trip</a></div>
@@ -83,7 +83,7 @@ export default function Home() {
       </section>
 
       <section id="cruises" className="section shell">
-        <div className="sectionHead"><div><span className="eyebrow">FEATURED CRUISES</span><h2>Most Popular Halong Bay Cruises</h2></div><a href="#">View all cruises →</a></div>
+        <div className="sectionHead"><div><span className="eyebrow">FEATURED CRUISES</span><h2>Most Popular Halong Bay Cruises</h2></div><a href="/cruises">View all cruises →</a></div>
         <div className="cruiseGrid">
           {cruises.map((c) => (
             <article className="cruiseCard" key={c.name}>
@@ -97,7 +97,7 @@ export default function Home() {
                 <p>⌖ {c.route}</p>
                 <div className="meta"><span>▣ {c.duration}</span><span>♨ All meals included</span><span>☆ 5-star</span></div>
                 <div className="priceRow"><div><del>US$ {c.oldPrice}</del><strong>US$ {c.price}</strong><small>/ person</small></div><span className="save">Save {Math.round((1-c.price/c.oldPrice)*100)}%</span></div>
-                <button className="darkButton">Check Availability →</button>
+                <a className="darkButton linkButton homeCardButton" href="/cruises/stellar-of-the-seas">Check Availability →</a>
               </div>
             </article>
           ))}
