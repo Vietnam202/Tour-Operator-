@@ -18,6 +18,7 @@ export async function PATCH(request: Request,{params}:{params:Promise<{id:string
   if (body.badge !== undefined) data.badge = String(body.badge).trim().slice(0,60) || null;
   if (body.heroImage !== undefined) data.heroImage = String(body.heroImage).trim().slice(0,1000) || null;
   if (body.slug !== undefined) data.slug = String(body.slug).trim().toLowerCase().replace(/[^a-z0-9-]/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"");
+  if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
   if (body.status !== undefined) {
     const status = String(body.status) as CruiseStatus;
     if (!Object.values(CruiseStatus).includes(status)) return NextResponse.json({ error:"Invalid cruise status" },{status:400});
