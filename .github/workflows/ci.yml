@@ -30,11 +30,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://hca_ci:ci-only-disposable-password@127.0.0.1:5432/hca_ci
       NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
-      # The production HTTP process is exercised directly at this explicit local origin.
-      # Do not infer trusted browser origins from Host or proxy headers.
       ADDITIONAL_STAFF_ORIGINS: http://127.0.0.1:3000
       NEXT_TELEMETRY_DISABLED: 1
       BOOKING_WEBHOOK_URL: ""
+      # A configured key alone must not enable the legacy authorization path.
+      ENABLE_LEGACY_ADMIN_API_KEY: "false"
       ADMIN_API_KEY: ci-placeholder-key-that-is-longer-than-32-characters
       PAYMENT_WEBHOOK_SECRET: ci-placeholder-secret-that-is-not-used-for-real-payments
     steps:

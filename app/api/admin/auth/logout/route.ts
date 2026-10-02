@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashSessionToken } from "@/lib/admin-auth";
-import { sameOrigin } from "@/lib/csrf";
+import { readStaffCookie, STAFF_COOKIE_NAME, staffCookieOptions } from "@/lib/staff-session";
+import { requireStaffOrigin, staffHttpError, staffResponseHeaders } from "@/lib/staff-http";
 
-function sessionToken(request:Request) {
-  const raw=request.headers.get("cookie")||"";
-  return raw.split(";").map(v=>v.trim()).find(v=>v.startsWith("hca_staff_session="))?.split("=")[1]||null;
-}
-export async function POST(request:Request) {
-  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
-  const token=sessionToken(request);
-  if(token) await prisma.staffSession.deleteMany({where:{tokenHash:hashSessionToken(decodeURIComponent(token))}});
-  const response=NextResponse.json({ok:true});
-  response.cookies.set("hca_staff_session","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0});
-  return response;
+export async function POST(request: Request) {
+  try {
+    requireStaffOrigin(request);
+    const { token } = readStaffCookie(request);
+    if (token) await prisma.staffSession.deleteMany({ where: { tokenHash: hashSessionToken(token) } });
+    const response = NextResponse.json({ ok: true }, { headers: staffResponseHeaders });
+    response.cookies.set(STAFF_COOKIE_NAME, "", staffCookieOptions(0));
+    return response;
+  } catch (error) {
+    // Do not claim server-side logout succeeded if database revocation failed.
+    return staffHttpError(error);
+  }
 }

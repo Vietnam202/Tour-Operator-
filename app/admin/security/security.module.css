@@ -1,0 +1,17 @@
+.utility{display:flex;justify-content:flex-end;gap:24px;padding:12px max(20px,calc((100vw - 1180px)/2));background:#eef3f4;font-size:14px;border-bottom:1px solid var(--line)}
+.utility a{text-decoration:underline;text-underline-offset:4px}.utility a[aria-current=page]{font-weight:700}
+.page{min-height:calc(100vh - 44px);padding:40px 20px 80px;background:#f6f8f8}
+.content{width:min(880px,100%);margin:0 auto}
+.header h1{font:36px Georgia,serif;margin:12px 0}.header p{line-height:1.7;color:#4c626e;margin-bottom:28px}
+.card{padding:26px;border:1px solid var(--line);border-radius:12px;background:white;margin-top:20px}
+.card h2{font-size:22px;margin:0 0 12px}.card p{line-height:1.7}.muted{color:#4c626e;font-size:14px;line-height:1.6}
+.controls{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.button{padding:12px 16px;border:1px solid #466675;border-radius:6px;background:#fff;color:#12394c;font:600 14px Arial,sans-serif;cursor:pointer}
+.primary{background:var(--navy);color:#fff}.danger{border-color:#9b2828;color:#9b2828}
+.button:disabled{opacity:.55;cursor:not-allowed}.button:focus-visible,.utility a:focus-visible{outline:3px solid #b77900;outline-offset:4px}
+.sessions{padding:0;list-style:none;margin:18px 0 0}.session{padding:18px 0;border-top:1px solid var(--line)}
+.session strong{display:block;margin-bottom:8px}.session dl{display:grid;grid-template-columns:110px 1fr;gap:8px;margin:0;font-size:14px}.session dd{margin:0;overflow-wrap:anywhere}.session dt{color:#4c626e}
+.error{background:#fff2f2;border:1px solid #b83b3b;padding:14px;border-radius:6px;line-height:1.6;margin:20px 0;color:#8f2222}
+.success{background:#edf9f2;border:1px solid #2b8055;padding:14px;border-radius:6px;line-height:1.6;margin:20px 0;color:#155637}
+.confirm{border:2px solid #a52b2b;background:#fff8f8;border-radius:8px;padding:18px;margin-top:20px}.confirm h3{margin-top:0}
+@media(max-width:600px){.page{padding:24px 14px 80px}.header h1{font-size:30px}.card{padding:20px}.utility{padding:12px 14px;justify-content:space-between;font-size:13px}.controls{flex-direction:column}.button{width:100%;text-align:center}}
