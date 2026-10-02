@@ -3,13 +3,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { notifyBookingConfirmed } from "@/lib/notifications";
+import { sameOrigin } from "@/lib/csrf";
 
 const allowed = new Set(Object.values(BookingStatus));
 
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 }); params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await requireAdminPermission(request,"bookings:write"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
