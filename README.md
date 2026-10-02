@@ -1,8 +1,6 @@
-# VTA Unified OS
+# VTA RC6.2 Static Preview
 
-RC6.2 (VS1) testing release.
+Synthetic session data only. Reload resets changes. No PHP API, private configuration, database or external providers are deployed on this branch.
 
-- Source and test guide: [codex/Vietnam/rc6.2-testing](https://github.com/Vietnam202/Tour-Operator-/tree/codex/Vietnam/rc6.2-testing)
-- Static Preview: [codex/Vietnam/rc6.2-preview](https://github.com/Vietnam202/Tour-Operator-/tree/codex/Vietnam/rc6.2-preview)
-
-The Preview uses synthetic session data. The PHP/MariaDB application requires a private configuration and migrations through 022. Hosting deployment has not been performed.
+Source: https://github.com/Vietnam202/Tour-Operator-/tree/codex/Vietnam/rc6.2-testing
+Preview: https://vietnam202.github.io/Tour-Operator-/
