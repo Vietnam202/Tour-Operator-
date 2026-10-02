@@ -31,6 +31,8 @@ export async function calculateQuote(input: QuoteInput) {
 
   const adultRate = departure?.priceFrom ?? cabin.basePrice;
   const childRate = Math.round(adultRate * cabin.childRatePct / 100);
+  const adultCostRate = departure?.netCostFrom ?? cabin.netCost ?? 0;
+  const childCostRate = Math.round(adultCostRate * cabin.childRatePct / 100);
   const occupancy = adults + children;
   const singleSupplement = occupancy === 1 ? cabin.singleSupplement : 0;
 
@@ -39,9 +41,17 @@ export async function calculateQuote(input: QuoteInput) {
     input.transferType === "shared" ? 35 :
     input.transferType === "private" ? 95 : 0;
 
+  // MVP supplier transfer costs. Move these into contracted transfer products later.
+  const transferCost =
+    input.transferType === "shared" ? 20 :
+    input.transferType === "private" ? 70 : 0;
+
   const passengerSubtotal = adults * adultRate + children * childRate + singleSupplement;
+  const supplierPassengerCost = adults * adultCostRate + children * childCostRate;
   const holidaySurcharge = departure?.holidaySurcharge ?? 0;
   const total = passengerSubtotal + holidaySurcharge + transferPerBooking;
+  const quotedCost = supplierPassengerCost + transferCost;
+  const quotedMargin = total - quotedCost;
 
   return {
     currency: departure?.currency ?? cabin.currency,
@@ -56,10 +66,16 @@ export async function calculateQuote(input: QuoteInput) {
     children,
     adultRate,
     childRate,
+    adultCostRate,
+    childCostRate,
     singleSupplement,
     passengerSubtotal,
     holidaySurcharge,
     transfer: transferPerBooking,
+    transferCost,
+    quotedCost,
+    quotedMargin,
+    marginPct: total > 0 ? Math.round((quotedMargin / total) * 1000) / 10 : 0,
     total
   };
 }
