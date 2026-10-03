@@ -23,14 +23,14 @@ function child(key: string, attempts: number) {
     console.log(JSON.stringify({ allowed, blocked, retryAfter }));
   `;
   return new Promise<{ allowed: number; blocked: number; retryAfter: number }>((resolve, reject) => {
-    const process = spawn("npx", ["tsx", "-e", script, key, String(attempts)], {
-      cwd: process.cwd(), env: { ...globalThis.process.env, RATE_LIMIT_BACKEND: "redis" }, stdio: ["ignore", "pipe", "pipe"],
+    const childProcess = spawn("npx", ["tsx", "-e", script, key, String(attempts)], {
+      cwd: process.cwd(), env: { ...process.env, RATE_LIMIT_BACKEND: "redis" }, stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "", stderr = "";
-    process.stdout.on("data", chunk => stdout += chunk);
-    process.stderr.on("data", chunk => stderr += chunk);
-    process.on("error", reject);
-    process.on("close", code => {
+    childProcess.stdout.on("data", chunk => stdout += chunk);
+    childProcess.stderr.on("data", chunk => stderr += chunk);
+    childProcess.on("error", reject);
+    childProcess.on("close", code => {
       if (code !== 0) return reject(new Error(stderr || `child exited ${code}`));
       try { resolve(JSON.parse(stdout.trim().split("\n").at(-1)!)); } catch (error) { reject(error); }
     });
