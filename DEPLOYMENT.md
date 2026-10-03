@@ -69,3 +69,11 @@ The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPD
 Delivery is at-least-once across network ambiguity. Receivers should honor the stable `Idempotency-Key` header (and `X-Notification-Id`) so a webhook accepted upstream but followed by a lost response can be safely retried without duplicating side effects.
 
 Do not place secrets, session tokens, authorization headers, cookies, or payment bearer tokens in notification payloads.
+
+The long-running worker handles `SIGINT` and `SIGTERM` by finishing the current claimed batch and then disconnecting from PostgreSQL. Events that exhaust `maxAttempts` remain in `FAILED` for operator inspection. After fixing the destination or configuration, requeue them without creating duplicate rows:
+
+```bash
+npm run notifications:process -- --requeue-failed
+```
+
+Requeue resets delivery-attempt metadata but preserves each row's stable ID and idempotency key, so receivers can continue deduplicating retries.
