@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -33,21 +33,47 @@ jobs:
       ADDITIONAL_STAFF_ORIGINS: http://127.0.0.1:3000
       NEXT_TELEMETRY_DISABLED: 1
       BOOKING_WEBHOOK_URL: ""
+      # A configured key alone must not enable the legacy authorization path.
       ENABLE_LEGACY_ADMIN_API_KEY: "false"
       ADMIN_API_KEY: ci-placeholder-key-that-is-longer-than-32-characters
       PAYMENT_WEBHOOK_SECRET: ci-placeholder-secret-that-is-not-used-for-real-payments
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: chore/lockfile-bootstrap-node20
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Generate and commit Node 20 lockfile
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate Prisma schema
+        run: npx prisma validate
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Apply committed migrations to disposable database
+        run: npm run db:migrate
+      - name: Verify migration and schema agreement
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Production HTTP and PostgreSQL integration tests
+        env:
+          HCA_INTEGRATION_TESTS: "1"
+          HCA_TEST_BASE_URL: http://127.0.0.1:3000
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "build: add Node 20 package lock" || exit 0
-          git push origin HEAD:chore/lockfile-bootstrap-node20
+          set -euo pipefail
+          npm run start -- --hostname 127.0.0.1 > /tmp/hca-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --max-time 2 -fsS http://127.0.0.1:3000/api/live > /dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/hca-server.log; exit 1; fi
+          npm run test:integration
+          npm run smoke -- http://127.0.0.1:3000
+      - name: Server diagnostics on failure
+        if: failure()
+        run: test ! -f /tmp/hca-server.log || tail -n 100 /tmp/hca-server.log
