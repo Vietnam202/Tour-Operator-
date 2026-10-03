@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 
 type Voucher = { reference: string; cruiseName: string; cabinName: string | null; primaryGuest: string;
   departureDate: string; durationNights: number; adults: number; children: number; transferType: string | null;
-  estimatedTotal: number; amountPaid: number; currency: string; paymentLabel: string };
+  estimatedTotal: number; currency: string };
 type StaffAccess = { mode: "staff"; bookingId: string; canManage: boolean };
 
 export default function VoucherPage() {
@@ -44,7 +44,7 @@ export default function VoucherPage() {
       : <>
         <header><div><span className="eyebrow">HALONG CRUISE ADVISOR</span><h1>Cruise Travel Voucher</h1></div>
           <div className="voucherRef"><small>BOOKING REFERENCE</small><b>{voucher.reference}</b></div></header>
-        <div className="voucherStatus">Booking and operator confirmed · {voucher.paymentLabel}</div>
+        <div className="voucherStatus">Booking and operator confirmed</div>
         <section><h2>{voucher.cruiseName}</h2><p>{voucher.cabinName || "Confirmed cabin"}</p></section>
         <div className="voucherGrid">
           <div><small>Lead guest</small><b>{voucher.primaryGuest}</b></div>
@@ -53,8 +53,7 @@ export default function VoucherPage() {
           <div><small>Guests</small><b>{voucher.adults} adults · {voucher.children} children</b></div>
           <div><small>Transfer</small><b>{voucher.transferType || "Not selected"}</b><span>Reconfirm pickup details with our team.</span></div>
         </div>
-        <div className="voucherMoney"><div><span>Trip total</span><b>{money(voucher.estimatedTotal)}</b></div>
-          <div><span>Payment received</span><b>{money(voucher.amountPaid)}</b></div></div>
+        <div className="voucherMoney"><div><span>Trip total</span><b>{money(voucher.estimatedTotal)}</b></div></div>
         <div className="voucherNotes"><h3>Before departure</h3><p>Keep this voucher private. Reconfirm the harbour, boarding time and pickup details with our operations team.</p></div>
         <button className="darkButton voucherPrint" onClick={() => window.print()}>Print / Save as PDF</button>
       </>}
