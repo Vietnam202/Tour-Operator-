@@ -10,8 +10,6 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     include:{
       assignedTo:{select:{id:true,name:true,email:true,role:true}},
       cruise:{select:{id:true,name:true,slug:true,supplierId:true,supplier:{select:{id:true,name:true,email:true,phone:true}}}},
-      payments:{orderBy:{createdAt:"desc"}},
-      paymentRequests:{orderBy:{createdAt:"desc"}},
       expenses:{orderBy:{createdAt:"desc"}},
       supplierPayables:{include:{supplier:{select:{id:true,name:true,email:true,phone:true}}},orderBy:{createdAt:"desc"}},
       tasks:{include:{owner:{select:{id:true,name:true,role:true}}},orderBy:[{status:"asc"},{dueAt:"asc"}]},
