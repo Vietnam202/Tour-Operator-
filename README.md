@@ -25,6 +25,9 @@ Cruise inventory → server quote → booking enquiry → CRM assignment/follow-
 ## Required environment variables
 
 - `DATABASE_URL` — PostgreSQL connection string.
+- `REDIS_URL` — shared Redis connection string; required by production rate limiting.
+- `TRUSTED_PROXY_HOPS` — number of trusted reverse proxies that append to `X-Forwarded-For`; required in production.
+- `RATE_LIMIT_BACKEND` — optional local/test override. Defaults to memory outside production; production rejects the memory backend.
 - `ADMIN_API_KEY` — optional legacy migration fallback for admin APIs; remove after staff-session rollout is complete.
 - `NEXT_PUBLIC_SITE_URL` — canonical application URL.
 - `BOOKING_WEBHOOK_URL` — optional automation endpoint for booking/payment events.
@@ -62,6 +65,8 @@ The data model supports deposits, balances, refunds, idempotent transactions, ex
 
 ## Production notes
 
-The current public API rate limiter is process-memory based. Replace it with a shared Redis/KV limiter for serverless or multi-instance deployment. Configure HTTPS, security headers, backups, monitoring and error reporting before launch.
+Quote, booking and staff-login throttles use an atomic shared Redis limiter in production. Production requires `REDIS_URL` and never falls back to process memory if Redis is missing or unavailable. Local/test defaults to the in-memory adapter unless `RATE_LIMIT_BACKEND=redis` is selected.
+
+Client IPs are resolved using a trusted-proxy policy rather than trusting the left-most `X-Forwarded-For` value. Set `TRUSTED_PROXY_HOPS` to the exact number of reverse proxies in front of the application, configure those proxies to append/overwrite forwarding headers safely, and do not expose the application origin directly. Configure HTTPS, security headers, backups, monitoring and error reporting before launch.
 
 Seed cruise content, prices and reviews are demo data and must be replaced with verified operator inventory before going live.
