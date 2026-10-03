@@ -1,4 +1,4 @@
-import { BookingTaskType, BookingTaskStatus, PaymentStatus, Prisma } from "@prisma/client";
+import { BookingTaskType, BookingTaskStatus, Prisma } from "@prisma/client";
 import { withBookingLock } from "@/lib/booking-lock";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -25,10 +25,6 @@ export async function ensureConfirmedBookingTasksTx(tx: Prisma.TransactionClient
   if (booking.supplierConfirmationStatus !== "CONFIRMED") {
     await ensureTask(tx, bookingId, BookingTaskType.SUPPLIER_CONFIRMATION,
       "Confirm reservation with cruise operator", now, booking.assignedToId);
-  }
-  if (booking.paymentStatus !== PaymentStatus.PAID) {
-    const due = new Date(Math.min(now.getTime() + DAY, dueBefore(booking.departureDate, 3, now).getTime()));
-    await ensureTask(tx, bookingId, BookingTaskType.PAYMENT, "Collect required guest payment", due, booking.assignedToId);
   }
   await ensureTask(tx, bookingId, BookingTaskType.PASSPORT, "Collect and verify passport details",
     dueBefore(booking.departureDate, 3, now), booking.assignedToId);
@@ -63,25 +59,3 @@ export function completeTasksByType(bookingId: string, type: BookingTaskType, me
   });
 }
 
-export function syncPaymentTasks(bookingId: string, _paymentStatus: PaymentStatus) {
-  return withBookingLock(bookingId, async tx => {
-    const b = await tx.bookingInquiry.findUniqueOrThrow({ where: { id: bookingId } });
-    if (b.status === "CONFIRMED" && b.paymentStatus === PaymentStatus.PAID) {
-      await completeTx(tx, bookingId, BookingTaskType.PAYMENT, "Payment task completed after payment reconciliation");
-    }
-  });
-}
-
-export function markPaymentTaskInProgress(bookingId: string) {
-  return withBookingLock(bookingId, async tx => {
-    const b = await tx.bookingInquiry.findUniqueOrThrow({ where: { id: bookingId } });
-    if (b.status !== "CONFIRMED") return;
-    const updated = await tx.bookingTask.updateMany({
-      where: { bookingId, type: BookingTaskType.PAYMENT, status: BookingTaskStatus.OPEN },
-      data: { status: BookingTaskStatus.IN_PROGRESS },
-    });
-    if (updated.count) await tx.bookingActivity.create({ data: {
-      bookingId, type: "AUTOMATION_TASK_PROGRESS", message: "Payment request created; payment task is in progress",
-    } });
-  });
-}
