@@ -69,6 +69,23 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.equal(receivedIds.filter(id => id === first.id).length, 2);
     assert.equal(await prisma.notificationOutbox.count({ where: { idempotencyKey } }), 1);
 
+    const terminalKey = `ci:terminal:${crypto.randomUUID()}`;
+    const terminal = await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "booking.created",
+      idempotencyKey: terminalKey,
+      aggregateType: "BookingInquiry",
+      aggregateId: "ci-terminal-booking",
+      payload: { reference: "CI-TERMINAL" },
+    }));
+    targetStatus = 503;
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-terminal" });
+    const terminalAfter = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: terminalKey } });
+    assert.equal(terminalAfter.id, terminal.id);
+    assert.equal(terminalAfter.status, "FAILED");
+    assert.equal(terminalAfter.attemptCount, 1);
+    assert.ok(terminalAfter.lastError);
+    assert.equal(terminalAfter.deliveredAt, null);
+
     const failedKey = `ci:failed:${crypto.randomUUID()}`;
     const failed = await prisma.notificationOutbox.create({
       data: {
