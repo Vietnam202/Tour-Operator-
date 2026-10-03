@@ -109,6 +109,21 @@ export async function getNotificationOutboxStatus(client: PrismaClient = prisma)
   };
 }
 
+export async function pruneDeliveredNotifications(
+  client: PrismaClient = prisma,
+  retentionDays = 30,
+) {
+  const days = Math.max(1, Math.floor(retentionDays));
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const result = await client.notificationOutbox.deleteMany({
+    where: {
+      status: "DELIVERED",
+      deliveredAt: { lt: cutoff },
+    },
+  });
+  return { deleted: result.count, cutoff };
+}
+
 export async function requeueFailedNotifications(client: PrismaClient = prisma) {
   const result = await client.notificationOutbox.updateMany({
     where: { status: "FAILED" },
