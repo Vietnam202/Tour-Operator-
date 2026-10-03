@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { getNotificationOutboxStatus, processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
+import { getNotificationOutboxStatus, processNotificationOutbox, pruneDeliveredNotifications, requeueFailedNotifications } from "../lib/notification-outbox";
 
 let stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -13,6 +13,14 @@ async function main() {
   const once = process.argv.includes("--once");
   if (process.argv.includes("--status")) {
     console.log(JSON.stringify(await getNotificationOutboxStatus(), null, 2));
+    return;
+  }
+  if (process.argv.includes("--prune-delivered")) {
+    const retentionArg = process.argv.find(arg => arg.startsWith("--retention-days="));
+    const retentionDays = retentionArg ? Number(retentionArg.split("=")[1]) : 30;
+    if (!Number.isFinite(retentionDays) || retentionDays < 1) throw new Error("--retention-days must be at least 1");
+    const result = await pruneDeliveredNotifications(prisma, retentionDays);
+    console.log(`Deleted ${result.deleted} delivered notification event(s) older than ${Math.floor(retentionDays)} day(s).`);
     return;
   }
   if (process.argv.includes("--requeue-failed")) {
