@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
     const email = body.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new StaffHttpError("Provide a valid email and password.", 400);
-    const limit = staffLoginThrottle(email);
+    const limit = await staffLoginThrottle(request, email);
     if (!limit.allowed) return NextResponse.json({ error: "Too many sign-in attempts. Try again later." }, {
       status: 429, headers: { ...staffResponseHeaders, "Retry-After": String(limit.retryAfter) },
     });
