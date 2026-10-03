@@ -1,18 +1,25 @@
 import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
 import { enqueueNotificationTx } from "@/lib/notification-outbox";
+import { getPaymentWebhookVerifier, PaymentWebhookVerificationError } from "@/lib/payment-webhook-verifiers";
 
-
-// This generic integration is not a production payment-provider signature verifier.
 export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
-  const secret = process.env.PAYMENT_WEBHOOK_SECRET;
-  if (!secret || request.headers.get("x-webhook-secret") !== secret) {
+  const verifier = getPaymentWebhookVerifier(provider);
+  if (!verifier) {
+    return NextResponse.json({ error: "Unsupported payment webhook provider" }, { status: 404 });
+  }
+
+  let body;
+  try {
+    body = await verifier.verify(request);
+  } catch (error) {
+    if (error instanceof PaymentWebhookVerificationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
   }
-  const body = await request.json();
   const externalEventId = String(body.eventId || "");
   if (!externalEventId || !body.bookingId || !body.amount || !body.status) return NextResponse.json({ error: "Invalid payment event" }, { status: 400 });
   try {

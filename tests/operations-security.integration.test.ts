@@ -115,7 +115,32 @@ test("Concurrent operations and private customer voucher access", async t => {
       assert.ok(!/token|secret|session|authorization|cookie/i.test(payloadText));
     });
 
-    await t.test("payment webhook replay creates one payment.updated outbox event", async () => {
+    await t.test("production mode rejects an unregistered provider before parsing and without payment writes", async () => {
+      const eventId = `ci-unregistered-${randomUUID()}`;
+      const idempotencyKey = `unregistered:${eventId}`;
+      const before = {
+        webhookEvents: await prisma.webhookEvent.count({ where: { provider: "unregistered", externalEventId: eventId } }),
+        payments: await prisma.paymentTransaction.count({ where: { idempotencyKey } }),
+        outbox: await prisma.notificationOutbox.count({ where: { idempotencyKey: `payment.updated:unregistered:${eventId}` } }),
+      };
+      const response = await fetch(base + "/api/payments/webhook/unregistered", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-webhook-secret": process.env.PAYMENT_WEBHOOK_SECRET || "",
+        },
+        // Deliberately malformed JSON: provider rejection must happen before body parsing.
+        body: "{not-json",
+        signal: AbortSignal.timeout(20000),
+      });
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), { error: "Unsupported payment webhook provider" });
+      assert.equal(await prisma.webhookEvent.count({ where: { provider: "unregistered", externalEventId: eventId } }), before.webhookEvents);
+      assert.equal(await prisma.paymentTransaction.count({ where: { idempotencyKey } }), before.payments);
+      assert.equal(await prisma.notificationOutbox.count({ where: { idempotencyKey: `payment.updated:unregistered:${eventId}` } }), before.outbox);
+    });
+
+    await t.test("payment webhook CI verifier replay is idempotent", async () => {
       const eventId = `ci-payment-${randomUUID()}`;
       const path = "/api/payments/webhook/ci";
       const body = { eventId, bookingId: same.id, amount: 100, status: "SUCCEEDED", kind: "DEPOSIT", currency: "USD" };
@@ -128,6 +153,8 @@ test("Concurrent operations and private customer voucher access", async t => {
       assert.equal(replay.data.duplicate, true);
       const key = `payment.updated:ci:${eventId}`;
       assert.equal(await prisma.notificationOutbox.count({ where: { idempotencyKey: key } }), 1);
+      assert.equal(await prisma.webhookEvent.count({ where: { provider: "ci", externalEventId: eventId } }), 1);
+      assert.equal(await prisma.paymentTransaction.count({ where: { idempotencyKey: `ci:${eventId}` } }), 1);
       const outbox = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: key } });
       outboxIds.push(outbox.id);
       assert.equal(outbox.status, "PENDING");

@@ -28,7 +28,7 @@ Cruise inventory → server quote → booking enquiry → CRM assignment/follow-
 - `ADMIN_API_KEY` — optional legacy migration fallback for admin APIs; remove after staff-session rollout is complete.
 - `NEXT_PUBLIC_SITE_URL` — canonical application URL.
 - `BOOKING_WEBHOOK_URL` — optional automation endpoint for booking/payment events.
-- `PAYMENT_WEBHOOK_SECRET` — shared secret for the generic payment webhook until a provider-specific signature verifier is implemented.
+- `PAYMENT_WEBHOOK_SECRET` — development/integration-only secret for the `local`/`ci` payment webhook adapters. It is not a production payment-provider credential and cannot enable a generic production verifier.
 
 ## Production database
 
@@ -58,7 +58,11 @@ Admin uses staff sessions with role-based access control. `ADMIN_API_KEY` remain
 
 ## Payments
 
-The data model supports deposits, balances, refunds, idempotent transactions, expiring customer payment requests, supplier payables and booking expenses. No real payment provider is connected yet. Provider-specific signature verification and checkout session creation must be implemented before accepting card payments.
+The data model supports deposits, balances, refunds, idempotent transactions, expiring customer payment requests, supplier payables and booking expenses. No real payment provider is connected yet.
+
+Inbound payment webhooks are fail-closed. The route resolves `{provider}` through `lib/payment-webhook-verifiers.ts` before reading the request body or opening a database transaction. Unknown providers are rejected without creating `WebhookEvent`, `PaymentTransaction`, or notification-outbox rows. The shared-secret adapters are restricted to disposable CI (`ci`) or non-production local development (`local`); production cannot fall back to the generic secret.
+
+Before accepting card payments, implement a provider-specific adapter that verifies the provider's native signature against the exact raw request bytes (plus provider timestamp/replay requirements), register only that adapter in the production verifier registry, add provider fixtures/tests for valid, invalid, and replayed events, and configure its credentials in the deployment secret store. Checkout/session creation must also be implemented for the selected provider.
 
 ## Production notes
 
