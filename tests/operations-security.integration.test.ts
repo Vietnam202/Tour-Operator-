@@ -87,6 +87,17 @@ test("Concurrent operations and private customer voucher access", async t => {
       return { ...result.data, token: token! };
     }
 
+    await t.test("staff login account throttle is shared and returns Retry-After", async () => {
+      const email = `missing-${randomUUID()}@example.invalid`;
+      const headers = { "x-forwarded-for": `198.51.100.${Math.floor(Math.random() * 100) + 1}` };
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const result = await request("/api/admin/auth/login", { method: "POST", body: { email, password: "wrong-password" }, headers });
+        assert.equal(result.response.status, 401);
+      }
+      const blocked = await request("/api/admin/auth/login", { method: "POST", body: { email, password: "wrong-password" }, headers });
+      assert.equal(blocked.response.status, 429);
+      assert.ok(Number(blocked.response.headers.get("retry-after")) >= 1);
+    });
     await t.test("eight simultaneous confirmations reserve one cabin and one automated checklist", async () => {
       const outcomes = await Promise.all(Array.from({ length: 8 }, () => patch(same.id, { status: "CONFIRMED" })));
       for (const result of outcomes) assert.equal(result.response.status, 200, result.data.error);
