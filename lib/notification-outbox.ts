@@ -126,6 +126,24 @@ export async function requeueFailedNotifications(client: PrismaClient = prisma) 
   return { requeued: result.count };
 }
 
+function resolveWebhookUrl(raw: string | undefined) {
+  if (!raw) throw new Error("BOOKING_WEBHOOK_URL is not configured");
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("BOOKING_WEBHOOK_URL must be a valid absolute URL");
+  }
+  if (url.username || url.password) {
+    throw new Error("BOOKING_WEBHOOK_URL must not contain embedded credentials");
+  }
+  const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  if (url.protocol !== "https:" && !localHttp) {
+    throw new Error("BOOKING_WEBHOOK_URL must use HTTPS outside localhost");
+  }
+  return url.toString();
+}
+
 export async function processNotificationOutbox(options: ProcessOutboxOptions = {}) {
   const client = options.client ?? prisma;
   const batchSize = Math.min(100, Math.max(1, options.batchSize ?? 25));
@@ -171,11 +189,11 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
 
   let delivered = 0;
   let failed = 0;
-  const url = process.env.BOOKING_WEBHOOK_URL;
+  const rawUrl = process.env.BOOKING_WEBHOOK_URL;
 
   for (const event of claimed) {
     try {
-      if (!url) throw new Error("BOOKING_WEBHOOK_URL is not configured");
+      const url = resolveWebhookUrl(rawUrl);
       const response = await fetch(url, {
         method: "POST",
         headers: {
