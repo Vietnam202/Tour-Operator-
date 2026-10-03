@@ -10,11 +10,13 @@ Set `DATABASE_URL` and `NEXT_PUBLIC_SITE_URL`. For the temporary migration perio
 For a new empty database:
 
 ```sh
-npm install
+npm ci --no-audit --no-fund
 npx prisma generate
 npm run db:migrate
 npm run db:seed
 ```
+
+`npm ci` requires the committed `package-lock.json` to match `package.json` and fails on a mismatch; do not replace it with `npm install` in build/deploy automation, because that can rewrite dependency resolution.
 
 Never run `prisma db push` against production.
 
