@@ -8,7 +8,7 @@ import { enqueueNotificationTx } from "@/lib/notification-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const limit = rateLimit(request, "booking", 8, 60_000);
+  const limit = await rateLimit(request, "booking", 8, 60_000);
   if (!limit.allowed) return NextResponse.json({ error: "Too many booking attempts. Please try again shortly." }, { status: 429, headers: { "Retry-After": String(limit.retryAfter) } });
   try {
     const body = asObject(await request.json());
