@@ -130,6 +130,32 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.ok(status.oldestPending);
     assert.ok(status.oldestPending.ageSeconds >= 0);
 
+    const unsafeUrlKey = `ci:unsafe-url:${crypto.randomUUID()}`;
+    await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "booking.created",
+      idempotencyKey: unsafeUrlKey,
+      payload: { reference: "CI-UNSAFE-URL" },
+    }));
+    process.env.BOOKING_WEBHOOK_URL = "http://example.com/webhook";
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-insecure-url" });
+    const insecureUrlEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: unsafeUrlKey } });
+    assert.equal(insecureUrlEvent.status, "FAILED");
+    assert.match(insecureUrlEvent.lastError || "", /must use HTTPS outside localhost/);
+
+    const credentialUrlKey = `ci:credential-url:${crypto.randomUUID()}`;
+    await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "booking.created",
+      idempotencyKey: credentialUrlKey,
+      payload: { reference: "CI-CREDENTIAL-URL" },
+    }));
+    process.env.BOOKING_WEBHOOK_URL = "https://user:password@example.com/webhook";
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-credential-url" });
+    const credentialUrlEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: credentialUrlKey } });
+    assert.equal(credentialUrlEvent.status, "FAILED");
+    assert.match(credentialUrlEvent.lastError || "", /must not contain embedded credentials/);
+
+    process.env.BOOKING_WEBHOOK_URL = `http://127.0.0.1:${address.port}`;
+
     await assert.rejects(
       prisma.$transaction(tx => enqueueNotificationTx(tx, {
         eventType: "payment.requested",
