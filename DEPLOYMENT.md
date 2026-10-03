@@ -97,3 +97,14 @@ npm run notifications:prune -- --retention-days=60
 
 The prune command deletes only rows with `status = DELIVERED` whose `deliveredAt` is older than the retention cutoff. It never deletes `PENDING`, `PROCESSING`, or `FAILED` events. Keep failed events until an operator has inspected and either requeued or otherwise resolved them. Schedule pruning periodically (for example, daily) in the production scheduler rather than running it inside the delivery worker loop.
 
+### Outbound webhook authentication
+
+Set `BOOKING_WEBHOOK_SECRET` in the worker secret store to authenticate notification deliveries. When configured, every delivery includes:
+
+- `x-webhook-timestamp`: Unix timestamp in seconds
+- `x-webhook-signature`: `v1=<hex HMAC-SHA256>`
+
+The signature input is the exact UTF-8 request body prefixed by the timestamp: `<timestamp>.<raw-body>`. Receivers should recompute the HMAC with `BOOKING_WEBHOOK_SECRET`, compare signatures using a timing-safe comparison, reject stale timestamps (for example, older than five minutes), and continue deduplicating by `idempotency-key` / `x-notification-id`.
+
+The signing secret is read only from the worker environment at delivery time. It is never written to `NotificationOutbox.payload` or included in the request body. Rotate the secret through the deployment secret store; during a coordinated rotation, update receiver and worker together.
+
