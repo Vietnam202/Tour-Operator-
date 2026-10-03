@@ -72,7 +72,7 @@ npm run notifications:status
 
 The status command reports counts by state, due pending work, stale processing leases, and the age of the oldest pending event. A growing `duePending` count or old pending age indicates the worker is stopped or the destination is failing; any `FAILED` rows require operator inspection before requeueing.
 
-The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Each HTTP attempt is bounded to 10 seconds by default; set `BOOKING_WEBHOOK_TIMEOUT_MS` to override it. Run at least one worker process in production. Multiple workers are supported.
+The worker requires `BOOKING_WEBHOOK_URL` to use HTTPS in staging/production and rejects URLs with embedded credentials. Plain HTTP is accepted only for localhost integration/development targets. It claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Each HTTP attempt is bounded to 10 seconds by default; set `BOOKING_WEBHOOK_TIMEOUT_MS` to override it. Run at least one worker process in production. Multiple workers are supported.
 
 Delivery is at-least-once across network ambiguity. Receivers should honor the stable `Idempotency-Key` header (and `X-Notification-Id`) so a webhook accepted upstream but followed by a lost response can be safely retried without duplicating side effects.
 
