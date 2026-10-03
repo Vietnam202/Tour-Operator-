@@ -5,8 +5,7 @@ import { BookingOperationError, withBookingLock } from "@/lib/booking-lock";
 export const voucherBookingSelect = {
   id: true, reference: true, cruiseName: true, cabinName: true, departureDate: true,
   durationNights: true, adults: true, children: true, primaryGuest: true, transferType: true,
-  estimatedTotal: true, amountPaid: true, amountRefunded: true, depositAmount: true,
-  currency: true, status: true, paymentStatus: true, inventoryCommitted: true,
+  estimatedTotal: true, currency: true, status: true, inventoryCommitted: true,
   supplierConfirmationStatus: true, supplierConfirmationRef: true,
 } satisfies Prisma.BookingInquirySelect;
 export type VoucherBooking = Prisma.BookingInquiryGetPayload<{ select: typeof voucherBookingSelect }>;
@@ -16,10 +15,6 @@ export function voucherReadiness(booking: VoucherBooking, now = new Date()): str
   if (booking.supplierConfirmationStatus !== "CONFIRMED" || !booking.supplierConfirmationRef?.trim()) return "Record the cruise operator's confirmation and reservation reference first.";
   const total = booking.estimatedTotal;
   if (total === null || !Number.isSafeInteger(total) || total <= 0) return "A verified positive booking total is required.";
-  if (booking.amountRefunded !== 0 || !["PAID", "PARTIALLY_PAID"].includes(booking.paymentStatus)) return "Review the recorded payment and any refunds before issuing a voucher.";
-  const required = booking.depositAmount !== null && booking.depositAmount > 0 && booking.depositAmount <= total
-    ? booking.depositAmount : total;
-  if (booking.amountPaid < required) return "The agreed deposit has not been received. Without a deposit plan, full payment is required.";
   const tripEnd = booking.departureDate.getTime() + (booking.durationNights + 1) * 86400000;
   if (tripEnd <= now.getTime()) return "This trip has ended; a new travel voucher cannot be issued.";
   return null;
@@ -30,9 +25,7 @@ export function publicVoucher(booking: VoucherBooking) {
     reference: booking.reference, cruiseName: booking.cruiseName, cabinName: booking.cabinName,
     primaryGuest: booking.primaryGuest, departureDate: booking.departureDate.toISOString(),
     durationNights: booking.durationNights, adults: booking.adults, children: booking.children,
-    transferType: booking.transferType, estimatedTotal: booking.estimatedTotal!,
-    amountPaid: booking.amountPaid - booking.amountRefunded, currency: booking.currency,
-    paymentLabel: booking.amountPaid >= booking.estimatedTotal! ? "Paid in full" : "Agreed deposit received",
+    transferType: booking.transferType, estimatedTotal: booking.estimatedTotal!, currency: booking.currency,
   };
 }
 
