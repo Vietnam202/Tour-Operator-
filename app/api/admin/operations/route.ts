@@ -25,7 +25,6 @@ export async function GET(request:Request){
         {followUpAt:{lte:horizon}},
         {departureDate:{gte:new Date(now.getTime()-DAY),lte:horizon}},
         {supplierConfirmationStatus:{not:"CONFIRMED"}},
-        {paymentStatus:{not:"PAID"}},
         {tasks:{some:{status:{in:["OPEN","IN_PROGRESS"]}}}}
       ]
     },
@@ -43,8 +42,7 @@ export async function GET(request:Request){
 
   const row=(b:any)=>({
     id:b.id,reference:b.reference,primaryGuest:b.primaryGuest,cruiseName:b.cruiseName,
-    departureDate:b.departureDate,status:b.status,paymentStatus:b.paymentStatus,
-    amountDue:Math.max(0,(b.estimatedTotal||0)-(b.amountPaid||0)+(b.amountRefunded||0)),
+    departureDate:b.departureDate,status:b.status,
     supplierConfirmationStatus:b.supplierConfirmationStatus,followUpAt:b.followUpAt,
     assignedTo:b.assignedTo,tasks:b.tasks,daysUntilDeparture:daysUntil(b.departureDate,now)
   });
@@ -55,7 +53,6 @@ export async function GET(request:Request){
     .filter((t:any)=>t.dueAt&&new Date(t.dueAt)<now)
     .map((t:any)=>({booking:b,task:t})));
   const supplierPending=normalized.filter(b=>b.status==="CONFIRMED"&&b.supplierConfirmationStatus!=="CONFIRMED");
-  const paymentDue=normalized.filter(b=>b.status==="CONFIRMED"&&b.amountDue>0);
   const passport=normalized.flatMap(b=>b.tasks.filter((t:any)=>t.type==="PASSPORT").map((t:any)=>({booking:b,task:t})));
   const transfer=normalized.flatMap(b=>b.tasks.filter((t:any)=>t.type==="TRANSFER_DETAILS").map((t:any)=>({booking:b,task:t})));
   const next1=normalized.filter(b=>b.status==="CONFIRMED"&&b.daysUntilDeparture>=0&&b.daysUntilDeparture<=1);
@@ -66,10 +63,10 @@ export async function GET(request:Request){
     generatedAt:now.toISOString(),
     counts:{
       overdueFollowUps:overdueFollowUps.length,overdueTasks:overdueTasks.length,
-      supplierPending:supplierPending.length,paymentDue:paymentDue.length,
+      supplierPending:supplierPending.length,
       passport:passport.length,transfer:transfer.length,
       next1:next1.length,next3:next3.length,next7:next7.length
     },
-    queues:{overdueFollowUps,overdueTasks,supplierPending,paymentDue,passport,transfer,next1,next3,next7}
+    queues:{overdueFollowUps,overdueTasks,supplierPending,passport,transfer,next1,next3,next7}
   },{headers:{"cache-control":"no-store"}});
 }
