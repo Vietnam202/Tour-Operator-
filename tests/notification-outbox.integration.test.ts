@@ -137,10 +137,14 @@ test("durable notification outbox persists, retries without duplicate rows, deli
       payload: { reference: "CI-UNSAFE-URL" },
     }));
     process.env.BOOKING_WEBHOOK_URL = "http://example.com/webhook";
-    await processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-insecure-url" });
+    await assert.rejects(
+      processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-insecure-url" }),
+      /must use HTTPS outside localhost/,
+    );
     const insecureUrlEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: unsafeUrlKey } });
-    assert.equal(insecureUrlEvent.status, "FAILED");
-    assert.match(insecureUrlEvent.lastError || "", /must use HTTPS outside localhost/);
+    assert.equal(insecureUrlEvent.status, "PENDING");
+    assert.equal(insecureUrlEvent.attemptCount, 0);
+    assert.equal(insecureUrlEvent.lastError, null);
 
     const credentialUrlKey = `ci:credential-url:${crypto.randomUUID()}`;
     await prisma.$transaction(tx => enqueueNotificationTx(tx, {
@@ -149,10 +153,14 @@ test("durable notification outbox persists, retries without duplicate rows, deli
       payload: { reference: "CI-CREDENTIAL-URL" },
     }));
     process.env.BOOKING_WEBHOOK_URL = "https://user:password@example.com/webhook";
-    await processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-credential-url" });
+    await assert.rejects(
+      processNotificationOutbox({ client: prisma, baseDelayMs: 0, maxAttempts: 1, workerId: "ci-worker-credential-url" }),
+      /must not contain embedded credentials/,
+    );
     const credentialUrlEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: credentialUrlKey } });
-    assert.equal(credentialUrlEvent.status, "FAILED");
-    assert.match(credentialUrlEvent.lastError || "", /must not contain embedded credentials/);
+    assert.equal(credentialUrlEvent.status, "PENDING");
+    assert.equal(credentialUrlEvent.attemptCount, 0);
+    assert.equal(credentialUrlEvent.lastError, null);
 
     process.env.BOOKING_WEBHOOK_URL = `http://127.0.0.1:${address.port}`;
 

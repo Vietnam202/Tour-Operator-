@@ -152,6 +152,7 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
   const workerId = options.workerId ?? `worker-${process.pid}-${crypto.randomUUID()}`;
   const configuredTimeout = Number(process.env.BOOKING_WEBHOOK_TIMEOUT_MS || "10000");
   const deliveryTimeoutMs = Math.max(100, options.deliveryTimeoutMs ?? (Number.isFinite(configuredTimeout) ? configuredTimeout : 10_000));
+  const url = resolveWebhookUrl(process.env.BOOKING_WEBHOOK_URL);
 
   const claimed = await client.$transaction(async tx => {
     const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -189,11 +190,9 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
 
   let delivered = 0;
   let failed = 0;
-  const rawUrl = process.env.BOOKING_WEBHOOK_URL;
 
   for (const event of claimed) {
     try {
-      const url = resolveWebhookUrl(rawUrl);
       const response = await fetch(url, {
         method: "POST",
         headers: {
