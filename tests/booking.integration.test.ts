@@ -19,8 +19,9 @@ function assertPublic(value: unknown): void {
   }
 }
 async function request(path: string, body?: unknown, extraHeaders: Record<string, string> = {}) {
-  const response = await fetch(base + path, body === undefined ? { headers: extraHeaders } : {
-    method: "POST", headers: { "Content-Type": "application/json", ...extraHeaders }, body: JSON.stringify(body),
+  const headers = { "x-forwarded-for": "127.0.0.1", ...extraHeaders };
+  const response = await fetch(base + path, body === undefined ? { headers } : {
+    method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body),
   });
   assert.match(response.headers.get("content-type") || "", /application\/json/, `Expected JSON from ${path}`);
   return { response, data: await response.json() };
@@ -192,7 +193,7 @@ test("Published cruise booking against migrated PostgreSQL and the production HT
     });
     await t.test("unauthenticated staff and malformed public requests are rejected", async () => {
       assert.equal((await request("/api/admin/bookings")).response.status, 401);
-      const bad = await fetch(base + "/api/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{broken" });
+      const bad = await fetch(base + "/api/quote", { method: "POST", headers: { "Content-Type": "application/json", "x-forwarded-for": "127.0.0.1" }, body: "{broken" });
       assert.equal(bad.status, 400); assert.deepEqual(await bad.json(), { error: "Invalid JSON request." });
     });
   } finally {
