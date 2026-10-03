@@ -68,6 +68,23 @@ function retryDelayMs(attemptCount: number, baseDelayMs: number) {
   return Math.min(60 * 60 * 1000, baseDelayMs * 2 ** Math.max(0, attemptCount - 1));
 }
 
+export async function requeueFailedNotifications(client: PrismaClient = prisma) {
+  const result = await client.notificationOutbox.updateMany({
+    where: { status: "FAILED" },
+    data: {
+      status: "PENDING",
+      attemptCount: 0,
+      nextAttemptAt: new Date(),
+      lastAttemptAt: null,
+      lastError: null,
+      lockedAt: null,
+      lockedBy: null,
+      deliveredAt: null,
+    },
+  });
+  return { requeued: result.count };
+}
+
 export async function processNotificationOutbox(options: ProcessOutboxOptions = {}) {
   const client = options.client ?? prisma;
   const batchSize = Math.min(100, Math.max(1, options.batchSize ?? 25));
