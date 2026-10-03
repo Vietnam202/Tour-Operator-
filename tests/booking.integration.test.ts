@@ -18,9 +18,9 @@ function assertPublic(value: unknown): void {
     assertPublic(child);
   }
 }
-async function request(path: string, body?: unknown) {
-  const response = await fetch(base + path, body === undefined ? undefined : {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+async function request(path: string, body?: unknown, extraHeaders: Record<string, string> = {}) {
+  const response = await fetch(base + path, body === undefined ? { headers: extraHeaders } : {
+    method: "POST", headers: { "Content-Type": "application/json", ...extraHeaders }, body: JSON.stringify(body),
   });
   assert.match(response.headers.get("content-type") || "", /application\/json/, `Expected JSON from ${path}`);
   return { response, data: await response.json() };
@@ -159,6 +159,28 @@ test("Published cruise booking against migrated PostgreSQL and the production HT
       assert.equal(response.status, 201);
       const saved = await prisma.bookingInquiry.findUniqueOrThrow({ where: { reference: data.reference } });
       assert.equal(saved.quotedCost, null); assert.equal(saved.quotedMargin, null);
+    });
+    await t.test("booking rate limit is shared and returns Retry-After", async () => {
+      const ip = `198.51.100.${Math.floor(Math.random() * 100) + 1}`;
+      const headers = { "x-forwarded-for": ip };
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const result = await request("/api/bookings", { ...bookingInput, consent: false }, headers);
+        assert.equal(result.response.status, 400);
+      }
+      const blocked = await request("/api/bookings", { ...bookingInput, consent: false }, headers);
+      assert.equal(blocked.response.status, 429);
+      assert.ok(Number(blocked.response.headers.get("retry-after")) >= 1);
+    });
+    await t.test("client-prepended X-Forwarded-For values cannot evade the trusted-hop limit", async () => {
+      const trustedClient = `203.0.113.${Math.floor(Math.random() * 100) + 1}`;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const spoof = `10.0.0.${attempt + 1}, ${trustedClient}`;
+        const result = await request("/api/bookings", { ...bookingInput, consent: false }, { "x-forwarded-for": spoof });
+        assert.equal(result.response.status, 400);
+      }
+      const blocked = await request("/api/bookings", { ...bookingInput, consent: false }, { "x-forwarded-for": `192.0.2.99, ${trustedClient}` });
+      assert.equal(blocked.response.status, 429);
+      assert.ok(Number(blocked.response.headers.get("retry-after")) >= 1);
     });
     await t.test("production pages render database inventory and working filters", async () => {
       const listing = await fetch(`${base}/cruises?q=${encodeURIComponent(suffix)}&route=CI%20Route`);
