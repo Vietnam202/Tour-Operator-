@@ -23,7 +23,8 @@
     "next": "15.5.27",
     "react": "19.1.2",
     "react-dom": "19.1.2",
-    "@prisma/client": "^6.8.2"
+    "@prisma/client": "^6.8.2",
+    "redis": "^5.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

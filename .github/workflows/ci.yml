@@ -14,6 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
       postgres:
         image: postgres:16
         env:
@@ -29,6 +38,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://hca_ci:ci-only-disposable-password@127.0.0.1:5432/hca_ci
+      REDIS_URL: redis://127.0.0.1:6379
+      TRUSTED_PROXY_HOPS: "1"
       NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
       ADDITIONAL_STAFF_ORIGINS: http://127.0.0.1:3000
       NEXT_TELEMETRY_DISABLED: 1

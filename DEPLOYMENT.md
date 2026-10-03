@@ -1,10 +1,10 @@
 # Staging / Production Runbook
 
 ## 1. Infrastructure
-Provision PostgreSQL, an HTTPS application URL, and a secret store. Do not expose PostgreSQL publicly unless the provider requires controlled network access.
+Provision PostgreSQL, Redis, an HTTPS application URL, and a secret store. Do not expose PostgreSQL or Redis publicly unless the provider requires controlled network access.
 
 ## 2. Required secrets
-Set `DATABASE_URL` and `NEXT_PUBLIC_SITE_URL`. For the temporary migration period only, `ADMIN_API_KEY` may be set and must be at least 32 characters. Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` only when bootstrapping the first staff account, then remove them from the runtime environment.
+Set `DATABASE_URL`, `REDIS_URL`, `TRUSTED_PROXY_HOPS`, and `NEXT_PUBLIC_SITE_URL`. For the temporary migration period only, `ADMIN_API_KEY` may be set and must be at least 32 characters. Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` only when bootstrapping the first staff account, then remove them from the runtime environment.
 
 ## 3. Database deployment
 For a new empty database:
@@ -45,7 +45,15 @@ Application rollback: redeploy the previous known-good image/commit.
 Database rollback: Prisma production migrations are forward-oriented. Take a database backup before schema changes and prepare an explicit corrective migration instead of editing an already-applied migration.
 
 ## 6. Before accepting real payments
-Remove the legacy API-key fallback, use a shared Redis/KV rate limiter, configure provider-specific webhook signature verification, enable error monitoring, configure database backups, and verify transactional email delivery.
+Remove the legacy API-key fallback, configure provider-specific webhook signature verification, enable error monitoring, configure database backups, and verify transactional email delivery.
+
+## Shared rate limiting and trusted proxies
+
+Production quote, booking and staff-login limits are stored in Redis and updated atomically. `REDIS_URL` is mandatory in production. If Redis is missing, cannot connect, or returns an error, the protected request fails closed through the route's existing 503 handling; production never falls back to a per-process memory bucket. The memory adapter exists only for local/test runs.
+
+Set `TRUSTED_PROXY_HOPS` to the exact number of trusted reverse proxies/load balancers between the public client and this application. The application selects the client address from the right-hand side of the `X-Forwarded-For` chain, so client-prepended values do not become the rate-limit identity. Configure the outer proxy to sanitize forwarding headers, keep the application origin private, and verify the hop count whenever the proxy topology changes. A missing or malformed forwarding chain fails closed in production.
+
+Before opening traffic, verify Redis connectivity from every application instance and send repeated quote/booking/login requests through the real proxy path. Confirm HTTP 429 responses include `Retry-After`, and confirm requests routed to different instances consume the same Redis quota.
 
 
 ## Notification outbox worker
