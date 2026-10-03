@@ -160,7 +160,7 @@ function resolveWebhookUrl(raw: string | undefined) {
   return url.toString();
 }
 
-function webhookAuthHeaders(body: string) {
+function webhookAuthHeaders(body: string): Record<string, string> {
   const secret = process.env.BOOKING_WEBHOOK_SECRET;
   if (!secret) return {};
   const timestamp = Math.floor(Date.now() / 1000).toString();
