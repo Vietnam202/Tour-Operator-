@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { PrismaClient } from "@prisma/client";
-import { enqueueNotificationTx, getNotificationOutboxStatus, processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
+import { enqueueNotificationTx, getNotificationOutboxStatus, processNotificationOutbox, pruneDeliveredNotifications, requeueFailedNotifications } from "../lib/notification-outbox";
 
 const database = new URL(process.env.DATABASE_URL || "postgresql://invalid/invalid");
 if (process.env.HCA_INTEGRATION_TESTS !== "1" || !["localhost", "127.0.0.1"].includes(database.hostname) || database.pathname !== "/hca_ci") {
@@ -163,6 +163,44 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.equal(credentialUrlEvent.lastError, null);
 
     process.env.BOOKING_WEBHOOK_URL = `http://127.0.0.1:${address.port}`;
+
+    const pruneOldKey = `ci:prune-old:${crypto.randomUUID()}`;
+    const pruneRecentKey = `ci:prune-recent:${crypto.randomUUID()}`;
+    const pruneFailedKey = `ci:prune-failed:${crypto.randomUUID()}`;
+    const oldDeliveredAt = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    await prisma.notificationOutbox.createMany({
+      data: [
+        {
+          eventType: "booking.created",
+          idempotencyKey: pruneOldKey,
+          payload: { reference: "CI-PRUNE-OLD" },
+          status: "DELIVERED",
+          deliveredAt: oldDeliveredAt,
+          nextAttemptAt: oldDeliveredAt,
+        },
+        {
+          eventType: "booking.created",
+          idempotencyKey: pruneRecentKey,
+          payload: { reference: "CI-PRUNE-RECENT" },
+          status: "DELIVERED",
+          deliveredAt: new Date(),
+          nextAttemptAt: new Date(),
+        },
+        {
+          eventType: "booking.created",
+          idempotencyKey: pruneFailedKey,
+          payload: { reference: "CI-PRUNE-FAILED" },
+          status: "FAILED",
+          deliveredAt: oldDeliveredAt,
+          nextAttemptAt: oldDeliveredAt,
+        },
+      ],
+    });
+    const pruneResult = await pruneDeliveredNotifications(prisma, 30);
+    assert.equal(pruneResult.deleted, 1);
+    assert.equal(await prisma.notificationOutbox.findUnique({ where: { idempotencyKey: pruneOldKey } }), null);
+    assert.ok(await prisma.notificationOutbox.findUnique({ where: { idempotencyKey: pruneRecentKey } }));
+    assert.ok(await prisma.notificationOutbox.findUnique({ where: { idempotencyKey: pruneFailedKey } }));
 
     await assert.rejects(
       prisma.$transaction(tx => enqueueNotificationTx(tx, {
