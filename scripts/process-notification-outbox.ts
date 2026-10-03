@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
+import { getNotificationOutboxStatus, processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
 
 let stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -11,6 +11,10 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 async function main() {
   const once = process.argv.includes("--once");
+  if (process.argv.includes("--status")) {
+    console.log(JSON.stringify(await getNotificationOutboxStatus(), null, 2));
+    return;
+  }
   if (process.argv.includes("--requeue-failed")) {
     const result = await requeueFailedNotifications();
     console.log(`Requeued ${result.requeued} failed notification event(s).`);
