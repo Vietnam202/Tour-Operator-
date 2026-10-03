@@ -16,7 +16,7 @@ function future(days: number) { const value = new Date(); value.setUTCDate(value
 type Options = { method?: string; body?: unknown; cookie?: string; token?: string; origin?: string | null; headers?: Record<string, string> };
 async function request(path: string, options: Options = {}) {
   const method = options.method || "GET";
-  const headers: Record<string, string> = { ...options.headers };
+  const headers: Record<string, string> = { "x-forwarded-for": "127.0.0.1", ...options.headers };
   if (options.cookie) headers.Cookie = options.cookie;
   if (options.token !== undefined) headers.Authorization = "Bearer " + options.token;
   if (method !== "GET" && options.origin !== null) headers.Origin = options.origin ?? base;
