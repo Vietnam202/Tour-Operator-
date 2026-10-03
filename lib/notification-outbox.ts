@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -159,6 +160,17 @@ function resolveWebhookUrl(raw: string | undefined) {
   return url.toString();
 }
 
+function webhookAuthHeaders(body: string): Record<string, string> {
+  const secret = process.env.BOOKING_WEBHOOK_SECRET;
+  if (!secret) return {};
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signature = crypto.createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
+  return {
+    "x-webhook-timestamp": timestamp,
+    "x-webhook-signature": `v1=${signature}`,
+  };
+}
+
 export async function processNotificationOutbox(options: ProcessOutboxOptions = {}) {
   const client = options.client ?? prisma;
   const batchSize = Math.min(100, Math.max(1, options.batchSize ?? 25));
@@ -208,14 +220,16 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
 
   for (const event of claimed) {
     try {
+      const body = JSON.stringify({ id: event.id, event: event.eventType, payload: event.payload });
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           "idempotency-key": event.idempotencyKey,
           "x-notification-id": event.id,
+          ...webhookAuthHeaders(body),
         },
-        body: JSON.stringify({ id: event.id, event: event.eventType, payload: event.payload }),
+        body,
         cache: "no-store",
         signal: AbortSignal.timeout(deliveryTimeoutMs),
       });

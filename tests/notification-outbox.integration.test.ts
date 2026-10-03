@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
 import { PrismaClient } from "@prisma/client";
@@ -15,17 +16,30 @@ test("durable notification outbox persists, retries without duplicate rows, deli
   let targetStatus = 503;
   let requests = 0;
   const receivedIds: string[] = [];
+  const receivedBodies: string[] = [];
+  const receivedSignatures: string[] = [];
+  const receivedTimestamps: string[] = [];
   const server = createServer((request, response) => {
     requests += 1;
     receivedIds.push(String(request.headers["x-notification-id"] || ""));
-    response.statusCode = targetStatus;
-    response.end();
+    receivedSignatures.push(String(request.headers["x-webhook-signature"] || ""));
+    receivedTimestamps.push(String(request.headers["x-webhook-timestamp"] || ""));
+    const chunks: Buffer[] = [];
+    request.on("data", chunk => chunks.push(Buffer.from(chunk)));
+    request.on("end", () => {
+      receivedBodies.push(Buffer.concat(chunks).toString("utf8"));
+      response.statusCode = targetStatus;
+      response.end();
+    });
   });
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.ok(address && typeof address !== "string");
   const previousUrl = process.env.BOOKING_WEBHOOK_URL;
+  const previousSecret = process.env.BOOKING_WEBHOOK_SECRET;
+  const webhookSecret = "ci-webhook-secret-do-not-persist";
   process.env.BOOKING_WEBHOOK_URL = `http://127.0.0.1:${address.port}`;
+  process.env.BOOKING_WEBHOOK_SECRET = webhookSecret;
 
   const idempotencyKey = `ci:booking.created:${crypto.randomUUID()}`;
   try {
@@ -63,6 +77,20 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.equal(delivered.attemptCount, 2);
     assert.ok(delivered.deliveredAt);
     assert.equal(receivedIds.filter(id => id === first.id).length, 2);
+    const matchingIndexes = receivedIds.map((id, index) => id === first.id ? index : -1).filter(index => index >= 0);
+    for (const index of matchingIndexes) {
+      const body = receivedBodies[index];
+      const timestamp = receivedTimestamps[index];
+      const signature = receivedSignatures[index];
+      assert.ok(body);
+      assert.match(timestamp, /^\d+$/);
+      assert.match(signature, /^v1=[0-9a-f]{64}$/);
+      const expected = crypto.createHmac("sha256", webhookSecret).update(`${timestamp}.${body}`).digest("hex");
+      assert.equal(signature, `v1=${expected}`);
+      assert.equal(body.includes(webhookSecret), false);
+    }
+    const persistedPayload = JSON.stringify(delivered.payload);
+    assert.equal(persistedPayload.includes(webhookSecret), false);
 
     const replay = await processNotificationOutbox({ client: prisma, baseDelayMs: 0, workerId: "ci-worker-replay" });
     assert.ok(replay.claimed >= 0);
@@ -214,6 +242,8 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     await prisma.notificationOutbox.deleteMany({ where: { idempotencyKey: { startsWith: "ci:" } } });
     if (previousUrl === undefined) delete process.env.BOOKING_WEBHOOK_URL;
     else process.env.BOOKING_WEBHOOK_URL = previousUrl;
+    if (previousSecret === undefined) delete process.env.BOOKING_WEBHOOK_SECRET;
+    else process.env.BOOKING_WEBHOOK_SECRET = previousSecret;
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     await prisma.$disconnect();
   }
