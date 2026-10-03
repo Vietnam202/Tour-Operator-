@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { PrismaClient } from "@prisma/client";
-import { enqueueNotificationTx, processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
+import { enqueueNotificationTx, getNotificationOutboxStatus, processNotificationOutbox, requeueFailedNotifications } from "../lib/notification-outbox";
 
 const database = new URL(process.env.DATABASE_URL || "postgresql://invalid/invalid");
 if (process.env.HCA_INTEGRATION_TESTS !== "1" || !["localhost", "127.0.0.1"].includes(database.hostname) || database.pathname !== "/hca_ci") {
@@ -121,6 +121,14 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.equal(deliveredAfter.id, deliveredControl.id);
     assert.equal(deliveredAfter.status, "DELIVERED");
     assert.ok(deliveredAfter.deliveredAt);
+
+    const status = await getNotificationOutboxStatus(prisma);
+    assert.ok(status.counts.DELIVERED >= 2);
+    assert.ok(status.counts.PENDING >= 1);
+    assert.ok(status.duePending >= 1);
+    assert.equal(status.staleProcessing, 0);
+    assert.ok(status.oldestPending);
+    assert.ok(status.oldestPending.ageSeconds >= 0);
 
     await assert.rejects(
       prisma.$transaction(tx => enqueueNotificationTx(tx, {

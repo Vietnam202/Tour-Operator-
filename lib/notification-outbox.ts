@@ -68,6 +68,47 @@ function retryDelayMs(attemptCount: number, baseDelayMs: number) {
   return Math.min(60 * 60 * 1000, baseDelayMs * 2 ** Math.max(0, attemptCount - 1));
 }
 
+export async function getNotificationOutboxStatus(client: PrismaClient = prisma) {
+  const now = new Date();
+  const [grouped, oldestPending, duePending, staleProcessing] = await Promise.all([
+    client.notificationOutbox.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+    client.notificationOutbox.findFirst({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, eventType: true, createdAt: true, nextAttemptAt: true, attemptCount: true },
+    }),
+    client.notificationOutbox.count({
+      where: { status: "PENDING", nextAttemptAt: { lte: now } },
+    }),
+    client.notificationOutbox.count({
+      where: {
+        status: "PROCESSING",
+        lockedAt: { lt: new Date(now.getTime() - 5 * 60 * 1000) },
+      },
+    }),
+  ]);
+
+  const counts = { PENDING: 0, PROCESSING: 0, DELIVERED: 0, FAILED: 0 };
+  for (const row of grouped) {
+    if (row.status in counts) counts[row.status as keyof typeof counts] = row._count._all;
+  }
+
+  return {
+    counts,
+    duePending,
+    staleProcessing,
+    oldestPending: oldestPending
+      ? {
+          ...oldestPending,
+          ageSeconds: Math.max(0, Math.floor((now.getTime() - oldestPending.createdAt.getTime()) / 1000)),
+        }
+      : null,
+  };
+}
+
 export async function requeueFailedNotifications(client: PrismaClient = prisma) {
   const result = await client.notificationOutbox.updateMany({
     where: { status: "FAILED" },
