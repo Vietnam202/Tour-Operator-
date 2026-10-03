@@ -108,3 +108,7 @@ The signature input is the exact UTF-8 request body prefixed by the timestamp: `
 
 The signing secret is read only from the worker environment at delivery time. It is never written to `NotificationOutbox.payload` or included in the request body. Rotate the secret through the deployment secret store; during a coordinated rotation, update receiver and worker together.
 
+
+### Notification retry pacing
+
+Failed outbound webhook deliveries use exponential backoff with bounded deterministic jitter to avoid synchronized retry bursts. A receiver may return `Retry-After` (delta-seconds or an HTTP date); the worker will not retry before that hint or its own backoff, whichever is later. Retry delays are capped at one hour, and terminal `maxAttempts` behavior is unchanged.

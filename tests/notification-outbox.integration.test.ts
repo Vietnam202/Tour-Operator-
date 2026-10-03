@@ -14,6 +14,7 @@ const prisma = new PrismaClient();
 
 test("durable notification outbox persists, retries without duplicate rows, delivers once, and replay is idempotent", async () => {
   let targetStatus = 503;
+  let targetRetryAfter: string | null = null;
   let requests = 0;
   const receivedIds: string[] = [];
   const receivedBodies: string[] = [];
@@ -29,6 +30,7 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     request.on("end", () => {
       receivedBodies.push(Buffer.concat(chunks).toString("utf8"));
       response.statusCode = targetStatus;
+      if (targetRetryAfter) response.setHeader("retry-after", targetRetryAfter);
       response.end();
     });
   });
@@ -191,6 +193,59 @@ test("durable notification outbox persists, retries without duplicate rows, deli
     assert.equal(credentialUrlEvent.lastError, null);
 
     process.env.BOOKING_WEBHOOK_URL = `http://127.0.0.1:${address.port}`;
+
+    const numericRetryKey = `ci:retry-after-seconds:${crypto.randomUUID()}`;
+    await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "booking.created",
+      idempotencyKey: numericRetryKey,
+      payload: { reference: "CI-RETRY-AFTER-SECONDS" },
+    }));
+    targetStatus = 429;
+    targetRetryAfter = "120";
+    const numericRetryStartedAt = Date.now();
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 1_000, workerId: "ci-worker-retry-after-seconds" });
+    const numericRetryEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: numericRetryKey } });
+    assert.equal(numericRetryEvent.status, "PENDING");
+    assert.equal(numericRetryEvent.attemptCount, 1);
+    assert.ok(numericRetryEvent.nextAttemptAt.getTime() >= numericRetryStartedAt + 120_000);
+    assert.ok(numericRetryEvent.nextAttemptAt.getTime() <= Date.now() + 121_000);
+
+    const dateRetryKey = `ci:retry-after-date:${crypto.randomUUID()}`;
+    await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "payment.updated",
+      idempotencyKey: dateRetryKey,
+      payload: { reference: "CI-RETRY-AFTER-DATE" },
+    }));
+    targetStatus = 503;
+    const retryDate = new Date(Date.now() + 180_000);
+    targetRetryAfter = retryDate.toUTCString();
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 1_000, workerId: "ci-worker-retry-after-date" });
+    const dateRetryEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: dateRetryKey } });
+    assert.equal(dateRetryEvent.status, "PENDING");
+    assert.equal(dateRetryEvent.attemptCount, 1);
+    assert.ok(Math.abs(dateRetryEvent.nextAttemptAt.getTime() - Date.parse(targetRetryAfter)) < 2_000);
+
+    const invalidRetryKey = `ci:retry-after-invalid:${crypto.randomUUID()}`;
+    const invalidRetryEventCreated = await prisma.$transaction(tx => enqueueNotificationTx(tx, {
+      eventType: "booking.confirmed",
+      idempotencyKey: invalidRetryKey,
+      payload: { reference: "CI-RETRY-AFTER-INVALID" },
+    }));
+    targetStatus = 503;
+    targetRetryAfter = "not-a-valid-retry-after";
+    const invalidRetryStartedAt = Date.now();
+    await processNotificationOutbox({ client: prisma, baseDelayMs: 1_000, workerId: "ci-worker-retry-after-invalid" });
+    const invalidRetryEvent = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: invalidRetryKey } });
+    assert.equal(invalidRetryEvent.status, "PENDING");
+    assert.equal(invalidRetryEvent.attemptCount, 1);
+    const digest = crypto.createHash("sha256").update(`${invalidRetryEventCreated.id}:1`).digest();
+    const expectedFraction = digest.readUInt32BE(0) / 0xffffffff;
+    const expectedDelay = 1_000 + Math.floor(1_000 * 0.2 * expectedFraction);
+    assert.ok(invalidRetryEvent.nextAttemptAt.getTime() >= invalidRetryStartedAt + expectedDelay);
+    assert.ok(invalidRetryEvent.nextAttemptAt.getTime() <= Date.now() + expectedDelay + 250);
+
+    targetRetryAfter = null;
+    targetStatus = 204;
 
     const pruneOldKey = `ci:prune-old:${crypto.randomUUID()}`;
     const pruneRecentKey = `ci:prune-recent:${crypto.randomUUID()}`;
