@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 export const notificationEvents = [
   "booking.created",
   "booking.confirmed",
-  "payment.requested",
-  "payment.updated",
 ] as const;
 export type NotificationEvent = (typeof notificationEvents)[number];
 
