@@ -65,8 +65,25 @@ export type ProcessOutboxOptions = {
   client?: PrismaClient;
 };
 
-function retryDelayMs(attemptCount: number, baseDelayMs: number) {
-  return Math.min(60 * 60 * 1000, baseDelayMs * 2 ** Math.max(0, attemptCount - 1));
+const MAX_RETRY_DELAY_MS = 60 * 60 * 1000;
+
+function retryDelayMs(attemptCount: number, baseDelayMs: number, jitterKey?: string) {
+  const exponential = Math.min(MAX_RETRY_DELAY_MS, baseDelayMs * 2 ** Math.max(0, attemptCount - 1));
+  if (exponential <= 0 || !jitterKey) return exponential;
+  const digest = crypto.createHash("sha256").update(`${jitterKey}:${attemptCount}`).digest();
+  const fraction = digest.readUInt32BE(0) / 0xffffffff;
+  const jitter = Math.floor(exponential * 0.2 * fraction);
+  return Math.min(MAX_RETRY_DELAY_MS, exponential + jitter);
+}
+
+function retryAfterMs(value: string | null, nowMs = Date.now()) {
+  if (!value) return null;
+  if (/^\d+$/.test(value.trim())) {
+    return Math.min(MAX_RETRY_DELAY_MS, Number(value.trim()) * 1000);
+  }
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.min(MAX_RETRY_DELAY_MS, Math.max(0, parsed - nowMs));
 }
 
 export async function getNotificationOutboxStatus(client: PrismaClient = prisma) {
@@ -219,6 +236,7 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
   let failed = 0;
 
   for (const event of claimed) {
+    let serverRetryAfterMs: number | null = null;
     try {
       const body = JSON.stringify({ id: event.id, event: event.eventType, payload: event.payload });
       const response = await fetch(url, {
@@ -233,7 +251,10 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
         cache: "no-store",
         signal: AbortSignal.timeout(deliveryTimeoutMs),
       });
-      if (!response.ok) throw new Error(`Webhook responded with HTTP ${response.status}`);
+      if (!response.ok) {
+        serverRetryAfterMs = retryAfterMs(response.headers.get("retry-after"));
+        throw new Error(`Webhook responded with HTTP ${response.status}`);
+      }
 
       const updated = await client.notificationOutbox.updateMany({
         where: { id: event.id, status: "PROCESSING", lockedBy: workerId },
@@ -253,7 +274,10 @@ export async function processNotificationOutbox(options: ProcessOutboxOptions = 
         where: { id: event.id, status: "PROCESSING", lockedBy: workerId },
         data: {
           status: terminal ? "FAILED" : "PENDING",
-          nextAttemptAt: new Date(Date.now() + retryDelayMs(event.attemptCount, baseDelayMs)),
+          nextAttemptAt: new Date(Date.now() + Math.max(
+            retryDelayMs(event.attemptCount, baseDelayMs, event.id),
+            serverRetryAfterMs ?? 0,
+          )),
           lastError: message,
           lockedAt: null,
           lockedBy: null,
