@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateQuote } from "@/lib/pricing";
 import { asObject, parseQuoteInput, QuoteInputError, text } from "@/lib/quote-input";
 import { toPublicQuote } from "@/lib/public-quote";
-import { notifyNewBooking } from "@/lib/notifications";
+import { enqueueNotificationTx } from "@/lib/notification-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -38,13 +38,18 @@ export async function POST(request: Request) {
         bookingId: created.id, type: "BOOKING_CREATED", message: "Guest submitted an availability request and contact consent.",
         metadata: { source: "website", consentVersion: "booking-contact-v1", consentAt: new Date().toISOString() },
       } });
+      await enqueueNotificationTx(tx, {
+        eventType: "booking.created",
+        idempotencyKey: `booking.created:${created.id}`,
+        aggregateType: "BookingInquiry",
+        aggregateId: created.id,
+        payload: { reference: created.reference, cruiseName: created.cruiseName,
+          departureDate: created.departureDate.toISOString(), primaryGuest: created.primaryGuest,
+          email: created.email, phone: created.phone, adults: created.adults, children: created.children,
+          estimatedTotal: created.estimatedTotal, currency: created.currency },
+      });
       return created;
     });
-    // A notification integration is optional; persistence is the source of success.
-    await notifyNewBooking({ reference: booking.reference, cruiseName: booking.cruiseName,
-      departureDate: booking.departureDate.toISOString(), primaryGuest: booking.primaryGuest,
-      email: booking.email, phone: booking.phone, adults: booking.adults, children: booking.children,
-      estimatedTotal: booking.estimatedTotal });
     return NextResponse.json({ reference: booking.reference, status: booking.status, quote: toPublicQuote(quote) },
       { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

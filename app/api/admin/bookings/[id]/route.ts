@@ -2,7 +2,7 @@ import { BookingStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { sameOrigin } from "@/lib/csrf";
-import { notifyBookingConfirmed } from "@/lib/notifications";
+import { enqueueNotificationTx } from "@/lib/notification-outbox";
 import { ensureConfirmedBookingTasksTx } from "@/lib/booking-automation";
 import { BookingOperationError, withBookingLock } from "@/lib/booking-lock";
 
@@ -85,20 +85,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         type: "BOOKING_UPDATED", message: changed.join("; "),
       } });
       if (booking.status === "CONFIRMED") await ensureConfirmedBookingTasksTx(tx, id);
+      const newlyConfirmed = current.status !== "CONFIRMED" && booking.status === "CONFIRMED";
+      if (newlyConfirmed) await enqueueNotificationTx(tx, {
+        eventType: "booking.confirmed",
+        idempotencyKey: `booking.confirmed:${booking.id}`,
+        aggregateType: "BookingInquiry",
+        aggregateId: booking.id,
+        payload: { reference: booking.reference, cruiseName: booking.cruiseName,
+          primaryGuest: booking.primaryGuest, email: booking.email,
+          departureDate: booking.departureDate.toISOString(), estimatedTotal: booking.estimatedTotal,
+          currency: booking.currency },
+      });
       if (booking.status === "CANCELLED") {
         await tx.voucherGrant.updateMany({ where: { bookingId: id, revokedAt: null }, data: { revokedAt: new Date() } });
         await tx.bookingTask.updateMany({ where: { bookingId: id, status: { in: ["OPEN", "IN_PROGRESS"] } }, data: { status: "CANCELLED" } });
         // Supplier release, refunds and inventory restoration are explicit operations, not automatic.
       }
-      return { booking, newlyConfirmed: current.status !== "CONFIRMED" && booking.status === "CONFIRMED" };
+      return { booking, newlyConfirmed };
     });
-    if (result.newlyConfirmed) {
-      // External notification failure must not turn a committed booking into a failed API response.
-      try { await notifyBookingConfirmed({ reference: result.booking.reference, cruiseName: result.booking.cruiseName,
-        primaryGuest: result.booking.primaryGuest, email: result.booking.email,
-        departureDate: result.booking.departureDate.toISOString(), estimatedTotal: result.booking.estimatedTotal,
-        currency: result.booking.currency }); } catch { /* Delivery requires a separate durable outbox. */ }
-    }
     return NextResponse.json({ booking: result.booking }, { headers });
   } catch (error) {
     if (error instanceof BookingOperationError) return NextResponse.json({ error: error.message }, { status: error.status, headers });

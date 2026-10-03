@@ -46,3 +46,34 @@ Database rollback: Prisma production migrations are forward-oriented. Take a dat
 
 ## 6. Before accepting real payments
 Remove the legacy API-key fallback, use a shared Redis/KV rate limiter, configure provider-specific webhook signature verification, enable error monitoring, configure database backups, and verify transactional email delivery.
+
+
+## Notification outbox worker
+
+Booking and payment HTTP handlers only persist notification events; they never depend on the external webhook being available.
+
+Run one delivery batch:
+
+```bash
+npm run notifications:once
+```
+
+Run a long-lived worker:
+
+```bash
+npm run notifications:process
+```
+
+The worker reads `BOOKING_WEBHOOK_URL`, claims due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, retries failures with exponential backoff, and marks successful rows as `DELIVERED`. Each HTTP attempt is bounded to 10 seconds by default; set `BOOKING_WEBHOOK_TIMEOUT_MS` to override it. Run at least one worker process in production. Multiple workers are supported.
+
+Delivery is at-least-once across network ambiguity. Receivers should honor the stable `Idempotency-Key` header (and `X-Notification-Id`) so a webhook accepted upstream but followed by a lost response can be safely retried without duplicating side effects.
+
+Do not place secrets, session tokens, authorization headers, cookies, or payment bearer tokens in notification payloads.
+
+The long-running worker handles `SIGINT` and `SIGTERM` by finishing the current claimed batch and then disconnecting from PostgreSQL. Events that exhaust `maxAttempts` remain in `FAILED` for operator inspection. After fixing the destination or configuration, requeue them without creating duplicate rows:
+
+```bash
+npm run notifications:process -- --requeue-failed
+```
+
+Requeue resets delivery-attempt metadata but preserves each row's stable ID and idempotency key, so receivers can continue deduplicating retries.

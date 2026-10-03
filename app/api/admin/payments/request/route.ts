@@ -2,7 +2,7 @@ import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-auth";
-import { notifyPaymentRequested } from "@/lib/notifications";
+import { enqueueNotificationTx } from "@/lib/notification-outbox";
 import { sameOrigin } from "@/lib/csrf";
 import { markPaymentTaskInProgress } from "@/lib/booking-automation";
 
@@ -37,19 +37,19 @@ export async function POST(request: Request) {
       }
     });
     await tx.bookingInquiry.update({ where: { id: booking.id }, data: { paymentStatus: PaymentStatus.PENDING } });
+    await enqueueNotificationTx(tx, {
+      eventType: "payment.requested",
+      idempotencyKey: `payment.requested:${paymentRequest.id}`,
+      aggregateType: "PaymentRequest",
+      aggregateId: paymentRequest.id,
+      payload: { paymentRequestId: paymentRequest.id, bookingId: booking.id, reference: booking.reference,
+        primaryGuest: booking.primaryGuest, email: booking.email, kind, amount, currency: booking.currency },
+    });
     return { transaction, paymentRequest };
+
   });
 
   const paymentUrl = `/pay/${token}`;
   await markPaymentTaskInProgress(booking.id);
-  await notifyPaymentRequested({
-    reference: booking.reference,
-    primaryGuest: booking.primaryGuest,
-    email: booking.email,
-    kind,
-    amount,
-    currency: booking.currency,
-    paymentUrl
-  });
   return NextResponse.json({ ...result, paymentUrl }, { status: 201 });
 }

@@ -33,7 +33,7 @@ function assertPublic(value: unknown): void {
 }
 
 test("Concurrent operations and private customer voucher access", async t => {
-  const bookingIds: string[] = [], userIds: string[] = [], cruiseIds: string[] = [];
+  const bookingIds: string[] = [], userIds: string[] = [], cruiseIds: string[] = [], outboxIds: string[] = [];
   const suffix = randomUUID();
   let issuedToken = "";
   try {
@@ -97,6 +97,43 @@ test("Concurrent operations and private customer voucher access", async t => {
       assert.equal(saved.activities.filter(item => item.type === "BOOKING_UPDATED").length, 1);
       assert.equal(saved.activities.filter(item => item.type === "AUTOMATION_TASK_CREATED").length, 5);
     });
+    await t.test("payment request persists a safe outbox event without bearer credentials", async () => {
+      const result = await request("/api/admin/payments/request", {
+        method: "POST", cookie: admin.cookie,
+        body: { bookingId: same.id, kind: "DEPOSIT", amount: 100 },
+      });
+      assert.equal(result.response.status, 201, result.data.error);
+      assert.match(result.data.paymentUrl, /^\/pay\/[a-f0-9]{64}$/);
+      const outbox = await prisma.notificationOutbox.findUniqueOrThrow({
+        where: { idempotencyKey: `payment.requested:${result.data.paymentRequest.id}` },
+      });
+      outboxIds.push(outbox.id);
+      assert.equal(outbox.status, "PENDING");
+      const payloadText = JSON.stringify(outbox.payload);
+      assert.ok(!payloadText.includes(result.data.paymentRequest.token));
+      assert.ok(!payloadText.includes(result.data.paymentUrl));
+      assert.ok(!/token|secret|session|authorization|cookie/i.test(payloadText));
+    });
+
+    await t.test("payment webhook replay creates one payment.updated outbox event", async () => {
+      const eventId = `ci-payment-${randomUUID()}`;
+      const path = "/api/payments/webhook/ci";
+      const body = { eventId, bookingId: same.id, amount: 100, status: "SUCCEEDED", kind: "DEPOSIT", currency: "USD" };
+      const headers = { "x-webhook-secret": process.env.PAYMENT_WEBHOOK_SECRET || "" };
+      const firstDelivery = await request(path, { method: "POST", body, headers });
+      const replay = await request(path, { method: "POST", body, headers });
+      assert.equal(firstDelivery.response.status, 200, firstDelivery.data.error);
+      assert.equal(firstDelivery.data.duplicate, false);
+      assert.equal(replay.response.status, 200, replay.data.error);
+      assert.equal(replay.data.duplicate, true);
+      const key = `payment.updated:ci:${eventId}`;
+      assert.equal(await prisma.notificationOutbox.count({ where: { idempotencyKey: key } }), 1);
+      const outbox = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: key } });
+      outboxIds.push(outbox.id);
+      assert.equal(outbox.status, "PENDING");
+      assert.ok(!/token|secret|session|authorization|cookie/i.test(JSON.stringify(outbox.payload)));
+    });
+
     await t.test("two bookings racing for the final cabin produce one success and one conflict", async () => {
       const outcomes = await Promise.all([patch(first.id, { status: "CONFIRMED" }), patch(second.id, { status: "CONFIRMED" })]);
       assert.deepEqual(outcomes.map(result => result.response.status).sort(), [200, 409]);
@@ -277,6 +314,7 @@ test("Concurrent operations and private customer voucher access", async t => {
     });
   } finally {
     // No broad deletes: only synthetic IDs allocated by this test run are removed.
+    if (outboxIds.length) await prisma.notificationOutbox.deleteMany({ where: { id: { in: outboxIds } } });
     if (bookingIds.length) await prisma.bookingInquiry.deleteMany({ where: { id: { in: bookingIds } } });
     if (cruiseIds.length) await prisma.cruise.deleteMany({ where: { id: { in: cruiseIds } } });
     if (userIds.length) await prisma.staffUser.deleteMany({ where: { id: { in: userIds } } });
