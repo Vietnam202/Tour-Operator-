@@ -1,9 +1,8 @@
 import { PaymentEventStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-import { enqueueNotificationTx } from "@/lib/notification-outbox";\nimport { getPaymentWebhookVerifier, PaymentWebhookVerificationError } from "@/lib/payment-webhook-verifiers";
-
+import { enqueueNotificationTx } from "@/lib/notification-outbox";
+import { getPaymentWebhookVerifier, PaymentWebhookVerificationError } from "@/lib/payment-webhook-verifiers";
 
 export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
