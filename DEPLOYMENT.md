@@ -136,3 +136,15 @@ Failed outbound webhook deliveries use exponential backoff with bounded determin
 Authenticated staff with existing booking-read permission can query `GET /api/admin/notifications/outbox-status` for automation-friendly outbox health aggregates. The response is private/no-store and contains only status counts, due pending count, stale processing count, oldest pending age in seconds, and generation time. It intentionally excludes event payloads, event identifiers, lock owner values, and last-error text.
 
 Use this endpoint from authenticated internal monitoring to alert on sustained pending age, any stale processing rows, or unexpected growth in FAILED rows. The existing `npm run notifications:status` CLI remains suitable for host-level diagnostics.
+
+
+### Selective failed-notification replay
+
+The existing `npm run notifications:process -- --requeue-failed` command requeues every FAILED notification and remains available for bulk recovery. For safer incident handling, target a single failed event by durable outbox ID or idempotency key:
+
+```bash
+npm run notifications:process -- --requeue-failed --id=<outbox-id>
+npm run notifications:process -- --requeue-failed --idempotency-key=<key>
+```
+
+Selectors only match rows currently in FAILED state. A successful selective requeue preserves the event ID, idempotency key, event type, aggregate metadata, and payload while resetting delivery-attempt state and making the event immediately eligible for processing. Supplying both selectors is rejected.
