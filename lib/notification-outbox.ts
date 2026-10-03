@@ -142,9 +142,19 @@ export async function pruneDeliveredNotifications(
   return { deleted: result.count, cutoff };
 }
 
-export async function requeueFailedNotifications(client: PrismaClient = prisma) {
+export async function requeueFailedNotifications(
+  client: PrismaClient = prisma,
+  selector?: { id?: string; idempotencyKey?: string },
+) {
+  if (selector?.id && selector?.idempotencyKey) {
+    throw new Error("Specify only one failed-notification selector");
+  }
   const result = await client.notificationOutbox.updateMany({
-    where: { status: "FAILED" },
+    where: {
+      status: "FAILED",
+      ...(selector?.id ? { id: selector.id } : {}),
+      ...(selector?.idempotencyKey ? { idempotencyKey: selector.idempotencyKey } : {}),
+    },
     data: {
       status: "PENDING",
       attemptCount: 0,
