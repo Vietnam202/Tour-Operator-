@@ -24,7 +24,14 @@ async function main() {
     return;
   }
   if (process.argv.includes("--requeue-failed")) {
-    const result = await requeueFailedNotifications();
+    const idArg = process.argv.find(arg => arg.startsWith("--id="));
+    const keyArg = process.argv.find(arg => arg.startsWith("--idempotency-key="));
+    if (idArg && keyArg) throw new Error("Specify only one of --id or --idempotency-key");
+    const id = idArg?.slice("--id=".length);
+    const idempotencyKey = keyArg?.slice("--idempotency-key=".length);
+    if (idArg && !id) throw new Error("--id must not be empty");
+    if (keyArg && !idempotencyKey) throw new Error("--idempotency-key must not be empty");
+    const result = await requeueFailedNotifications(prisma, { id, idempotencyKey });
     console.log(`Requeued ${result.requeued} failed notification event(s).`);
     return;
   }
