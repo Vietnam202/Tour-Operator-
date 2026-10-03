@@ -139,6 +139,58 @@ test("durable notification outbox persists, retries without duplicate rows, deli
         deliveredAt: new Date(),
       },
     });
+    const selectiveAKey = `ci:failed-selective-a:${crypto.randomUUID()}`;
+    const selectiveBKey = `ci:failed-selective-b:${crypto.randomUUID()}`;
+    const selectiveA = await prisma.notificationOutbox.create({
+      data: {
+        eventType: "booking.created",
+        idempotencyKey: selectiveAKey,
+        payload: { reference: "CI-FAILED-SELECTIVE-A" },
+        status: "FAILED",
+        attemptCount: 4,
+        lastAttemptAt: new Date(),
+        lastError: "selective-a failure",
+      },
+    });
+    const selectiveB = await prisma.notificationOutbox.create({
+      data: {
+        eventType: "payment.updated",
+        idempotencyKey: selectiveBKey,
+        payload: { reference: "CI-FAILED-SELECTIVE-B" },
+        status: "FAILED",
+        attemptCount: 5,
+        lastAttemptAt: new Date(),
+        lastError: "selective-b failure",
+      },
+    });
+
+    const byId = await requeueFailedNotifications(prisma, { id: selectiveA.id });
+    assert.equal(byId.requeued, 1);
+    const selectiveAAfter = await prisma.notificationOutbox.findUniqueOrThrow({ where: { id: selectiveA.id } });
+    const selectiveBStillFailed = await prisma.notificationOutbox.findUniqueOrThrow({ where: { id: selectiveB.id } });
+    assert.equal(selectiveAAfter.status, "PENDING");
+    assert.equal(selectiveAAfter.attemptCount, 0);
+    assert.equal(selectiveAAfter.lastError, null);
+    assert.equal(selectiveAAfter.idempotencyKey, selectiveAKey);
+    assert.equal(selectiveBStillFailed.status, "FAILED");
+    assert.equal(selectiveBStillFailed.attemptCount, 5);
+    assert.equal(selectiveBStillFailed.lastError, "selective-b failure");
+
+    const byKey = await requeueFailedNotifications(prisma, { idempotencyKey: selectiveBKey });
+    assert.equal(byKey.requeued, 1);
+    const selectiveBAfter = await prisma.notificationOutbox.findUniqueOrThrow({ where: { id: selectiveB.id } });
+    assert.equal(selectiveBAfter.status, "PENDING");
+    assert.equal(selectiveBAfter.attemptCount, 0);
+    assert.equal(selectiveBAfter.lastError, null);
+    assert.equal(selectiveBAfter.idempotencyKey, selectiveBKey);
+
+    assert.equal((await requeueFailedNotifications(prisma, { id: selectiveA.id })).requeued, 0);
+    assert.equal((await requeueFailedNotifications(prisma, { idempotencyKey: "ci:does-not-exist" })).requeued, 0);
+    await assert.rejects(
+      requeueFailedNotifications(prisma, { id: selectiveA.id, idempotencyKey: selectiveAKey }),
+      /Specify only one failed-notification selector/,
+    );
+
     const requeued = await requeueFailedNotifications(prisma);
     assert.ok(requeued.requeued >= 1);
     const failedAfter = await prisma.notificationOutbox.findUniqueOrThrow({ where: { idempotencyKey: failedKey } });
