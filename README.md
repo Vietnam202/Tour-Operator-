@@ -17,7 +17,7 @@ Cruise inventory → server quote → booking enquiry → CRM assignment/follow-
 
 1. Copy `.env.example` to `.env`.
 2. Set a PostgreSQL `DATABASE_URL`.
-3. Run `npm install`.
+3. Run `npm ci` to install the exact dependency tree committed in `package-lock.json`. Use Node 20, matching CI and Docker.
 4. Run `npm run db:migrate:dev -- --name init` for a new development database.
 5. Run `npm run db:seed`.
 6. Run `npm run dev`.
@@ -38,13 +38,17 @@ Use committed Prisma migrations and run:
 
 Do not use `prisma db push` as the production deployment workflow.
 
+## Reproducible installs
+
+`package-lock.json` is committed and is the source of truth for dependency resolution. CI, Docker builds, and deployment setup use `npm ci`; if `package.json` and `package-lock.json` disagree, installation must fail instead of rewriting the lockfile. When intentionally changing dependencies, update both files with Node 20 and commit them together.
+
 ## Verification
 
 `npm run typecheck`
 
 `npm run build`
 
-GitHub Actions runs Prisma validation, TypeScript checking and a production build for pushes to `main` and pull requests.
+GitHub Actions installs with `npm ci`, validates and generates Prisma, checks migration/schema agreement, runs TypeScript checking and a production build, then runs the integration and smoke suites for pushes to `main` and pull requests.
 
 ## Admin
 
