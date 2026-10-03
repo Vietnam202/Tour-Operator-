@@ -47,6 +47,23 @@ Database rollback: Prisma production migrations are forward-oriented. Take a dat
 ## 6. Before accepting real payments
 Remove the legacy API-key fallback, use a shared Redis/KV rate limiter, configure provider-specific webhook signature verification, enable error monitoring, configure database backups, and verify transactional email delivery.
 
+### Inbound payment webhook providers
+
+The payment webhook endpoint is fail-closed: `/api/payments/webhook/{provider}` resolves a verifier before reading the request body or starting Prisma work. An unregistered provider is rejected and must not persist a webhook event, payment transaction, or notification-outbox event.
+
+`PAYMENT_WEBHOOK_SECRET` is only for the disposable `ci` adapter and the non-production `local` adapter. Do not use it as a real provider secret. The `ci` adapter additionally requires `HCA_INTEGRATION_TESTS=1` and the local `/hca_ci` database; the `local` adapter is unavailable when `NODE_ENV=production`. There is intentionally no environment switch that enables a generic shared-secret verifier in production.
+
+To add a real provider:
+
+1. Implement a `PaymentWebhookVerifier` adapter in `lib/payment-webhook-verifiers.ts` (or a provider-specific module imported there).
+2. Verify the provider's native signature over the exact raw request bytes before JSON parsing. Enforce its timestamp/replay rules and reject malformed or unverifiable input.
+3. Add that provider explicitly to `productionVerifierRegistry`; never point a production entry at the generic shared-secret verifier.
+4. Store provider signing credentials in the deployment secret store and document rotation. Do not persist signing secrets in webhook payloads, payment metadata, or outbox rows.
+5. Add integration fixtures covering valid signatures, invalid signatures, malformed bodies, unknown providers, and replay/idempotency. Confirm rejected requests create no `WebhookEvent`, `PaymentTransaction`, or `NotificationOutbox` rows.
+6. Run `npm run typecheck`, `npm run build`, and `npm run test:integration` against the disposable test database before enabling provider traffic.
+
+Keep provider traffic disabled at the upstream dashboard/load balancer until the provider-specific adapter and checkout/session integration have passed staging verification.
+
 
 ## Notification outbox worker
 
