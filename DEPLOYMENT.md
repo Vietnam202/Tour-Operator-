@@ -112,3 +112,10 @@ The signing secret is read only from the worker environment at delivery time. It
 ### Notification retry pacing
 
 Failed outbound webhook deliveries use exponential backoff with bounded deterministic jitter to avoid synchronized retry bursts. A receiver may return `Retry-After` (delta-seconds or an HTTP date); the worker will not retry before that hint or its own backoff, whichever is later. Retry delays are capped at one hour, and terminal `maxAttempts` behavior is unchanged.
+
+
+### Notification outbox monitoring endpoint
+
+Authenticated staff with existing booking-read permission can query `GET /api/admin/notifications/outbox-status` for automation-friendly outbox health aggregates. The response is private/no-store and contains only status counts, due pending count, stale processing count, oldest pending age in seconds, and generation time. It intentionally excludes event payloads, event identifiers, lock owner values, and last-error text.
+
+Use this endpoint from authenticated internal monitoring to alert on sustained pending age, any stale processing rows, or unexpected growth in FAILED rows. The existing `npm run notifications:status` CLI remains suitable for host-level diagnostics.
