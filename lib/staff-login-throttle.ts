@@ -1,25 +1,16 @@
 import { createHash } from "node:crypto";
+import { getClientIp } from "@/lib/client-ip";
+import { consumeRateLimit, type RateLimitResult } from "@/lib/rate-limit";
 
-type Bucket = { count: number; resetAt: number };
-const accounts = new Map<string, Bucket>();
-let aggregate: Bucket = { count: 0, resetAt: 0 };
+const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 
-// Per-process safeguards, NOT a distributed lockout. Do not trust user-supplied
-// X-Forwarded-For/X-Real-IP for sign-in limits. A shared edge/KV limiter is still
-// required for production multi-instance deployments.
-export function staffLoginThrottle(email: string, now = Date.now()): { allowed: boolean; retryAfter: number } {
-  if (aggregate.resetAt <= now) aggregate = { count: 0, resetAt: now + 60000 };
-  if (aggregate.count >= 80) return { allowed: false, retryAfter: Math.max(1, Math.ceil((aggregate.resetAt - now) / 1000)) };
-  aggregate.count += 1;
-  for (const [key, bucket] of accounts) if (bucket.resetAt <= now) accounts.delete(key);
-  const key = createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
-  let bucket = accounts.get(key);
-  if (!bucket) {
-    if (accounts.size >= 1000) return { allowed: false, retryAfter: 60 };
-    bucket = { count: 0, resetAt: now + 5 * 60000 };
-    accounts.set(key, bucket);
-  }
-  if (bucket.count >= 8) return { allowed: false, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)) };
-  bucket.count += 1;
-  return { allowed: true, retryAfter: 0 };
+export async function staffLoginThrottle(request: Request, email: string): Promise<RateLimitResult> {
+  const ip = getClientIp(request);
+  const account = digest(email.trim().toLowerCase());
+  const address = digest(ip);
+  return consumeRateLimit([
+    { key: "staff-login:aggregate", limit: 80, windowMs: 60_000 },
+    { key: `staff-login:ip:${address}`, limit: 30, windowMs: 5 * 60_000 },
+    { key: `staff-login:account:${account}`, limit: 8, windowMs: 5 * 60_000 },
+  ]);
 }
