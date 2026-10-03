@@ -85,3 +85,15 @@ npm run notifications:process -- --requeue-failed
 ```
 
 Requeue resets delivery-attempt metadata but preserves each row's stable ID and idempotency key, so receivers can continue deduplicating retries.
+
+### Outbox retention
+
+Delivered notification rows are retained for 30 days by default and can be pruned independently of delivery processing:
+
+```bash
+npm run notifications:prune
+npm run notifications:prune -- --retention-days=60
+```
+
+The prune command deletes only rows with `status = DELIVERED` whose `deliveredAt` is older than the retention cutoff. It never deletes `PENDING`, `PROCESSING`, or `FAILED` events. Keep failed events until an operator has inspected and either requeued or otherwise resolved them. Schedule pruning periodically (for example, daily) in the production scheduler rather than running it inside the delivery worker loop.
+
