@@ -6,6 +6,9 @@
     "jsdom": "26.1.0"
   },
   "scripts": {
-    "test": "node frontend.cjs && node marketing-unit.cjs && node marketing-preview.cjs && node marketing-studio-ui.cjs && node landing-ui.cjs && node landing-pro.cjs && node ai-ui.cjs && node pwa.cjs && node schedule-sections-ui.cjs && node operations-center.cjs && node operations-demo.cjs && node tour-library-ui.cjs && node tour-library-demo.cjs && node navigation-library.cjs && node workspace-centers-ui.cjs && node workspace-demo.cjs && node ai-drawer.cjs && node vs0-shell.cjs && node vs1-workspace.cjs"
+    "test": "node frontend.cjs && node marketing-unit.cjs && node marketing-preview.cjs && node marketing-studio-ui.cjs && node landing-ui.cjs && node landing-pro.cjs && node ai-ui.cjs && node pwa.cjs && node schedule-sections-ui.cjs && node operations-center.cjs && node operations-demo.cjs && node tour-library-ui.cjs && node tour-library-demo.cjs && node navigation-library.cjs && node workspace-centers-ui.cjs && node workspace-demo.cjs && node ai-drawer.cjs && node vs0-shell.cjs && node vs1-workspace.cjs && node vs21-ui.cjs",
+    "test:vs21:unit": "php vs21-unit.php",
+    "test:vs21:native": "php vs21-edge.php && php vs21-coverage.php && php vs21-migrations.php",
+    "test:vs21:browser": "node vs21-browser.cjs"
   }
 }

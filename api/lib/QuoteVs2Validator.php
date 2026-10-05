@@ -23,6 +23,8 @@ final class QuoteVs2Validator {
         $g=QuoteVs2Repository::graph($db,$v);$reqs=array_column($g['requirements'],null,'id');
         try{$guests=QuoteVs2Domain::guests($v,$g['profile']);}catch(Throwable $e){$add('PAX_SEGMENT_REVIEW_REQUIRED');return ['valid'=>false,'errors'=>$errors,'warnings'=>[]];}
         if(!QuoteVs2Repository::decode($v['schedule_json']??'[]'))$add('ITINERARY_NEEDED');
+        $dayKeys=array_column(QuoteVs2Repository::decode($v['schedule_json']??'[]'),'day_key');
+        foreach($reqs as $req)if($req['requirement_state']!=='NOT_APPLICABLE'&&$req['day_key']&&!in_array($req['day_key'],$dayKeys,true))$add('REQUIREMENT_DAY_MISSING',null,null,(int)$req['id']);
         $policy=self::policy($db,(int)$v['company_id']);if($policy===null)$warnings[]=['code'=>'POLICY_NOT_CONFIGURED','severity'=>'WARNING'];
         $offered=array_filter($g['variants'],fn($variant)=>(bool)$variant['is_offered']);if(!$offered)$add('OFFERED_VARIANT_NEEDED');
         foreach($offered as $variant){$vid=(int)$variant['id'];$byId=array_column($variant['lines'],null,'id');$seen=[];$active=[];$rates=[];
@@ -44,7 +46,6 @@ final class QuoteVs2Validator {
                 }
                 $rate=null;
                 try{
-                    if($line['review_required']||!$line['reviewed_by'])throw new DomainException('REVIEW_REQUIRED');
                     if($line['line_kind']==='ADJUSTMENT'){
                         $parent=$byId[$line['adjusts_line_id']]??null;if(!$parent||$parent['line_kind']!=='SERVICE'||$parent['coverage_state']!=='PRICED'||(int)$parent['requirement_id']!==(int)$line['requirement_id']||(int)$parent['supplier_id']!==(int)$line['supplier_id'])throw new DomainException('INVALID_ADJUSTMENT_PARENT');
                         if(Vs2Decimal::parse((string)$line['total_vnd'])!==Vs2Decimal::parse((string)$line['adjustment_amount_vnd']))throw new DomainException('STALE_CALCULATION');
@@ -56,6 +57,9 @@ final class QuoteVs2Validator {
                         if(in_array($line['formula_code'],['CUSTOM','LUMP_SUM'],true)&&(!$rate['manual']||!$line['manual_reason']))throw new DomainException('CUSTOM_BASIS_REVIEW');
                         if($line['units_override']!==null&&(int)$line['units_override']!==(int)$req['service_units']&&!in_array($line['formula_code'],['CUSTOM','LUMP_SUM'],true))throw new DomainException('SERVICE_UNITS_MISMATCH');
                         if($calc['resolved_quantity']===0&&empty(QuoteVs2Repository::decode($req['metadata_json'])['zero_reason']))throw new DomainException('ELIGIBLE_ZERO_REVIEW');
+                        foreach($variant['lines'] as $package){if((int)$package['id']===$lid||$package['coverage_state']!=='PRICED'||!in_array($reqs[$package['requirement_id']]['category'],['TOUR','CRUISE'],true)||!QuoteVs2Domain::applies($reqs[$package['requirement_id']],$variant,$package))continue;
+                            $pr=Vs2RateResolver::resolve($db,$v,$guests,$reqs[$package['requirement_id']],$variant,$package);foreach($pr['inclusions'] as $ir)if(Vs2Inclusions::overlaps($ir,$req))throw new DomainException(Vs2Inclusions::covers($ir,$req,$line,$package,$guests)?'DUPLICATE_INCLUDED_COST':'PARTIAL_COVERAGE_REVIEW');
+                        }
                     }elseif($line['coverage_state']==='INCLUDED'){
                         $parent=$byId[$line['included_by_line_id']]??null;if(!$parent||$parent['coverage_state']!=='PRICED'||!in_array($reqs[$parent['requirement_id']]['category'],['TOUR','CRUISE'],true))throw new DomainException('INVALID_PACKAGE_COVERAGE');
                         $parentRate=Vs2RateResolver::resolve($db,$v,$guests,$reqs[$parent['requirement_id']],$variant,$parent);$rule=null;$matchCount=0;
@@ -66,6 +70,7 @@ final class QuoteVs2Validator {
                     }elseif($line['coverage_state']==='NO_COST'){
                         if(!$line['manual_reason']||empty(QuoteVs2Repository::decode($line['manual_contract_json'])['evidence'])||Vs2Decimal::parse((string)$line['total_vnd'])!==0)throw new DomainException('NO_COST_REVIEW');
                     }else throw new DomainException('RATE_NEEDED');
+                    if($line['review_required']||!$line['reviewed_by'])throw new DomainException('REVIEW_REQUIRED');
                     $review=SmartCosting::reviewHash($v,$g['profile'],$req,$variant,$line,$rate);if(!hash_equals($line['reviewed_context_hash']??'',$review))throw new DomainException('CONTEXT_REVIEW_REQUIRED');
                     $path=[];$cursor=$line;while($cursor['included_by_line_id']){if(isset($path[$cursor['id']]))throw new DomainException('INCLUSION_CYCLE');$path[$cursor['id']]=true;$cursor=$byId[$cursor['included_by_line_id']]??throw new DomainException('FOREIGN_PACKAGE_LINE');}
                 }catch(Throwable $e){$add(strtok($e->getMessage(),':'),$vid,$lid,(int)$req['id']);}

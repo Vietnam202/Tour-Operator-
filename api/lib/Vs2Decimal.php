@@ -6,7 +6,8 @@ final class Vs2Decimal {
     public const LIMIT=999999999999999999;
     public static function parse($value,int $scale=2): int {
         if(!is_int($value)&&!is_string($value))throw new InvalidArgumentException('Decimal string required');
-        if(!preg_match('/^(-?)(\d{1,16})(?:\.(\d+))?$/',(string)$value,$m)||strlen($m[3]??'')>$scale)throw new InvalidArgumentException('Invalid decimal precision');
+        if(!preg_match('/^(-?)(\d{1,16})(?:\.(\d+))?$/',(string)$value,$m))throw new InvalidArgumentException('Invalid decimal precision');
+        $m[3]=rtrim($m[3]??'','0');if(strlen($m[3])>$scale)throw new InvalidArgumentException('Invalid decimal precision');
         $digits=ltrim($m[2].str_pad($m[3]??'',$scale,'0'),'0');if(strlen($digits)>18)throw new OverflowException('DECIMAL_OVERFLOW');
         $n=$digits===''?0:(int)$digits;return ($m[1]==='-'?-1:1)*$n;
     }

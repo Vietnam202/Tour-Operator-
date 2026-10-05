@@ -52,7 +52,7 @@ final class QuoteVs2Repository {
         return (int)$body['expected_revision'];
     }
     public static function atomic(PDO $db,callable $fn): array {
-        $own=!$db->inTransaction();if($own)$db->beginTransaction();
+        $own=!$db->inTransaction();if($own){if($db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql')$db->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');$db->beginTransaction();}
         try{$out=$fn();if($own)$db->commit();return $out;}catch(Throwable $e){if($own&&$db->inTransaction())$db->rollBack();throw $e;}
     }
 }

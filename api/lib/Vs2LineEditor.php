@@ -7,11 +7,12 @@ final class Vs2LineEditor {
         if($id){$old=QuoteVs2Repository::q($db,'SELECT * FROM quote_variant_cost_lines WHERE variant_id=? AND id=?',[$variantId,$id])->fetch();if(!$old)throw new OutOfBoundsException('Line not found');}
         if($action==='delete'){
             if(QuoteVs2Repository::q($db,'SELECT 1 FROM quote_variant_cost_lines WHERE included_by_line_id=? OR adjusts_line_id=?',[$id,$id])->fetchColumn())throw new DomainException('LINE_HAS_DEPENDENTS');
-            QuoteVs2Repository::q($db,'DELETE FROM quote_variant_cost_lines WHERE id=?',[$id]);return ['line_id'=>$id];
+            QuoteVs2Repository::q($db,'DELETE FROM quote_variant_cost_lines WHERE id=?',[$id]);SmartCosting::refresh($db,$v);Vs2Inclusions::apply($db,$v);return ['line_id'=>$id];
         }
         if($action==='duplicate'){
             $req=QuoteVs2Repository::q($db,'SELECT * FROM quote_service_requirements WHERE id=? AND quote_version_id=?',[$old['requirement_id'],$v['id']])->fetch();unset($req['id']);$req['requirement_key']='req-'.bin2hex(random_bytes(8));$req['service_name'].=' copy';$reqId=QuoteSmartCosting::requirement($db,$u,(int)$v['id'],$req);$body=['requirement_id'=>$reqId]+array_intersect_key($old,array_flip(['formula_code','quantity_source','quantity_override','custom_quantity','units_override','override_reason','supplier_id','rate_version_id','original_currency','unit_amount_original','manual_reason','manual_contract_json','service_mode']));$id=0;$old=[];
         }
+        if($action==='duplicate'&&!empty($body['rate_version_id']))unset($body['unit_amount_original']);
         if($action==='reorder'){QuoteVs2Repository::q($db,'UPDATE quote_variant_cost_lines SET sort_order=?,updated_by=? WHERE id=?',[QuoteVs2Domain::count($body['sort_order']??null),$u['id'],$id]);return ['line_id'=>$id];}
         $allowed=['expected_revision','requirement','requirement_id','line_key','sort_order','line_kind','service_mode','formula_code','quantity_source','quantity_override','custom_quantity','units_override','override_reason','supplier_id','rate_version_id','original_currency','unit_amount_original','adjusts_line_id','adjustment_amount_vnd','manual_reason','manual_contract','manual_contract_json','no_cost','review_reason'];
         foreach(array_keys($body) as $key)if(!in_array($key,$allowed,true))throw new InvalidArgumentException('Unsupported cost input: '.$key);
@@ -20,6 +21,7 @@ final class Vs2LineEditor {
         $req=QuoteVs2Repository::q($db,'SELECT * FROM quote_service_requirements WHERE quote_version_id=? AND id=?',[$v['id'],$r['requirement_id']??0])->fetch();if(!$req)throw new OutOfBoundsException('Requirement not found');
         $r['formula_code']=$r['formula_code']??QuoteVs2Domain::FORMULAS[$req['category']];$r['quantity_source']=$r['quantity_source']??$req['default_quantity_source'];
         if(!in_array($r['formula_code'],[...array_values(QuoteVs2Domain::FORMULAS),'LUMP_SUM'],true)||!in_array($r['quantity_source'],QuoteVs2Domain::SOURCES,true)||!in_array($r['service_mode'],['PRIVATE','SIC'],true)||!in_array($r['line_kind'],['SERVICE','ADJUSTMENT'],true))throw new InvalidArgumentException('Invalid line basis');
+        if(in_array($r['formula_code'],['TRANSFER_PACKAGE','GUIDE_DAY'],true)&&$r['quantity_source']!=='CUSTOM_QTY')throw new InvalidArgumentException('Transfer and guide require explicit CUSTOM_QTY resource counts');
         if(!in_array($r['original_currency'],['VND','USD'],true))throw new InvalidArgumentException('Invalid currency');
         $contract=$body['manual_contract']??QuoteVs2Repository::decode($r['manual_contract_json']??null);if(!is_array($contract))throw new InvalidArgumentException('Invalid manual contract');
         $data=[];foreach(['requirement_id','line_key','sort_order','line_kind','service_mode','formula_code','quantity_source','override_reason','supplier_id','rate_version_id','original_currency','unit_amount_original','adjusts_line_id','adjustment_amount_vnd','manual_reason'] as $key)$data[$key]=$r[$key];

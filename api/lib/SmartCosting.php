@@ -5,7 +5,9 @@ require_once __DIR__.'/Vs2RateResolver.php';
 
 final class SmartCosting {
     public static function calculate(array $line,array $req,array $guests,array $rate,string $fx): array {
+        if(in_array($line['formula_code'],['TRANSFER_PACKAGE','GUIDE_DAY'],true)&&$line['quantity_source']!=='CUSTOM_QTY')throw new DomainException('RESOURCE_COUNT_NEEDED: Explicit vehicle or guide count required');
         $quantity=QuoteVs2Domain::quantity($line,$guests);if($quantity===null)throw new DomainException('QUANTITY_NEEDED');
+        if(in_array($line['formula_code'],['HOTEL_PAX_NIGHT','CRUISE_PAX','VISA_PAX','MEAL_PAX_COUNT','TICKET_PAX','SIC_PAX'],true)&&$quantity>$guests['total_guests'])throw new DomainException('SERVICE_POPULATION_EXCEEDS_TOTAL');
         if($line['formula_code']==='LUMP_SUM'&&($quantity!==1||$line['quantity_source']!=='CUSTOM_QTY'))throw new DomainException('LUMP_SUM_REQUIRES_CUSTOM_ONE');
         $formula=$line['formula_code'];$units=in_array($formula,['GUIDE_DAY','HOTEL_PAX_NIGHT','MEAL_PAX_COUNT','CUSTOM'],true)?($line['units_override']??$req['service_units']):1;
         if($units===null||(int)$units<1)throw new DomainException('SERVICE_UNITS_NEEDED');$units=QuoteVs2Domain::count($units);
@@ -27,7 +29,12 @@ final class SmartCosting {
     }
     public static function reviewHash(array $v,array $profile,array $req,array $variant,array $line,?array $rate): string {
         $input=array_intersect_key($line,array_flip(['requirement_id','formula_code','quantity_source','quantity_override','custom_quantity','units_override','override_reason','supplier_id','rate_version_id','unit_amount_original','original_currency','coverage_state','included_by_line_id','inclusion_rule_id','adjusts_line_id','adjustment_amount_vnd','manual_reason','manual_contract_json','service_mode']));
-        return QuoteVs2Domain::hash([$input,QuoteVs2Domain::guests($v,$profile),array_intersect_key($req,array_flip(['category','service_date','service_end_date','service_units','scope_json','requirement_state'])),[$variant['hotel_level'],$variant['cruise_level'],$variant['costing_mode']],QuoteVs2Domain::itineraryScope($v),$rate['source_hash']??null]);
+        $guests=QuoteVs2Domain::guests($v,$profile);$eligibility=$rate['terms']['rate_eligibility_source']??null;
+        $deps=['quantity'=>QuoteVs2Domain::quantity($line,$guests),'eligibility'=>$eligibility?($guests[strtolower($eligibility)]??null):null];
+        if(($line['quantity_override']??null)!==null)$deps['override_context']=$guests;
+        if($line['formula_code']==='TRANSFER_PACKAGE'){$deps['total_guests']=$guests['total_guests'];$deps['itinerary_scope']=QuoteVs2Domain::itineraryScope($v);}
+        $stars=$req['category']==='HOTEL'?$variant['hotel_level']:($req['category']==='CRUISE'?$variant['cruise_level']:null);
+        return QuoteVs2Domain::hash([$input,$deps,array_intersect_key($req,array_flip(['category','service_date','service_end_date','service_units','scope_json','requirement_state'])),$stars,$rate['source_hash']??null]);
     }
     /** Guest-source writes never execute arithmetic for unbound or overridden lines. */
     public static function refresh(PDO $db,array $v,array $changed=[],bool $all=false,array $requirementEdits=[],array $lineIds=[]): array {

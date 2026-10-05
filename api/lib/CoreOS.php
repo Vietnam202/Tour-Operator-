@@ -182,6 +182,7 @@ final class CoreOS {
     }
 
     public static function handle(string $route,string $method,PDO $db,array $config,array $user): bool {
+        if(class_exists('QuoteVs2')&&$method==='POST'&&preg_match('#^quotes/\d+/(approve|send|confirm|create-booking)$#',$route))QuoteVs2::handle($route,$method,$db,$user);
         $companyId=(int)$user['company_id']; $userId=(int)$user['id'];
         if(!self::tableExists($db,'trips')) return false;
 

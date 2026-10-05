@@ -2,6 +2,12 @@
 declare(strict_types=1);
 
 final class Vs2Inclusions {
+    public static function overlaps(array $rule,array $req): bool {
+        if($rule['included_category']!==$req['category'])return false;$scope=QuoteVs2Repository::decode($rule['scope_rule_json']);$wanted=QuoteVs2Repository::decode($req['scope_json']);
+        if(!isset($scope['service_date']))return false;
+        $dates=$wanted['dates']??[$req['service_date']];if(!in_array($scope['service_date'],$dates,true))return false;
+        foreach(['day_key','route','attraction_key','meal_key','eligibility_group','transport_leg'] as $key){$actual=$key==='day_key'?$req['day_key']:($wanted[$key]??null);if(isset($scope[$key])&&$actual!==$scope[$key])return false;}return true;
+    }
     public static function covers(array $rule,array $req,array $line,array $package,array $guests): bool {
         if($rule['included_category']!==$req['category'])return false;
         $scope=QuoteVs2Repository::decode($rule['scope_rule_json']);$wanted=QuoteVs2Repository::decode($req['scope_json']);
@@ -9,7 +15,7 @@ final class Vs2Inclusions {
         if($req['package_component_key']&&$req['package_component_key']!==$rule['component_key'])return false;
         if(!$scope||!isset($scope['service_date'])||$scope['service_date']!==$req['service_date'])return false;
         foreach(['day_key','route','attraction_key','meal_key','eligibility_group','transport_leg'] as $key){$actual=$key==='day_key'?$req['day_key']:($wanted[$key]??null);if(($scope[$key]??null)!==$actual)return false;}
-        if(($scope['dates']??[])!==($wanted['dates']??[]))return false;
+        if(($scope['dates']??[])!==($wanted['dates']??[])||($scope['occurrences']??[])!==($wanted['occurrences']??[]))return false;
         $coverage=QuoteVs2Repository::decode($rule['coverage_rule_json']);
         $quantity=QuoteVs2Domain::quantity($line,$guests);$units=(int)($line['units_override']??$req['service_units']??1);
         $coveredQty=isset($coverage['quantity'])?QuoteVs2Domain::count($coverage['quantity']):QuoteVs2Domain::quantity($package,$guests);

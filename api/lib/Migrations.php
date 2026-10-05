@@ -18,6 +18,8 @@ final class Migrations {
                     if($bad)throw new RuntimeException('Candidate 023/024 history requires an approved adapter; VS2.1 upgrade stopped');
                     $candidate=$db->query("SHOW COLUMNS FROM quote_options LIKE 'costing_mode'")->fetch();
                     if($candidate)throw new RuntimeException('Candidate quote option schema detected; upgrade stopped');
+                    $index=$db->query("SHOW INDEX FROM quote_options WHERE Key_name='uq_option_level'")->fetchAll(PDO::FETCH_ASSOC);
+                    if(array_column($index,'Column_name')!==['quote_version_id','hotel_level'])throw new RuntimeException('Historical hotel option unique index mismatch; upgrade stopped');
                 }
                 $s=$db->prepare('SELECT * FROM migration_checksums WHERE version=?');$s->execute([$version]);$tracked=$s->fetch(PDO::FETCH_ASSOC);
                 if($tracked && !hash_equals($tracked['sha256'],$hash)) throw new RuntimeException('Migration checksum changed: '.$version);

@@ -37,7 +37,7 @@ final class LandingPages {
   foreach($doc['blocks'] as $block){if($block['form_url']==='')continue;parse_str((string)parse_url($block['form_url'],PHP_URL_QUERY),$query);
    if(!$campaign||!self::q($db,"SELECT id FROM lead_forms WHERE company_id=? AND campaign_id=? AND public_token=? AND status='ACTIVE'",[$cid,$campaign,$query['form']])->fetchColumn())throw new OutOfBoundsException('Choose an active Lead Hub form belonging to this campaign');
    if(isset($_SERVER['HTTP_HOST'])){$host=parse_url($block['form_url'],PHP_URL_HOST);$port=parse_url($block['form_url'],PHP_URL_PORT);if(strtolower((string)$host.($port&&$port!==443?':'.$port:''))!==strtolower($_SERVER['HTTP_HOST']))throw new InvalidArgumentException('Lead form must use this application host');}
-   if(isset($_SERVER['SCRIPT_NAME'])&&str_ends_with($_SERVER['SCRIPT_NAME'],'/api/index.php')){$path=rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])),'/').'/request.html';if(parse_url($block['form_url'],PHP_URL_PATH)!==$path)throw new InvalidArgumentException('Lead form must use this application path');}
+   if(isset($_SERVER['SCRIPT_NAME'])&&str_ends_with($_SERVER['SCRIPT_NAME'],'/api/index.php')){$path=rtrim(str_replace('\\','/',dirname(dirname($_SERVER['SCRIPT_NAME']))),'/').'/request.html';if(parse_url($block['form_url'],PHP_URL_PATH)!==$path)throw new InvalidArgumentException('Lead form must use this application path');}
   }
   if(!empty($b['id'])){
    $id=self::id($b['id']);self::get($db,$cid,$id);$version=self::id($b['version_no']??null);
