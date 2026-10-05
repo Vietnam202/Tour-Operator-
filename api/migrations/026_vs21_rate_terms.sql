@@ -32,4 +32,3 @@ CREATE TABLE rate_version_inclusions (
  UNIQUE KEY uq_vs21_component (rate_version_id,component_key),
  FOREIGN KEY (rate_version_id) REFERENCES rate_version_vs2_terms(rate_version_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-

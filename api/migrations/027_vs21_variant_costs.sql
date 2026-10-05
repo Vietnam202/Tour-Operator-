@@ -74,4 +74,3 @@ CREATE TABLE quote_variant_cost_lines (
  FOREIGN KEY (updated_by) REFERENCES users(id),
  FOREIGN KEY (reviewed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-

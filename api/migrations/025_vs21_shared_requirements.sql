@@ -43,4 +43,3 @@ CREATE TABLE quote_service_requirements (
  FOREIGN KEY (package_requirement_id) REFERENCES quote_service_requirements(id),
  FOREIGN KEY (updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
