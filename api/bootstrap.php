@@ -44,6 +44,7 @@ require_once __DIR__ . '/lib/AiChat.php';
 require_once __DIR__ . '/lib/TourInventory.php';
 require_once __DIR__ . '/lib/RateEngine.php';
 require_once __DIR__ . '/lib/QuoteOptions.php';
+require_once __DIR__ . '/lib/QuoteSmartCosting.php';
 require_once __DIR__ . '/lib/Procurement.php';
 require_once __DIR__ . '/lib/TravelDocuments.php';
 require_once __DIR__ . '/lib/FinanceLedger.php';

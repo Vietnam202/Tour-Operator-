@@ -1,0 +1,34 @@
+PASS service pax cannot exceed total
+PASS fractional guest quantity rejected
+PASS FOC not silently reinterpreted
+PASS complete typed cost sheet validates
+PASS TRANSPORT formula
+PASS GUIDE formula
+PASS HOTEL formula
+PASS CRUISE formula
+PASS VISA formula
+PASS MEAL formula
+PASS ATTRACTION formula
+PASS TOUR formula
+PASS VND aggregation exact before FX
+PASS transfer package and cruise per-pax do not multiply by days
+PASS human-readable formula trace
+PASS only rule-bound quantities follow changed fields
+PASS manual qty reviewed in current context
+PASS manual override stable but flagged after guest change
+PASS transfer capacity blocks finalization
+PASS transfer route change does not invent replacement rate
+PASS hotel nights mismatch blocks
+PASS guide days mismatch blocks
+PASS missing required service blocked
+PASS missing ticket rate blocked
+PASS duplicate attraction cost blocked
+PASS SIC inclusions suppress exact standalone requirements
+PASS included SIC services not double counted
+PASS package cannot suppress another scope
+PASS vehicle never uses paying pax multiplier
+PASS cruise variant requires matching confirmed star
+PASS zero eligible service pax supported
+PASS markup differs from margin
+PASS SIC category order/default requirements
+VS2.1 arithmetic suite complete.

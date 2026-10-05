@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/QuoteCostItems.php';
+require_once __DIR__.'/QuoteSmartCosting.php';
 final class QuoteOptions {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
     private static function atomic(PDO $db,callable $fn): array {$db->beginTransaction();try{$out=$fn();$db->commit();return $out;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}}
@@ -81,12 +82,12 @@ final class QuoteOptions {
             if(!$saved)throw new InvalidArgumentException('At least one base service line required');
             $pricing=self::pricing(round($cost,2),$pay,$mode,$value,$step);
             if($pricing['total_selling']<=0)throw new InvalidArgumentException('Positive selling value required');
-            $prior=self::q($db,'SELECT snapshot_json FROM quote_options WHERE quote_version_id=? AND hotel_level=?',[$version,$level])->fetchColumn();$prior=$prior?json_decode($prior,true):[];
+            $prior=self::q($db,'SELECT snapshot_json FROM quote_options WHERE quote_version_id=? AND hotel_level=? AND variant_key=\'\'',[$version,$level])->fetchColumn();$prior=$prior?json_decode($prior,true):[];
             $review=!empty($prior['review_required'])||count(array_filter($lines,fn($l)=>!empty($l['review_required'])))>0;
             if($review&&!empty($body['review_copied'])){self::text($body['review_reason']??'',1000);$review=false;}
             if(!array_filter($saved,fn($l)=>empty($l['rate_version_id'])))$review=false;
             $snapshot=$segments+['review_required'=>$review,'review_reason'=>$body['review_reason']??null,'fx_rate'=>$fx,'selling_currency'=>'USD','lines'=>$saved,'pricing'=>$pricing,'manual_review_required'=>$manual];
-            $existing=self::q($db,'SELECT id FROM quote_options WHERE quote_version_id=? AND hotel_level=?',[$version,$level])->fetchColumn();
+            $existing=self::q($db,'SELECT id FROM quote_options WHERE quote_version_id=? AND hotel_level=? AND variant_key=\'\'',[$version,$level])->fetchColumn();
             if($existing){self::q($db,'UPDATE quote_options SET label=?,snapshot_json=?,created_by=? WHERE id=?',[$label,self::json($snapshot),$user['id'],$existing]);$id=(int)$existing;}
             else{self::q($db,'INSERT INTO quote_options(quote_version_id,label,hotel_level,snapshot_json,created_by) VALUES(?,?,?,?,?)',[$version,$label,$level,self::json($snapshot),$user['id']]);$id=(int)$db->lastInsertId();}
             self::q($db,'DELETE FROM quote_bundle_approvals WHERE quote_version_id=?',[$version]);
@@ -98,10 +99,10 @@ final class QuoteOptions {
         });
     }
     public static function bundle(PDO $db,array $v): array {
-        $rows=self::q($db,'SELECT id,label,hotel_level,snapshot_json FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$v['id']])->fetchAll();
+        $rows=self::q($db,'SELECT id,label,hotel_level,variant_key,costing_mode,cruise_level,snapshot_json FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$v['id']])->fetchAll();
         if(!$rows)throw new DomainException('At least one priced option required');
         $segments=self::guestSegments($v);
-        foreach($rows as &$row){$row['snapshot']=json_decode($row['snapshot_json'],true,512,JSON_THROW_ON_ERROR);unset($row['snapshot_json']);
+        foreach($rows as &$row){$row['snapshot']=json_decode($row['snapshot_json'],true,512,JSON_THROW_ON_ERROR);unset($row['snapshot_json']);if(empty($row['variant_key']))unset($row['variant_key'],$row['costing_mode'],$row['cruise_level']);
             $optionSegments=self::guestSegments($row['snapshot']);
             foreach($segments as $field=>$count)if($optionSegments[$field]!==$count)throw new DomainException('Guest counts changed; recost every option');
         }unset($row);
@@ -110,7 +111,7 @@ final class QuoteOptions {
         return $segments+['document_language'=>$v['document_language']??'en','quote_ref'=>$v['quote_ref'],'version_no'=>(int)$v['version_no'],'tour_name'=>$v['tour_name'],'start_date'=>$v['start_date'],'end_date'=>$v['end_date'],'schedule'=>$publicDays,'included'=>$v['included_text'],'excluded'=>$v['excluded_text'],'terms'=>$v['terms_text'],'options'=>$rows];
     }
     public static function publicBundle(array $bundle): array {
-        $bundle['options']=array_map(fn($o)=>['id'=>(int)$o['id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);return $bundle;
+        $bundle['options']=array_map(fn($o)=>['id'=>(int)$o['id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],...(!empty($o['variant_key'])?['costing_mode'=>$o['costing_mode'],'cruise_level'=>$o['cruise_level']]:[]),'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);return $bundle;
     }
     public static function publicSchedule($schedule): array {
         if(!is_array($schedule)||!$schedule)throw new InvalidArgumentException('Itinerary required');$safe=[];
@@ -118,7 +119,7 @@ final class QuoteOptions {
         return $safe;
     }
     public static function approve(PDO $db,array $user,int $version,string $reason): array {
-        return self::atomic($db,function()use($db,$user,$version,$reason){$v=self::version($db,(int)$user['company_id'],$version,true);self::mutable($v);$bundle=self::bundle($db,$v);foreach($bundle['options'] as $option)if(!empty($option['snapshot']['review_required']))throw new DomainException('Review copied option lines before approval');$reason=self::text($reason,1000);
+        return self::atomic($db,function()use($db,$user,$version,$reason){$v=self::version($db,(int)$user['company_id'],$version,true);self::mutable($v);$bundle=self::bundle($db,$v);QuoteSmartCosting::validateFinal($db,$v,$bundle);foreach($bundle['options'] as $option)if(!empty($option['snapshot']['review_required']))throw new DomainException('Review copied option lines before approval');$reason=self::text($reason,1000);
             $hash=hash('sha256',self::json($bundle));self::q($db,'INSERT INTO quote_bundle_approvals(quote_version_id,content_hash,reason,approved_by) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE content_hash=VALUES(content_hash),reason=VALUES(reason),approved_by=VALUES(approved_by),approved_at=NOW()',[$version,$hash,$reason,$user['id']]);
             self::q($db,"UPDATE quote_versions SET version_status='APPROVED',approved_by=?,approved_at=NOW() WHERE id=?",[$user['id'],$version]);self::q($db,"UPDATE quotes SET status='APPROVED' WHERE id=?",[$v['quote_id']]);
             Audit::log($db,(int)$user['company_id'],(int)$user['id'],'QUOTE_BUNDLE_APPROVED','quote_version',$version,null,['hash'=>$hash,'reason'=>$reason]);return ['content_hash'=>$hash];
@@ -128,7 +129,7 @@ final class QuoteOptions {
         return self::atomic($db,function()use($db,$user,$version){$v=self::version($db,(int)$user['company_id'],$version,true);
             $old=self::q($db,'SELECT public_snapshot_json FROM quote_sent_bundles WHERE quote_version_id=?',[$version])->fetchColumn();if($old)return ['customer_safe_snapshot'=>json_decode($old,true)];
             if($v['version_status']!=='APPROVED')throw new DomainException('Approve this quote bundle before sending');
-            $bundle=self::bundle($db,$v);$hash=hash('sha256',self::json($bundle));$approved=self::q($db,'SELECT content_hash FROM quote_bundle_approvals WHERE quote_version_id=?',[$version])->fetchColumn();
+            $bundle=self::bundle($db,$v);QuoteSmartCosting::validateFinal($db,$v,$bundle);$hash=hash('sha256',self::json($bundle));$approved=self::q($db,'SELECT content_hash FROM quote_bundle_approvals WHERE quote_version_id=?',[$version])->fetchColumn();
             if(!$approved||!hash_equals($approved,$hash))throw new DomainException('Quote changed since approval');
             $public=self::publicBundle($bundle);
             self::q($db,'INSERT INTO quote_sent_bundles(quote_version_id,public_snapshot_json,internal_snapshot_json,content_hash,sent_by) VALUES(?,?,?,?,?)',[$version,self::json($public),self::json($bundle),$hash,$user['id']]);
@@ -159,7 +160,7 @@ final class QuoteOptions {
             if($segments!==$optionSegments)throw new DomainException('PAX_SEGMENT_REVIEW_REQUIRED: Accepted bundle and option guest counts differ; create a reviewed revision before booking.');
             $ref='BKG-'.date('Y').'-'.strtoupper(bin2hex(random_bytes(5)));
             self::q($db,"INSERT INTO bookings(company_id,booking_ref,trip_id,quote_id,confirmed_quote_version_no,lead_guest_name,lead_whatsapp,lead_email,start_date,end_date,adults,children,infants,foc,total_guests,paying_pax,selling_currency,confirmed_selling,operations_status,sales_owner_id,operations_owner_id,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'NEW_BOOKING',?,?,?,?)",[$cid,$ref,$v['trip_id'],$v['quote_id'],$bundle['version_no'],$v['lead_contact_name'],$v['lead_whatsapp'],$v['lead_email'],$bundle['start_date'],$bundle['end_date'],$segments['adults'],$segments['children'],$segments['infants'],$segments['foc'],$segments['total_guests'],$segments['paying_pax'],$snap['selling_currency'],$snap['pricing']['total_selling'],$v['sales_owner_id'],$v['operations_owner_id']?:$uid,$uid,$uid]);$id=(int)$db->lastInsertId();
-            foreach($snap['lines'] as $i=>$line)self::q($db,"INSERT INTO booking_services(booking_id,service_ref,category,service_name,service_date,pax,qty,supplier_id,booking_status,planned_cost,cost_currency,source_type,source_ref) VALUES(?,?,?,?,?,?,?,?,'PLANNED',?,?,'QUOTE_COST',?)",[$id,sprintf('SVC-%03d',$i+1),$line['category'],$line['service_name'],$line['service_date'],$line['pax'],$line['qty'],$line['supplier_id'],$line['total'],$line['currency'],$v['quote_ref'].' V'.$v['version_no'].' '.$option['hotel_level']]);
+            foreach($snap['lines'] as $i=>$line)if(empty($line['included'])&&empty($line['no_cost']))self::q($db,"INSERT INTO booking_services(booking_id,service_ref,category,service_name,service_date,pax,qty,supplier_id,booking_status,planned_cost,cost_currency,source_type,source_ref) VALUES(?,?,?,?,?,?,?,?,'PLANNED',?,?,'QUOTE_COST',?)",[$id,sprintf('SVC-%03d',$i+1),$line['category'],$line['service_name'],$line['service_date'],$line['pax'],$line['qty'],$line['supplier_id'],$line['total'],$line['currency'],$v['quote_ref'].' V'.$v['version_no'].' '.$option['hotel_level']]);
             $public=json_decode($accepted['public_snapshot_json'],true,512,JSON_THROW_ON_ERROR);$public['options']=array_values(array_filter($public['options'],fn($o)=>(int)$o['id']===(int)$accepted['option_id']));
             self::q($db,'INSERT INTO booking_quote_snapshots(booking_id,quote_version_id,option_id,public_snapshot_json,internal_snapshot_json,source_hash) VALUES(?,?,?,?,?,?)',[$id,$version,$accepted['option_id'],self::json($public),self::json(['quote'=>$bundle,'accepted_option'=>$option]),$accepted['content_hash']]);
             self::q($db,"UPDATE trips SET lifecycle_stage='BOOKING' WHERE id=?",[$v['trip_id']]);Audit::log($db,$cid,$uid,'BOOKING_FROM_ACCEPTED_OPTION','booking',$id,null,['option_id'=>$accepted['option_id'],'source_hash'=>$accepted['content_hash']]);return ['id'=>$id,'booking_ref'=>$ref];

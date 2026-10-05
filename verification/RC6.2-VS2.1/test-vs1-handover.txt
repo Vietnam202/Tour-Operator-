@@ -1,0 +1,115 @@
+PASS current migration manifest includes additive VS1 handover
+PASS released baseline has all 21 migrations
+PASS released migration bytes preserved: 001_phase1_core.sql
+PASS released migration bytes preserved: 002_phase1_rate_rules_import.sql
+PASS released migration bytes preserved: 003_phase1_contracting_rules_reconciliation.sql
+PASS released migration bytes preserved: 004_sales_core.sql
+PASS released migration bytes preserved: 005_booking_operations.sql
+PASS released migration bytes preserved: 006_finance_control.sql
+PASS released migration bytes preserved: 007_lead_attribution.sql
+PASS released migration bytes preserved: 008_tour_inventory.sql
+PASS released migration bytes preserved: 009_quote_options.sql
+PASS released migration bytes preserved: 010_travel_documents.sql
+PASS released migration bytes preserved: 011_finance_ledgers.sql
+PASS released migration bytes preserved: 012_operations_resources_issues.sql
+PASS released migration bytes preserved: 013_invoice_schedules.sql
+PASS released migration bytes preserved: 014_service_travel_details.sql
+PASS released migration bytes preserved: 015_commercial_invoice_documents.sql
+PASS released migration bytes preserved: 016_rc1_editing.sql
+PASS released migration bytes preserved: 017_campaignpilot.sql
+PASS released migration bytes preserved: 018_ai_chat.sql
+PASS released migration bytes preserved: 019_marketing_studio.sql
+PASS released migration bytes preserved: 020_landing_pages.sql
+PASS released migration bytes preserved: 021_tour_library.sql
+PASS fresh MariaDB installs complete current migration manifest
+PASS fresh migration retry is a no-op
+PASS foreign/inactive qualification owner rejected (InvalidArgumentException)
+PASS foreign/inactive qualification owner rejected (InvalidArgumentException)
+PASS foreign company cannot qualify request (OutOfBoundsException)
+PASS sales.view alone cannot qualify (LeadSalesPermissionException)
+PASS failed qualification preflight leaves no partial records/effects
+PASS concurrent qualification waits on request lock (PDOException)
+PASS native InnoDB lock timeout proves qualification serialization
+PASS timed-out qualification rolls back without partial lead/effects
+PASS task failure aborts qualification transaction (PDOException)
+PASS failed qualification rolls back lead/request revision/history/outbox/task/audit
+PASS qualification persists pending handover and request revision
+PASS one committed internal lead.qualified outbox record
+PASS one shared task effect for lead.qualified
+PASS exact qualification retry returns same receipt
+PASS qualification retry creates no duplicated task/event/history
+PASS command receipt cannot be reused by another actor (DomainException)
+PASS same action key with changed content conflicts (DomainException)
+PASS stale new qualification key cannot create another lead (DomainException)
+PASS unaccepted handover cannot convert (DomainException)
+PASS identity review cannot precede Sales acceptance (DomainException)
+PASS accept rejects foreign owner (InvalidArgumentException)
+PASS acceptance advances handover once
+PASS one committed internal lead.sales_accepted outbox record
+PASS one shared task effect for lead.sales_accepted
+PASS acceptance retry returns same receipt
+PASS acceptance replay adds no effects
+PASS stale handover version rejects a new decision (DomainException)
+PASS exact contacts suggest one same-company active identity; name alone never matches
+PASS reviewed identity and tenant link preflight rejected (InvalidArgumentException)
+PASS reviewed identity and tenant link preflight rejected (DomainException)
+PASS reviewed identity and tenant link preflight rejected (InvalidArgumentException)
+PASS reviewed identity and tenant link preflight rejected (InvalidArgumentException)
+PASS reviewed identity and tenant link preflight rejected (InvalidArgumentException)
+PASS reviewed identity and tenant link preflight rejected (InvalidArgumentException)
+PASS identity review nonce cannot transfer to another actor (DomainException)
+PASS invalid identity/agent selections create no partial customer/trip/inquiry/effect
+PASS concurrent conversion is serialized by request parent lock (PDOException)
+PASS native InnoDB lock wait timeout proves second conversion waited
+PASS timed-out conversion rolls back its transaction
+PASS lock timeout leaves no downstream/effect rows
+PASS handover transaction isolation does not alter connection default
+PASS injected task persistence failure aborts conversion (PDOException)
+PASS failed conversion rolls back trip/inquiry/stage/outbox/audit/command effects
+PASS rollback leaves identity review nonce reusable
+PASS same command succeeds after lock/failure rollback with existing customer
+PASS one committed internal lead.converted outbox record
+PASS one shared task effect for lead.converted
+PASS conversion retry uses exact original command result
+PASS historical no-body conversion replay preserves existing identities
+PASS conversion retries never create new customer/trip/inquiry/tasks
+PASS one opportunity identity downstream
+PASS request source attribution and original contacts remain byte-preserved
+PASS shared trip retains upstream guest counts
+PASS conversion creates exactly one next-action task for shared inquiry
+PASS return requires recorded reason (InvalidArgumentException)
+PASS invalid return has no effect
+PASS Sales can return pending MQL
+PASS one committed internal lead.sales_returned outbox record
+PASS one shared task effect for lead.sales_returned
+PASS return command replay returns receipt
+PASS return retry does not duplicate effects
+PASS returned lead requires resubmission before Sales acceptance (DomainException)
+PASS Marketing resubmits same lead as pending
+PASS one committed internal lead.resubmitted outbox record
+PASS one shared task effect for lead.resubmitted
+PASS resubmit retry returns receipt
+PASS resubmit retry does not duplicate effects
+PASS expired review nonce cannot convert (DomainException)
+PASS expired identity review leaves business state untouched
+PASS identity candidate changes require refreshed human review (DomainException)
+PASS candidate conflict inserts no partial opportunity
+PASS new identity despite match needs explicit duplicate reason (InvalidArgumentException)
+PASS late task failure aborts new-customer conversion (PDOException)
+PASS failed CREATE_NEW rolls back new customer and all downstream effects
+PASS reviewed new customer uses shared customer master once
+PASS CREATE_NEW retry reuses one identity
+PASS unrelated same name never creates a customer merge candidate
+PASS nonmatching existing identity requires recorded identity reason (InvalidArgumentException)
+PASS explicit reason can link an existing identity without automatic name merge
+PASS Customer360 reuses shared Sales projection
+PASS Customer360 redacts leads for sales.view-only role
+PASS Customer360 redacts bookings for sales.view-only role
+PASS Customer360 redacts tasks for sales.view-only role
+PASS Customer360 redacts documents for sales.view-only role
+PASS Customer360 redacts finance for sales.view-only role
+PASS Customer360 scoped foreign ID returns no data (OutOfBoundsException)
+PASS ADMIN label cannot bypass effective Sales acceptance DENY (LeadSalesPermissionException)
+PASS explicit permission denial has no business side effects
+SKIP dedicated RC5.3 upgrade fixture: set VS1_UPGRADE_MYSQL_DSN to another empty local fixture database.
+VS1 native handover checks complete: 113 passed assertions.
