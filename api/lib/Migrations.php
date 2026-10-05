@@ -13,6 +13,12 @@ final class Migrations {
             $files=glob($directory.'/*.sql')?:[];sort($files,SORT_STRING);
             foreach($files as $file) {
                 $version=basename($file,'.sql');$hash=hash_file('sha256',$file);
+                if($version==='025_vs21_shared_requirements') {
+                    $bad=$db->query("SELECT version FROM schema_migrations WHERE version REGEXP '^02[34]_' LIMIT 1")->fetchColumn();
+                    if($bad)throw new RuntimeException('Candidate 023/024 history requires an approved adapter; VS2.1 upgrade stopped');
+                    $candidate=$db->query("SHOW COLUMNS FROM quote_options LIKE 'costing_mode'")->fetch();
+                    if($candidate)throw new RuntimeException('Candidate quote option schema detected; upgrade stopped');
+                }
                 $s=$db->prepare('SELECT * FROM migration_checksums WHERE version=?');$s->execute([$version]);$tracked=$s->fetch(PDO::FETCH_ASSOC);
                 if($tracked && !hash_equals($tracked['sha256'],$hash)) throw new RuntimeException('Migration checksum changed: '.$version);
                 if($tracked && $tracked['status']!=='APPLIED') throw new RuntimeException('Partial migration requires review before retry: '.$version);
