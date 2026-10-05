@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/QuoteCostItems.php';
 require_once __DIR__.'/QuoteSmartCosting.php';
+require_once __DIR__.'/QuoteProposal.php';
 final class QuoteOptions {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
     private static function atomic(PDO $db,callable $fn): array {$db->beginTransaction();try{$out=$fn();$db->commit();return $out;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}}
@@ -108,7 +109,7 @@ final class QuoteOptions {
         }unset($row);
         $schedule=json_decode($v['schedule_json']??'[]',true,512,JSON_THROW_ON_ERROR);if(!$schedule||!is_array($schedule))throw new DomainException('Itinerary required');
         $publicDays=[];foreach($schedule as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid itinerary');$clean=['day'=>$i+1];foreach(['date','title','description','meals','overnight'] as $key){if(isset($day[$key])&&!is_string($day[$key]))throw new InvalidArgumentException('Itinerary text required');$clean[$key]=(string)($day[$key]??'');}$publicDays[]=$clean;}
-        return $segments+['document_language'=>$v['document_language']??'en','quote_ref'=>$v['quote_ref'],'version_no'=>(int)$v['version_no'],'tour_name'=>$v['tour_name'],'start_date'=>$v['start_date'],'end_date'=>$v['end_date'],'schedule'=>$publicDays,'included'=>$v['included_text'],'excluded'=>$v['excluded_text'],'terms'=>$v['terms_text'],'options'=>$rows];
+        return QuoteProposal::extend($db,$v,$segments+['document_language'=>$v['document_language']??'en','quote_ref'=>$v['quote_ref'],'version_no'=>(int)$v['version_no'],'tour_name'=>$v['tour_name'],'start_date'=>$v['start_date'],'end_date'=>$v['end_date'],'schedule'=>$publicDays,'included'=>$v['included_text'],'excluded'=>$v['excluded_text'],'terms'=>$v['terms_text'],'options'=>$rows]);
     }
     public static function publicBundle(array $bundle): array {
         $bundle['options']=array_map(fn($o)=>['id'=>(int)$o['id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],...(!empty($o['variant_key'])?['costing_mode'=>$o['costing_mode'],'cruise_level'=>$o['cruise_level']]:[]),'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);return $bundle;

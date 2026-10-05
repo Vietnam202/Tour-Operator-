@@ -1,0 +1,5 @@
+PASS visual day text escaped without HTML execution
+PASS duplicate generates independent day identity and date
+PASS presentation template changes do not write supplier costing inputs
+PASS unavailable Drive has clear state and no automatic folder scan
+PASS sent visual editor disables day, template and save mutations

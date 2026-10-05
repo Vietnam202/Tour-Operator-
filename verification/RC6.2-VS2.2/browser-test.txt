@@ -1,0 +1,17 @@
+PASS three-area visual editor opened with one shared itinerary
+PASS PC upload optimized, thumb displayed and company image approved
+PASS public content, hotel row, cover and day hero persist
+PASS add/duplicate/remove/reorder retain image day identity
+PASS desktop and 390px mobile layout without outer overflow
+PASS server proposal preview contains public data and no internal note/cost fields
+PASS preview media resolves under actual API path
+PASS HTTP exports native PDF and DOCX with embedded media
+PASS all four templates render; white label omits VTA brand/contact
+PASS presentation mutation rejects wrong CSRF
+PASS sent proposal locks settings/day/media edits
+PASS anonymous expiring link exposes only locked proposal and its own images
+PASS library archive leaves already-sent image visible
+PASS link revocation blocks anonymous proposal and media access
+PASS revision copies proposal references but not customer links
+PASS media and proposal permission checks via actual front controller
+PASS no uncaught browser errors

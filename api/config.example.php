@@ -34,6 +34,17 @@ return [
         'max_upload_bytes' => 15728640,
         'allowed_extensions' => ['pdf','docx','xlsx','csv','txt'],
     ],
+    // Read-only media accounts are tenant scoped; never use a global Drive account.
+    // Configure the OAuth app's refresh token with drive.readonly scope, or a service account.
+    'media_drive' => [
+        'accounts' => [
+            // 1 => [
+            //     'allowed_folder_ids' => ['SPECIFIC_SHARED_IMAGE_FOLDER_ID'],
+            //     'oauth_client_id' => '', 'oauth_client_secret' => '', 'oauth_refresh_token' => '',
+            //     'service_account_json' => '/home/.../vta_private/company-1-drive.json',
+            // ],
+        ],
+    ],
     'ai' => [
         'enabled' => false,
         'api_key' => getenv('OPENAI_API_KEY') ?: '',

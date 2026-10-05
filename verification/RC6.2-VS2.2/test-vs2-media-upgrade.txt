@@ -1,0 +1,1 @@
+PASS upgrade023→024 only; no-op retry; historical VS2.1 snapshots unchanged; role and explicit user permission overrides preserved; no automatic proposal opt-in
