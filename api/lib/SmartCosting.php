@@ -6,6 +6,7 @@ require_once __DIR__.'/Vs2RateResolver.php';
 final class SmartCosting {
     public static function calculate(array $line,array $req,array $guests,array $rate,string $fx): array {
         $quantity=QuoteVs2Domain::quantity($line,$guests);if($quantity===null)throw new DomainException('QUANTITY_NEEDED');
+        if($line['formula_code']==='LUMP_SUM'&&($quantity!==1||$line['quantity_source']!=='CUSTOM_QTY'))throw new DomainException('LUMP_SUM_REQUIRES_CUSTOM_ONE');
         $formula=$line['formula_code'];$units=in_array($formula,['GUIDE_DAY','HOTEL_PAX_NIGHT','MEAL_PAX_COUNT','CUSTOM'],true)?($line['units_override']??$req['service_units']):1;
         if($units===null||(int)$units<1)throw new DomainException('SERVICE_UNITS_NEEDED');$units=QuoteVs2Domain::count($units);
         $unit=Vs2Decimal::parse((string)$rate['amount']);$original=Vs2Decimal::mul(Vs2Decimal::mul($unit,$quantity),$units);$total=Vs2Decimal::convert($original,$rate['currency'],$fx);$unitVnd=Vs2Decimal::convert($unit,$rate['currency'],$fx);

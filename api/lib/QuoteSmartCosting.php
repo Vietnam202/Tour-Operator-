@@ -39,6 +39,8 @@ final class QuoteSmartCosting {
             $current=QuoteOptions::version($db,(int)$u['company_id'],$id);
             $scopeChanged=QuoteVs2Domain::hash(QuoteVs2Domain::itineraryScope($current))!==QuoteVs2Domain::hash(QuoteVs2Domain::itineraryScope($v));
             $updates=SmartCosting::refresh($db,$current,$changed,isset($fields['fx_rate']),$body['requirements']??[]);
+            // Coverage follows explicit populations, but changing an unrelated source must not rerun line arithmetic.
+            Vs2Inclusions::apply($db,$current);
             if($changed||$scopeChanged)self::q($db,'UPDATE quote_variant_cost_lines l JOIN quote_option_variants c ON c.id=l.variant_id JOIN quote_options o ON o.id=c.quote_option_id SET l.review_required=1 WHERE o.quote_version_id=? AND (l.quantity_override IS NOT NULL OR l.formula_code=\'TRANSFER_PACKAGE\')',[$id]);
             QuoteVs2Repository::finish($db,$v,$u,'VS21_CONTEXT_UPDATED',['changed_sources'=>$changed,'scope_changed'=>$scopeChanged,'requirement_count'=>count($body['requirements']??[]),'recalculated'=>$updates]);
             return ['costing_revision'=>(int)$v['costing_revision']+1,'recalculated_line_ids'=>$updates];

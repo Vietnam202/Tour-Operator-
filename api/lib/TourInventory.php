@@ -63,6 +63,7 @@ final class TourInventory {
             if($v['status']!=='PUBLISHED')throw new DomainException('Publish the tour version first');
             $q=self::q($db,'SELECT v.*,q.id parent_quote_id,t.agent_id,t.market FROM quote_versions v JOIN quotes q ON q.id=v.quote_id JOIN trips t ON t.id=q.trip_id WHERE q.company_id=? AND v.id=? FOR UPDATE',[$cid,$quoteVersion])->fetch();
             if(!$q)throw new OutOfBoundsException('Quote not found');
+            QuoteVs2Repository::legacy($q);
             if($q['version_status']!=='DRAFT')throw new DomainException('Only draft quotes can use a program');
             if(self::q($db,'SELECT 1 FROM quote_program_sources WHERE quote_version_id=?',[$quoteVersion])->fetchColumn())throw new DomainException('Program already copied; create another quote revision');
             if(json_decode($q['schedule_json']??'[]',true))throw new DomainException('Existing itinerary must not be overwritten');

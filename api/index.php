@@ -131,6 +131,7 @@ try {
     CampaignPilot::handle($route,$method,$db,$user);
     AiChat::handle($route,$method,$db,$config,$user);
     TourInventory::handle($route,$method,$db,$user);
+    QuoteVs2::handle($route,$method,$db,$user);
     QuoteOptions::handle($route,$method,$db,$user);
     ScheduleImport::handle($route,$method,$db,$user);
     TourLibrary::handle($route,$method,$db,$config,$user);

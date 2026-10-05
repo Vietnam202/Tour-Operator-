@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 final class Http {
     public static function json(array $payload, int $status = 200): never {
+        if(class_exists('QuoteVs2Projection')&&isset($GLOBALS['db'],$GLOBALS['user']))$payload=QuoteVs2Projection::filter($GLOBALS['db'],$GLOBALS['user'],$payload,(string)($_GET['route']??''));
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-store');

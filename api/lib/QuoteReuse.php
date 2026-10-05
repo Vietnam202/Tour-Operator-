@@ -19,7 +19,7 @@ final class QuoteReuse {
    ScheduleImport::date((string)$target['start_date']);ScheduleImport::date((string)$target['end_date']);
    if($target['paying_pax']<1||$target['total_guests']<$target['paying_pax']+$target['foc'])throw new InvalidArgumentException('Correct target inquiry dates and paying pax first');
    $scrub=function($text)use($old){$s=(string)$text;foreach(['lead_contact_name','lead_email','lead_whatsapp'] as $k){$v=trim((string)($old[$k]??''));if(strlen($v)>2)$s=str_ireplace($v,'',$s);}return trim($s);};
-   $schedule=ScheduleImport::normalize(json_decode($old['schedule_json']??'[]',true)?:[]);
+   $smart=QuoteVs2Repository::engine($old)==='VS2_1';$schedule=$smart?QuoteVs2Domain::schedule(json_decode($old['schedule_json']??'[]',true)?:[]):ScheduleImport::normalize(json_decode($old['schedule_json']??'[]',true)?:[]);
    foreach($schedule as $i=>&$day){unset($day['notes']);$day['date']=ScheduleImport::date($target['start_date'])->modify("+$i days")->format('Y-m-d');foreach(['title','description','meals','overnight'] as $k)$day[$k]=$scrub($day[$k]);}unset($day);
    $quote=self::insert($db,'quotes',['company_id'=>$u['company_id'],'quote_ref'=>'PENDING-'.bin2hex(random_bytes(8)),'trip_id'=>$target['id'],'inquiry_id'=>$inquiry,'current_version_no'=>1,'status'=>'DRAFT','created_by'=>$u['id'],'updated_by'=>$u['id']]);
    $ref=sprintf('QT-%s-%06d',date('Y'),$quote);self::q($db,'UPDATE quotes SET quote_ref=? WHERE id=?',[$ref,$quote]);
@@ -29,7 +29,12 @@ final class QuoteReuse {
    if($mode==='FULL_DRAFT'){foreach(['included_text','excluded_text','terms_text'] as $k)$data[$k]=$scrub($old[$k]??'');foreach(['pricing_mode','pricing_value','rounding_step','selling_per_pax'] as $k)$data[$k]=$old[$k];}
    $version=self::insert($db,'quote_versions',$data);
    $offset=function($date)use($old):int {if(!$date||!$old['start_date'])return 0;return (int)ScheduleImport::date($old['start_date'])->diff(ScheduleImport::date($date))->format('%r%a');};
-   if($mode!=='PROGRAM_ONLY'){
+   if($smart&&$mode!=='PROGRAM_ONLY'){Vs2Snapshots::copy($db,$u,$source,$version);
+    self::q($db,'UPDATE quote_guest_profiles SET hotel_pax=NULL,cruise_pax=NULL,visa_pax=NULL,meal_pax=NULL,ticket_pax=NULL WHERE quote_version_id=?',[$version]);
+    $shift=(int)ScheduleImport::date($old['start_date'])->diff(ScheduleImport::date($target['start_date']))->format('%r%a');
+    Vs2Snapshots::shiftRequirements($db,$version,$shift);
+   }
+   if(!$smart&&$mode!=='PROGRAM_ONLY'){
     $options=self::q($db,'SELECT * FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$source])->fetchAll();
     if($options){foreach($options as $option){
      $snapshot=json_decode($option['snapshot_json'],true,512,JSON_THROW_ON_ERROR);$lines=[];$cost=0;

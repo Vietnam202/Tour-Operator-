@@ -32,7 +32,7 @@ final class Vs2RateResolver {
             $rate['terms']['package_scope']=QuoteVs2Repository::decode($terms['package_scope_json']);$rate['terms']['basis_evidence']=QuoteVs2Repository::decode($terms['basis_evidence_json']);
             $rate['inclusions']=$q('SELECT * FROM rate_version_inclusions WHERE rate_version_id=? ORDER BY sort_order,id',[$id])->fetchAll();
             $basis=['TRANSFER_PACKAGE'=>['PER_VEHICLE','PER_TRANSFER','PER_SERVICE'],'GUIDE_DAY'=>['PER_DAY','PER_GUIDE_DAY'],'HOTEL_PAX_NIGHT'=>['PER_PAX'],'CRUISE_PAX'=>['PER_PAX'],'VISA_PAX'=>['PER_PAX'],'MEAL_PAX_COUNT'=>['PER_PAX'],'TICKET_PAX'=>['PER_PAX'],'SIC_PAX'=>['PER_PAX']];
-            if($line['formula_code']!=='CUSTOM'&&!in_array($rate['rate_basis'],$basis[$line['formula_code']]??[],true))throw new DomainException('UNSUPPORTED_RATE_BASIS');
+            if(!in_array($line['formula_code'],['CUSTOM','LUMP_SUM'],true)&&!in_array($rate['rate_basis'],$basis[$line['formula_code']]??[],true))throw new DomainException('UNSUPPORTED_RATE_BASIS');
             if(empty($rate['terms']['basis_evidence']['evidence']))throw new DomainException('RATE_BASIS_EVIDENCE_NEEDED');
         }
         if($rate['terms']['formula_code']!==$line['formula_code'])throw new DomainException('RATE_FORMULA_MISMATCH');

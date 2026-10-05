@@ -41,6 +41,10 @@ final class QuoteVs2Repository {
         self::q($db,"UPDATE quote_versions SET costing_revision=costing_revision+1,version_status='DRAFT',approved_by=NULL,approved_at=NULL WHERE id=?",[$v['id']]);
         self::q($db,'DELETE FROM quote_bundle_approvals WHERE quote_version_id=?',[$v['id']]);
         self::q($db,"UPDATE quotes SET status='DRAFT',updated_by=? WHERE id=?",[$u['id'],$v['quote_id']]);
+        if(class_exists('Vs2Snapshots')){
+            $current=QuoteOptions::version($db,(int)$u['company_id'],(int)$v['id']);$p=Vs2Snapshots::summary($db,$current);
+            self::q($db,'UPDATE quote_versions SET total_cost=?,cost_per_paying_pax=?,selling_per_pax=?,total_selling=?,profit_amount=?,margin_pct=?,markup_pct=? WHERE id=?',[$p['total_cost'],$p['cost_per_paying_pax'],$p['selling_per_pax'],$p['total_selling'],$p['profit_amount'],$p['margin_pct'],$p['markup_pct'],$v['id']]);
+        }
         Audit::log($db,(int)$u['company_id'],(int)$u['id'],$event,'quote_version',(int)$v['id'],null,$details);
     }
     public static function expected(array $body): int {
