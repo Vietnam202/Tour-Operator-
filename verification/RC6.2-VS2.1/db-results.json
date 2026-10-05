@@ -1,0 +1,54 @@
+[
+  {
+    "suite": "vs2-migration-upgrade",
+    "exit_code": 0
+  },
+  {
+    "suite": "vs2-costing-db",
+    "exit_code": 0
+  },
+  {
+    "suite": "quote-options",
+    "exit_code": 0
+  },
+  {
+    "suite": "rc1",
+    "exit_code": 0
+  },
+  {
+    "suite": "rc1-options",
+    "exit_code": 0
+  },
+  {
+    "suite": "legacy-costs",
+    "exit_code": 0
+  },
+  {
+    "suite": "vs1-handover",
+    "exit_code": 0
+  },
+  {
+    "suite": "vs0-commercial",
+    "exit_code": 0
+  },
+  {
+    "suite": "vs0-finance-operations",
+    "exit_code": 0
+  },
+  {
+    "suite": "finance-flow",
+    "exit_code": 0
+  },
+  {
+    "suite": "operations",
+    "exit_code": 0
+  },
+  {
+    "suite": "workspace-center",
+    "exit_code": 0
+  },
+  {
+    "suite": "runtime-guard",
+    "exit_code": 0
+  }
+]

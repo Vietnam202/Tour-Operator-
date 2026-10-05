@@ -4,6 +4,8 @@ require __DIR__.'/quote-options.php';
 require_once __DIR__.'/../api/lib/CoreOS.php';
 require_once __DIR__.'/../api/lib/QuoteReuse.php';
 $db->prepare("UPDATE trips SET start_date='2027-01-02',end_date='2027-01-02' WHERE id=?")->execute([$conversion['trip_id']]);
+// VS1 deliberately does not infer adults from an intake total; explicitly review fixture segments.
+$db->prepare('UPDATE trips SET adults=10,children=0,infants=0,foc=1,total_guests=11,paying_pax=10 WHERE id=?')->execute([$conversion['trip_id']]);
 $before=$db->query('SELECT * FROM quote_versions WHERE id='.$qvid)->fetch();
 $c=QuoteReuse::clone($db,$user,$qvid,$conversion['inquiry_id'],'FULL_DRAFT');
 $v=QuoteOptions::version($db,1,$c['version_id']);$options=$db->query('SELECT * FROM quote_options WHERE quote_version_id='.$v['id'])->fetchAll();

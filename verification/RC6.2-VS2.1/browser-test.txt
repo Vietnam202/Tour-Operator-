@@ -1,0 +1,10 @@
+PASS PRIVATE seven categories created in editor
+PASS HTTP deterministic totals and category formulas
+PASS Simple/Advanced server traces and draft validation displayed
+PASS 390px mobile layout without page overflow
+PASS CSRF blocks mutation
+PASS cost read blocked without quote.view_cost
+PASS quote Info guest edit recosts only rule followers
+PASS sent snapshot customer-safe and immutable
+PASS existing revision route copies VS2 metadata and requirements
+PASS browser no uncaught JavaScript errors

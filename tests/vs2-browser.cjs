@@ -1,0 +1,38 @@
+// Requires an isolated PHP/MariaDB HTTP fixture from tests/http/setup.php; never production.
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('fs');
+(async()=>{
+ const base=process.env.VTA_TEST_BASE_URL||'http://127.0.0.1:8873',args=process.env.VTA_TEST_CHROME?['--no-sandbox','--disable-dev-shm-usage','--no-zygote','--single-process','--disable-gpu']:[];
+ const browser=await chromium.launch({headless:true,executablePath:process.env.VTA_TEST_CHROME||undefined,args});const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR '+e.message)});let count=0;
+ const pass=x=>{count++;console.log('PASS '+x)};
+ try{
+ await page.goto(base+'/');await page.locator('input[type=email]').fill('admin@example.invalid');await page.locator('input[type=password]').fill('Local-Http-Test-2026');await page.getByRole('button',{name:'Sign In',exact:true}).click();await page.waitForSelector('#workspace');
+ const req=page.context().request,me=await(await req.get(base+'/api/index.php?route=auth/me')).json();
+ async function call(route,method='GET',data,headers={}){const res=await req.fetch(base+'/api/index.php?route='+encodeURIComponent(route),{method,data,headers:{'X-VTA-CSRF':me.user.csrf,...headers}});const out=await res.json();assert(res.ok(),route+' '+res.status()+' '+JSON.stringify(out));return out}
+ const inquiry=await call('inquiries','POST',{lead_contact_name:'VS2 Browser Test',title:'VS2.1 Hanoi',adults:10,children:0,infants:0,foc:1,total_guests:11,paying_pax:10,start_date:'2027-01-02',end_date:'2027-01-04'}),quote=await call('inquiries/'+inquiry.id+'/create-quote','POST',{}),q=await call('quotes/'+quote.id),v=q.version;
+ await call('quote-versions/'+v.id,'PUT',{schedule:[{date:'2027-01-02',title:'Arrival',description:'Transfer to Hanoi',overnight:'Hanoi'},{date:'2027-01-03',title:'City tour',description:'Hanoi sightseeing',overnight:'Hanoi'},{date:'2027-01-04',title:'Departure',description:'Return transfer'}]});
+ const supplier=await call('suppliers','POST',{name:'Local VS2 fixture supplier',supplier_type:'OTHER',currency:'VND',status:'ACTIVE'});
+ const prefix='quote-versions/'+v.id+'/smart-costing';
+ await page.locator('[data-nav=sales]').first().click();await page.locator('[data-wsc-shortcut="2"]').click();await page.locator('[data-open-quote="'+quote.id+'"]').click();await page.getByRole('button',{name:'VS2.1 Smart Costing',exact:true}).click();await page.waitForSelector('#vs2Form');
+ await page.locator('#vs2PrivateDefaults').click();assert.equal(await page.locator('[data-req]').count(),7);pass('PRIVATE seven categories created in editor');
+ // No Halong cruise on this itinerary; remove requirement explicitly. Visa/meal/tickets still covered.
+ await page.locator('[data-req="3"] [data-remove-req]').click();await page.locator('[data-req="2"] [data-field=quantity]').fill('2');await page.locator('[data-req="2"] [data-field=quantity]').dispatchEvent('change');
+ await page.locator('#vs2SaveContext').click();await page.waitForTimeout(200);await page.locator('#vs2Template').click();await page.waitForSelector('[data-line]');assert.equal(await page.locator('[data-line]').count(),6);
+ const c=await call(prefix),template=await call(prefix+'/template','POST',{costing_mode:'PRIVATE'});const lines=template.lines.map(l=>({...l,supplier_id:supplier.id,unit_price:100000,manual_reason:'Supplier quote reviewed by Sales',star_level:'4*',capacity:16,route_scope_hash:c.route_scope_hash}));
+ const body={variant_key:'private4',label:'PRIVATE recommended',costing_mode:'PRIVATE',hotel_level:'4*',cruise_level:'4*',lines,pricing_mode:'MARKUP',pricing_value:20};
+ const saved=await call(prefix+'/variants','POST',body);assert(saved.snapshot.validation.ready);assert.equal(saved.snapshot.total_supplier_cost_vnd,5700000);pass('HTTP deterministic totals and category formulas');
+ await page.locator('[data-close]').first().click();await page.getByRole('button',{name:'VS2.1 Smart Costing',exact:true}).click();await page.locator('[data-open-variant]').first().click();await page.locator('#vs2View').selectOption('Advanced');assert.match(await page.locator('#vs2Lines').innerText(),/Confirmed: —/);assert.match(await page.locator('#vs2Result').innerText(),/Ready for approval/);pass('Simple/Advanced server traces and draft validation displayed');
+ await page.locator('details').first().evaluate(e=>e.open=false);await page.locator('#vs2View').selectOption('Simple');await page.locator('#vs2Lines').evaluate(e=>e.closest('.modal-body').scrollTop=e.offsetTop-140);await page.waitForTimeout(400);
+ await page.screenshot({path:__dirname+'/../verification/RC6.2-VS2.1/smart-costing-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:__dirname+'/../verification/RC6.2-VS2.1/smart-costing-mobile.png',fullPage:true});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2);assert(!overflow,'Mobile outer viewport overflow');pass('390px mobile layout without page overflow');await page.setViewportSize({width:1440,height:1100});
+ // Authorization and CSRF through the real front controller.
+ const forbidden=await req.post(base+'/api/index.php?route='+encodeURIComponent(prefix+'/preview'),{data:body,headers:{'X-VTA-CSRF':'wrong'}});assert.equal(forbidden.status(),419);pass('CSRF blocks mutation');
+ const viewer=await req.post(base+'/api/index.php?route=auth/login',{data:{email:'viewer@example.invalid',password:'Local-Http-Test-2026'}});assert(viewer.ok());const vm=await(await req.get(base+'/api/index.php?route=auth/me')).json();const denied=await req.get(base+'/api/index.php?route='+encodeURIComponent(prefix));assert.equal(denied.status(),403);pass('cost read blocked without quote.view_cost');
+ await req.post(base+'/api/index.php?route=auth/login',{data:{email:'admin@example.invalid',password:'Local-Http-Test-2026'}});const am=await(await req.get(base+'/api/index.php?route=auth/me')).json();me.user.csrf=am.user.csrf;
+ // Guest edit recosts bound hotel lines; transfer remains one package.
+ await call('quote-versions/'+v.id,'PUT',{adults:12,total_guests:13,paying_pax:12});const changed=await call(prefix);assert.equal(changed.items[0].snapshot.lines.find(l=>l.category==='HOTEL').pax,13);assert.equal(changed.items[0].snapshot.lines.find(l=>l.category==='TRANSPORT').pax,1);pass('quote Info guest edit recosts only rule followers');
+ await call('quotes/'+quote.id+'/approve','POST',{reason:'Browser acceptance supplier review'});const sent=await call('quotes/'+quote.id+'/send','POST',{});assert(!/supplier|rate_snapshot|margin|unit_price/.test(JSON.stringify(sent)));const locked=await req.post(base+'/api/index.php?route='+encodeURIComponent(prefix+'/variants'),{data:body,headers:{'X-VTA-CSRF':me.user.csrf}});assert.equal(locked.status(),409);pass('sent snapshot customer-safe and immutable');
+ const rev=await call('quotes/'+quote.id+'/new-version','POST',{});const rv=await call('quote-versions/'+rev.version_id+'/smart-costing');assert.equal(rv.items[0].variant_key,'private4');assert.equal(rv.requirements.length,6);pass('existing revision route copies VS2 metadata and requirements');
+ assert.deepEqual(errors,[]);pass('browser no uncaught JavaScript errors');
+ fs.writeFileSync(__dirname+'/../verification/RC6.2-VS2.1/browser-results.json',JSON.stringify({passed:count,browser:browser.version(),viewport:[1440,1100],mobile:[390,844],errors},null,2));
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exitCode=1});

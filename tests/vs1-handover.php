@@ -34,7 +34,7 @@ function v1effect(PDO $db,int $lead,int $version,string $event):void{
 $dsn=getenv('VS1_TEST_MYSQL_DSN')?:'';
 if($dsn==='')throw new RuntimeException('Set VS1_TEST_MYSQL_DSN to a newly created empty local vta_vs1_<random hex> database, plus VS1_TEST_MYSQL_PASSWORD');
 date_default_timezone_set('Asia/Ho_Chi_Minh');$db=v1connect($dsn);v1empty($db);
-$migrationDir=__DIR__.'/../api/migrations';$baselineDir=__DIR__.'/../../VTA_Unified_OS_RC5_3/api/migrations';
+$migrationDir=__DIR__.'/../api/migrations';$baselineDir=getenv('VS1_TEST_BASELINE_DIR')?:__DIR__.'/../../VTA_Unified_OS_RC5_3/api/migrations';
 $files=glob($migrationDir.'/*.sql')?:[];sort($files,SORT_STRING);$manifest=array_map(fn($p)=>basename($p,'.sql'),$files);
 v1check(in_array('022_lead_sales_handover',$manifest,true),'current migration manifest includes additive VS1 handover');
 $baseline=glob($baselineDir.'/*.sql')?:[];sort($baseline,SORT_STRING);

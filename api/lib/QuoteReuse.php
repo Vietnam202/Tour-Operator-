@@ -33,6 +33,12 @@ final class QuoteReuse {
     $options=self::q($db,'SELECT * FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$source])->fetchAll();
     if($options){foreach($options as $option){
      $snapshot=json_decode($option['snapshot_json'],true,512,JSON_THROW_ON_ERROR);$lines=[];$cost=0;
+     if(($snapshot['engine']??'')==='VS2.1'){
+      if(!self::q($db,'SELECT 1 FROM quote_guest_profiles WHERE quote_version_id=?',[$version])->fetchColumn()){QuoteSmartCosting::copyContext($db,$source,$version,(int)$u['id']);$requirements=self::q($db,'SELECT id,service_date FROM quote_service_requirements WHERE quote_version_id=?',[$version])->fetchAll();foreach($requirements as $r)self::q($db,'UPDATE quote_service_requirements SET service_date=? WHERE id=?',[ScheduleImport::date($target['start_date'])->modify('+'.$offset($r['service_date']).' days')->format('Y-m-d'),$r['id']]);}
+      foreach($snapshot['lines'] as &$line){$line['service_date']=ScheduleImport::date($target['start_date'])->modify('+'.$offset($line['service_date']).' days')->format('Y-m-d');$line['rate_version_id']=null;$line['unit_price']=$mode==='FULL_DRAFT'?$line['unit_price']:null;$line['manual_reason']='Copied supplier cost; explicitly reconfirm for new travel dates.';unset($line['quantity_context'],$line['route_scope_hash']);}unset($line);
+      $nv=QuoteOptions::version($db,(int)$u['company_id'],$version);$safe=QuoteSmartCosting::calculate($db,$nv,$snapshot);$safe['review_required']=true;
+      self::insert($db,'quote_options',['quote_version_id'=>$version,'label'=>$option['label'],'hotel_level'=>$option['hotel_level'],'variant_key'=>$option['variant_key'],'costing_mode'=>$option['costing_mode'],'cruise_level'=>$option['cruise_level'],'snapshot_json'=>json_encode($safe,JSON_THROW_ON_ERROR),'created_by'=>$u['id']]);continue;
+     }
      foreach($snapshot['lines'] as $line){
       $c=self::copyLine($line,$target,$mode==='FULL_DRAFT',$offset($line['service_date']??null));$c['service_name']=$scrub($c['service_name']);$c['cost_usd']=$c['currency']==='USD'?$c['total']:round($c['total']/(float)$data['fx_rate'],2);$cost+=$c['cost_usd'];$lines[]=$c;
      }

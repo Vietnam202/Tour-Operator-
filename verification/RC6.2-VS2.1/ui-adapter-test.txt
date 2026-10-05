@@ -1,0 +1,6 @@
+PASS PRIVATE/SIC default categories editable over shared requirements
+PASS nullable service quantities follow guests and explicit quantities persist
+PASS star presets and independent custom mix selectors
+PASS add/duplicate/remove lines and honest expected/confirmed/actual cost view
+PASS sent editor disabled and no context save action
+NOTE: DOM adapter checks; server arithmetic and browser acceptance tested separately.

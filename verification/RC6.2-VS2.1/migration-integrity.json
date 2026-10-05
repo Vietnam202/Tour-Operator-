@@ -1,0 +1,117 @@
+[
+  {
+    "path": "api/migrations/001_phase1_core.sql",
+    "sha256": "ba446bbfb56149d1e3a0374eceb4286467e9ef5bd107a3eca50142fa855a09af",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/002_phase1_rate_rules_import.sql",
+    "sha256": "3b6aacc4f21876f936dcda25f7a31f554bde7c4b9dc5546fc1c1a6ca2654ba6f",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/003_phase1_contracting_rules_reconciliation.sql",
+    "sha256": "41940510e379de980eb4f4537a4f4a5bbe5a879caebaf65c8a32389b58a84160",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/004_sales_core.sql",
+    "sha256": "a0fb2ed84ef3db592653c56901b628985918b1190e33ede3c24b313a586995c7",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/005_booking_operations.sql",
+    "sha256": "6a497ddf7954a9c719688abfd8300e0576f092dfdcab65848967fb0dd66a5c23",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/006_finance_control.sql",
+    "sha256": "62bdb03e5bcc6af2472a02db9ee45eee018d2fc93cbd55abed7e46ad05dea448",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/007_lead_attribution.sql",
+    "sha256": "ec3266a53d7f9061ab07ca74f14f22f4d9e3f50f199c2e27a945f5d773620ea0",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/008_tour_inventory.sql",
+    "sha256": "b4de34001b46f1cfdef313e0e68703dc4ef3130d87f94223fdc3d4ccb3659320",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/009_quote_options.sql",
+    "sha256": "aadf7c6249c2d1b309257d02fbe16d95d9a77f1894a03888929492b302a37ad5",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/010_travel_documents.sql",
+    "sha256": "0653fa43e5a70b8d942545b9ff58ba2c6cfd4dbe53b8acb54c3c7ed1e90f1f7e",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/011_finance_ledgers.sql",
+    "sha256": "898ce1a4a82e0b3b592d27ae862d97864628f3afe8398241f87b84f940783bea",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/012_operations_resources_issues.sql",
+    "sha256": "563b9709278e0548afddbf8066370352b306f9e9a6de1557326bad481ec2b0b8",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/013_invoice_schedules.sql",
+    "sha256": "42ca8c2fa232e9a1e4c32af70e61383f683ad62b3f6abfb932e5616b4a2adb46",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/014_service_travel_details.sql",
+    "sha256": "0cfebec36726005f159dd4d48068aefebf3643f57c26b699eeb3f5641b4b6b77",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/015_commercial_invoice_documents.sql",
+    "sha256": "c8e4baf750277afa12298ef89b60849f53a13c5c315f29578bc57869ac313aee",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/016_rc1_editing.sql",
+    "sha256": "1b0f509db9e3093a1bc0f9d4ddcbea79f98a3f4a80a0cd13c32338deded7e0a9",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/017_campaignpilot.sql",
+    "sha256": "016848bc893971f2ff4cf54b42a3ca02bcada7b99563fce4ce658cc56263bc65",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/018_ai_chat.sql",
+    "sha256": "76e17f49bd6296f0adcb8b519b290a55a548e80ffe47b939d8906abdec033210",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/019_marketing_studio.sql",
+    "sha256": "c489a7207602bfa2ed978d9271532c70887c3b10afc3613fdb7c153b6cc51066",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/020_landing_pages.sql",
+    "sha256": "26e2f74b8573f6758f6f0511f7d5bd57d8b36fc15f3eace230db0fe7112ce81f",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/021_tour_library.sql",
+    "sha256": "2fcb24f78bd25a16d3aff7baa4f417cdfcd627f071b739cc0ba9d5f577a641bd",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/022_lead_sales_handover.sql",
+    "sha256": "31c316668572377bac9046ec3a080a4c1424db8552a48243285860d0f1cd9f05",
+    "historical_bytes_unchanged": true
+  },
+  {
+    "path": "api/migrations/023_vs2_costing.sql",
+    "sha256": "242d97bcea3756fc6ace31cc02e25312c698dac0e66737060ada8848187997ce",
+    "historical_bytes_unchanged": null
+  }
+]

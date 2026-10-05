@@ -1,0 +1,40 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/../api/lib/QuoteOptions.php';
+require_once __DIR__.'/../api/lib/SmartCosting.php';
+function check(bool $x,string $name): void {if(!$x)throw new RuntimeException('FAIL '.$name);echo "PASS $name\n";}
+function rejects(callable $fn,string $name): void {try{$fn();}catch(InvalidArgumentException $e){check(true,$name);return;}throw new RuntimeException('FAIL accepted '.$name);}
+$v=['adults'=>10,'children'=>2,'infants'=>1,'foc'=>1,'total_guests'=>14,'paying_pax'=>12,'start_date'=>'2027-01-02','end_date'=>'2027-01-06','schedule_json'=>'[{"title":"Hanoi"},{"title":"Halong"}]'];
+$g=SmartCosting::guests($v,['visa_pax'=>8,'meal_pax'=>13,'hotel_pax'=>13,'ticket_pax'=>12]);
+rejects(fn()=>SmartCosting::guests($v+['foo'=>1],['visa_pax'=>15]),'service pax cannot exceed total');
+rejects(fn()=>SmartCosting::integer('1.5'),'fractional guest quantity rejected');
+rejects(fn()=>SmartCosting::guests(array_replace($v,['adults'=>14])),'FOC not silently reinterpreted');
+$categories=['TRANSPORT','GUIDE','HOTEL','CRUISE','VISA','MEAL','ATTRACTION','TOUR'];$req=[];
+foreach($categories as $c)$req[]=['key'=>strtolower($c),'category'=>$c,'service_name'=>$c,'service_date'=>$v['start_date'],'quantity'=>in_array($c,['HOTEL','GUIDE','MEAL'])?3:1,'mode'=>'BOTH','scope'=>'TOUR'];
+$r=SmartCosting::requirements($req,$v);$l=SmartCosting::template('PRIVATE',$r);
+foreach($l as &$x){$x['unit_price']=100;$x['_rate_status']='MANUAL COST';$x['manual_reason']='Confirmed supplier input';$x['capacity']=16;$x['route_scope_hash']=SmartCosting::scopeHash($v);$x['star_level']='4*';}unset($x);
+$calc=fn($lines,$guests=null,$version=null)=>SmartCosting::calculate($lines,$guests??$g,$version??$v,$r,'PRIVATE','4*','4*',25000,['pricing_mode'=>'MARKUP','pricing_value'=>20]);
+$s=$calc($l);check($s['validation']['ready'],'complete typed cost sheet validates');$by=array_column($s['lines'],null,'category');
+foreach(['TRANSPORT'=>100,'GUIDE'=>300,'HOTEL'=>3900,'CRUISE'=>1400,'VISA'=>800,'MEAL'=>3900,'ATTRACTION'=>1200,'TOUR'=>1400] as $c=>$expected)check($by[$c]['total']===$expected*1.0,$c.' formula');
+check($s['total_supplier_cost_vnd']===13000.0,'VND aggregation exact before FX');
+check($by['TRANSPORT']['qty']===1&&$by['CRUISE']['qty']===1,'transfer package and cruise per-pax do not multiply by days');
+check(str_contains($by['HOTEL']['trace'],'13 × 3'),'human-readable formula trace');
+$g2=SmartCosting::guests(array_replace($v,['adults'=>12,'total_guests'=>16,'paying_pax'=>14]),['visa_pax'=>8,'meal_pax'=>13,'hotel_pax'=>13,'ticket_pax'=>12]);
+$s2=$calc($l,$g2);$b2=array_column($s2['lines'],null,'category');check($b2['VISA']['total']===$by['VISA']['total']&&$b2['CRUISE']['total']===1600.0,'only rule-bound quantities follow changed fields');
+$manual=$l;$manual[2]['quantity_source']='CUSTOM_QTY';$manual[2]['custom_qty']=9;$manual[2]['quantity_context']=$g;
+check($calc($manual)['validation']['ready'],'manual qty reviewed in current context');$ms=$calc($manual,$g2);check($ms['lines'][2]['pax']===9&&in_array('NEEDS REVIEW: line 3',$ms['validation']['errors'],true),'manual override stable but flagged after guest change');
+$tooMany=$l;$tooMany[0]['capacity']=4;check(in_array('REPRICING REQUIRED: line 1',$calc($tooMany)['validation']['errors'],true),'transfer capacity blocks finalization');
+$changed=$v;$changed['schedule_json']='[{"title":"Sapa"}]';check(in_array('REPRICING REQUIRED: line 1',$calc($l,$g,$changed)['validation']['errors'],true),'transfer route change does not invent replacement rate');
+$wrong=$l;$wrong[2]['qty']=2;check(in_array('HOTEL_NIGHTS_MISMATCH: hotel',$calc($wrong)['validation']['errors'],true),'hotel nights mismatch blocks');$wrong=$l;$wrong[1]['qty']=2;check(in_array('GUIDE_DAYS_MISMATCH: guide',$calc($wrong)['validation']['errors'],true),'guide days mismatch blocks');
+$missing=$l;array_pop($missing);check(in_array('MISSING_SERVICE_COST: tour',$calc($missing)['validation']['errors'],true),'missing required service blocked');
+$missing=$l;$missing[6]['_rate_status']='RATE NEEDED';check(!$calc($missing)['validation']['ready'],'missing ticket rate blocked');
+$dup=$l;$dup[]=$l[6];check(in_array('DUPLICATE_COST: attraction',$calc($dup)['validation']['errors'],true),'duplicate attraction cost blocked');
+$sic=$l;$sic[7]['included_keys']=['guide','meal','attraction'];$sic[1]['_rate_status']='RATE NEEDED';$ss=$calc($sic);$sb=array_column($ss['lines'],null,'category');check($ss['validation']['ready']&&$sb['MEAL']['included']&&$sb['MEAL']['total']===0,'SIC inclusions suppress exact standalone requirements');
+check($ss['total_supplier_cost_vnd']===7600.0,'included SIC services not double counted');
+$wrong=$sic;$wrong[7]['scope']='DAY_2';rejects(fn()=>$calc($wrong),'package cannot suppress another scope');
+$bad=$l;$bad[0]['quantity_source']='PAYING_PAX';rejects(fn()=>$calc($bad),'vehicle never uses paying pax multiplier');
+$bad=$l;$bad[3]['star_level']='3*';check(!$calc($bad)['validation']['ready'],'cruise variant requires matching confirmed star');
+$zero=$l;$zero[4]['quantity_source']='VISA_PAX';$z=$g;$z['visa_pax']=0;check($calc($zero,$z)['lines'][4]['total']===0.0,'zero eligible service pax supported');
+check(QuoteOptions::pricing(100,10,'MARKUP',20)['total_selling']===120.0&&QuoteOptions::pricing(100,10,'TARGET_MARGIN',20)['total_selling']===125.0,'markup differs from margin');
+$templates=SmartCosting::template('SIC',array_map(fn($r)=>array_replace($r,['mode'=>in_array($r['category'],['GUIDE','MEAL','VISA','ATTRACTION'])?'PRIVATE':'BOTH']),$r));check(array_column($templates,'category')===['TRANSPORT','HOTEL','CRUISE','TOUR'],'SIC category order/default requirements');
+echo "VS2.1 arithmetic suite complete.\n";
