@@ -23,8 +23,8 @@ All 42 combined regression suites passed: 20 JavaScript/UI suites (287 PASS grou
 | Additional evidence | PASS assertions/groups | Result |
 | --- | ---: | --- |
 | native | 84 | PASS |
-| extended | 182 | PASS |
-| coverage | 93 | PASS |
+| extended | 192 | PASS |
+| coverage | 100 | PASS |
 | migration | 9 | PASS |
 | vs1 | 120 | PASS |
 | installer | 4 | PASS |
@@ -64,7 +64,7 @@ VTA_VS21_CREATION=0 prevents new explicit activation while retaining compatible 
 
 VS1 remains the default engine. Legacy writers cannot contribute alongside VS2 costs. Sent/confirmed edits are rejected and accepted child IDs cannot be substituted. Public B2B/B2C output shares the underlying graph and excludes supplier/profit/internal notes. Original-currency services and handover notes reach existing booking and Finance.
 
-Regression-driven fixes include a Windows root-path normalization in the existing landing-page guard, preserving the legacy booking INSERT shape while adding VS2 notes, a standalone test dependency include, an explicit reviewed FOC fixture segment breakdown, and the current exact migration manifest in the existing VS1 test. Existing assertions remain active. The UI prevents overlapping saves, preserves variant/view on refresh and keeps booking navigation in Operations. The service-worker cache is advanced and includes the new assets; private API data stays uncached.
+Regression-driven fixes include binding stored-rate destination eligibility to the explicit service destination (mismatched or missing destination blocks a restricted rate), a Windows root-path normalization in the existing landing-page guard, preserving the legacy booking INSERT shape while adding VS2 notes, a standalone test dependency include, an explicit reviewed FOC fixture segment breakdown, and the current exact migration manifest in the existing VS1 test. Existing assertions remain active. The UI prevents overlapping saves, preserves variant/view on refresh and keeps booking navigation in Operations. The service-worker cache is advanced and includes the new assets; private API data stays uncached.
 
 ## I. Reuse/discard record
 

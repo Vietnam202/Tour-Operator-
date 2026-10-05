@@ -14,12 +14,13 @@ final class Vs2RateResolver {
         }else{
             $terms=$q('SELECT * FROM rate_version_vs2_terms WHERE rate_version_id=?',[$id])->fetch();if(!$terms||$terms['approval_state']!=='APPROVED')throw new DomainException('RATE_TERMS_NEEDED');
             $eligible=$guests[strtolower($terms['rate_eligibility_source'])]??null;if(!$eligible)throw new DomainException('RATE_ELIGIBILITY_NEEDED');
-            $identity=$q('SELECT r.category,r.destination FROM rates r JOIN rate_versions rv ON rv.rate_id=r.id WHERE r.company_id=? AND rv.id=?',[$v['company_id'],$id])->fetch();if(!$identity||$identity['category']!==$req['category'])throw new DomainException('RATE_CATEGORY_MISMATCH');
-            $dates=QuoteVs2Repository::decode($req['scope_json'])['dates']??[$req['service_date']];if(!$dates||!is_array($dates))throw new DomainException('SERVICE_DATE_NEEDED');
+            $identity=$q('SELECT r.category FROM rates r JOIN rate_versions rv ON rv.rate_id=r.id WHERE r.company_id=? AND rv.id=?',[$v['company_id'],$id])->fetch();if(!$identity||$identity['category']!==$req['category'])throw new DomainException('RATE_CATEGORY_MISMATCH');
+            $serviceScope=QuoteVs2Repository::decode($req['scope_json']);$destination=$serviceScope['destination']??'';if(!is_string($destination))throw new InvalidArgumentException('Service destination must be text');
+            $dates=$serviceScope['dates']??[$req['service_date']];if(!$dates||!is_array($dates))throw new DomainException('SERVICE_DATE_NEEDED');
             $amount=null;$rate=null;
             foreach($dates as $date){
                 $date=QuoteVs2Domain::date($date);if(!$date)throw new DomainException('SERVICE_DATE_NEEDED');
-                $matched=RateEngine::match($db,(int)$v['company_id'],['category'=>$identity['category'],'destination'=>$identity['destination'],'travel_date'=>$date,'market'=>$v['market']??'','pax'=>$eligible,'trip_ref'=>$v['trip_ref']??'']);
+                $matched=RateEngine::match($db,(int)$v['company_id'],['category'=>$identity['category'],'destination'=>trim($destination),'travel_date'=>$date,'market'=>$v['market']??'','pax'=>$eligible,'trip_ref'=>$v['trip_ref']??'']);
                 $selected=null;foreach($matched as $candidate)if((int)$candidate['rate_version_id']===$id)$selected=$candidate;
                 if(!$selected||$selected['conflict'])throw new DomainException('RATE_UNAVAILABLE');
                 $cents=Vs2Decimal::parse((string)$selected['amount']);
