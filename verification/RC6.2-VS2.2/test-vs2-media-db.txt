@@ -1,0 +1,84 @@
+Disposable database: vta_test_476a430b17
+PASS migration manifest includes the RC5.3 baseline
+PASS fresh migrations match the complete filename manifest
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS identical qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one current sales follow-up task; handover task history retained
+PASS request qualification Sales acceptance conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS optimized image metadata and resolution warning
+PASS thumbnail generated in private storage
+PASS identical own image detected without another binary
+PASS media tenant isolation (OutOfBoundsException)
+PASS personal image hidden from other users including reviewers (OutOfBoundsException)
+PASS SVG/script image rejected (InvalidArgumentException)
+PASS oversized image rejected (InvalidArgumentException)
+PASS approved company image reusable by company colleague
+PASS favourites per user
+PASS favourites do not leak across users
+PASS legacy proposal has no new snapshot field
+PASS visual proposal normalized and media assigned
+PASS reorder keeps image attached to its stable day key
+PASS duplicate day keys blocked (InvalidArgumentException)
+PASS foreign/unknown assigned image blocked (OutOfBoundsException)
+PASS public projection strips financial, private note and storage/source details
+PASS legacy single-package selling price preserved in new renderer
+PASS customer-safe template VTA_STANDARD_B2B
+PASS customer-safe template VTA_B2B_WHITE_LABEL
+PASS white label contains no VTA contact branding
+PASS customer-safe template VTA_EXPLORER_B2C
+PASS customer-safe template VTA_PREMIUM_B2C
+PASS native Unicode PDF with embedded image
+PASS native DOCX OpenXML with embedded image and Unicode
+PASS DOCX omits internal notes
+PASS presentation edit invalidates approval
+PASS changed draft cannot be sent under old approval (DomainException)
+PASS web link reads frozen public snapshot
+PASS sent presentation immutable (DomainException)
+PASS archiving/retitling library does not alter sent proposal
+PASS frozen proposal image remains readable after archive
+PASS sent snapshot bytes unchanged
+PASS expired web link blocked (OutOfBoundsException)
+PASS revoked web link blocked (OutOfBoundsException)
+PASS unknown token blocked (OutOfBoundsException)
+PASS revision copies reference IDs, not binaries
+PASS revision never copies customer token
+PASS Drive picker lists only selected allowlisted folder
+PASS Drive root/unknown folders never browsed (DomainException)
+PASS Drive import verifies actual file parent (DomainException)
+PASS Drive sync imports immutable replacement asset
+PASS Drive refresh leaves original media source snapshot intact
+PASS every Drive list request has folder constraint
+VS2.2 media/proposal MariaDB suite complete.

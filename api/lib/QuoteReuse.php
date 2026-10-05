@@ -28,6 +28,7 @@ final class QuoteReuse {
    foreach(['hotel_level','tour_type','guide_language','meals'] as $k)$data[$k]=$scrub($old[$k]??'');
    if($mode==='FULL_DRAFT'){foreach(['included_text','excluded_text','terms_text'] as $k)$data[$k]=$scrub($old[$k]??'');foreach(['pricing_mode','pricing_value','rounding_step','selling_per_pax'] as $k)$data[$k]=$old[$k];}
    $version=self::insert($db,'quote_versions',$data);
+   if($mode==='FULL_DRAFT')QuoteProposal::copy($db,$source,$version,(int)$u['id']);
    $offset=function($date)use($old):int {if(!$date||!$old['start_date'])return 0;return (int)ScheduleImport::date($old['start_date'])->diff(ScheduleImport::date($date))->format('%r%a');};
    if($mode!=='PROGRAM_ONLY'){
     $options=self::q($db,'SELECT * FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$source])->fetchAll();

@@ -1,0 +1,14 @@
+{
+  "passed": 17,
+  "browser": "153.0.8010.0",
+  "desktop": [
+    1440,
+    1100
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "errors": [],
+  "drive": "synthetic provider tested in DB suite; no live credentials"
+}

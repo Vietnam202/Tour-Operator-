@@ -34,3 +34,19 @@ Audit ngày 05/10/2026. Nguồn: Issue #15; canonical spec `docs/RC6_VS2_FUNCTIO
 4. Migration 023 adds profile/requirements and option metadata. Replace only the hotel-only unique index with a wider variant unique index; no dropped data/columns, no historical JSON rewrite. Legacy key remains empty and keeps one legacy option per star. Revision and legacy save queries must preserve variant metadata and target only legacy key respectively.
 5. Finalization gates run for VS2 options in both approve and send. Legacy options retain legacy behavior. Confirmed/actual costs stay unavailable in quote Advanced View until Operations work in VS2.4.
 6. Do not mark VS2.2–2.4 complete and do not deploy production. Test on a disposable database / staging only.
+
+## Implementation update — VS2.2 (05/10/2026)
+
+The audit above remains the pre-implementation baseline. VS2.1 is in PR #16; VS2.2 is a stacked increment over that branch.
+
+| Requirement | VS2.2 implementation | Verification / remaining integration |
+|---|---|---|
+| Media Library + PC upload | Immutable private JPEG cache + thumbnail; validated JPEG/PNG/WebP; personal/company/synced visibility; approval/archive, favourites, duplicate/resolution checks | MariaDB + real HTTP upload/browser; synthetic image fixture |
+| Google Drive selective integration | Company account + folder allowlist; mapping; paginated image picker; selected import once/linked; check/sync creates replacement asset | Real adapter tested against synthetic provider; live VTA credentials/folders must be configured on staging |
+| Visual Itinerary Builder | Three areas; stable day IDs; add/duplicate/reorder/remove; typed route/activity/transport/guide/accommodation/notes fields | Browser reorder preserves image identity; changed legacy schedule requires explicit image review |
+| Media assignment | Cover/day hero/gallery/hotel/cruise/service; shared itinerary reused across price variants | Assignment bounds and cross-company rejection; no media binary in DB |
+| Proposal Gallery | Standard B2B, B2B White Label, Explorer B2C, Premium B2C; hotel/cruise star rows, policies/contact/public content | Four templates render; white-label omits VTA contacts; no internal cost/source/notes |
+| Output | Customer-safe HTML preview, native Unicode PDF, native DOCX with embedded images, expiring/revocable sent-proposal web link | HTTP/browser + PDF render/text extraction + DOCX XML/ZIP checks; email sending remains VS2.4 |
+| Sent media / revision | Frozen media IDs + hashes in opt-in public bundle; library archive/Drive replacement cannot rewrite sent proposal; revision copies references, no token | Historical migration/snapshot bytes retained; approval invalidated by presentation edits |
+
+VS2.3 and VS2.4 remain pending. Release/rollback: `docs/RC6_VS2_2_RELEASE_VI.md`; evidence: `verification/RC6.2-VS2.2/REPORT_VI.md`.

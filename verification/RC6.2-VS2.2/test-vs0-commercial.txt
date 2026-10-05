@@ -1,0 +1,77 @@
+PASS invalid customer owner 2
+PASS customer validation precedes writes 2
+PASS invalid customer owner 3
+PASS customer validation precedes writes 3
+PASS invalid customer owner -1
+PASS customer validation precedes writes -1
+PASS invalid customer owner "1.0"
+PASS customer validation precedes writes "1.0"
+PASS invalid customer owner ["1"]
+PASS customer validation precedes writes ["1"]
+PASS invalid customer owner "1 OR 1=1"
+PASS customer validation precedes writes "1 OR 1=1"
+PASS invalid inquiry sales_owner_id 2
+PASS inquiry link validation precedes writes sales_owner_id 2
+PASS invalid inquiry sales_owner_id 3
+PASS inquiry link validation precedes writes sales_owner_id 3
+PASS invalid inquiry sales_owner_id ["1"]
+PASS inquiry link validation precedes writes sales_owner_id ["1"]
+PASS invalid inquiry customer_id 99
+PASS inquiry link validation precedes writes customer_id 99
+PASS invalid inquiry customer_id 12
+PASS inquiry link validation precedes writes customer_id 12
+PASS invalid inquiry customer_id ["1"]
+PASS inquiry link validation precedes writes customer_id ["1"]
+PASS invalid inquiry agent_id 99
+PASS inquiry link validation precedes writes agent_id 99
+PASS invalid inquiry agent_id 12
+PASS inquiry link validation precedes writes agent_id 12
+PASS invalid inquiry agent_id ["1"]
+PASS inquiry link validation precedes writes agent_id ["1"]
+PASS active same-company customer owner accepted
+PASS active same-company inquiry links accepted
+PASS validated numeric link ids persisted
+PASS explicit unassigned optional link preserved
+PASS new option freezes each passenger segment
+PASS segment redistribution requires recost even unchanged total
+PASS sent public bundle includes frozen segments
+PASS sent bundle retry preserves exact snapshot
+PASS booking takes accepted immutable segments rather than changed version
+PASS booking never rehashes old sent bundle
+PASS booking retry remains idempotent
+PASS legacy acceptance exposes explicit review strategy
+PASS legacy missing segments create no guessed booking
+PASS legacy hash stays unchanged
+PASS old sent snapshot stays readable without segmentation backfill
+PASS existing legacy booking can be reopened without new data inference
+PASS new revision created
+PASS 008 source snapshot copied exactly
+PASS 021 provenance copied exactly and tenant scoped
+PASS draft segment edits use existing quote patch
+PASS segment edit invalidates copied option review even same total
+PASS full calendar month inquiry timestamps included
+PASS report booking cohort excludes cancelled foreign next month
+PASS report revenue never sums mixed currencies
+PASS unsafe scalar actual profit removed
+PASS modern allocations and reconciliations determine final profit with pending count
+PASS unsupported conversion remains explicit review without fabricated profit
+PASS report exposes half-open monthly bounds
+PASS no-profit role receives restricted value not zero
+PASS no-profit role sees no private cost review detail
+PASS no-profit role never queries private ledger domains
+PASS malformed month rejected "2026-13"
+PASS malformed month rejected "2026-00"
+PASS malformed month rejected "2026-10-extra"
+PASS malformed month rejected ["2026-10"]
+PASS malformed month rejected "2026-1"
+PASS legacy CoreOS service creation cannot bypass financial close
+PASS closed booking service count unchanged
+PASS authorized reasoned reopen works under booking lock
+PASS reopen removes close marker
+PASS modern final profit permits close under shared lock
+PASS financial close completes operation-completed booking
+PASS legacy guest write recalculates canonical projection
+PASS stored READY is corrected when current Travel Pack is missing
+PASS completion cannot bypass missing fifth readiness check
+PASS blocked completion leaves finalization timestamp unchanged
+VS0 commercial: 76 checks executed against SQLite. MariaDB/HTTP validation is separate.

@@ -1,0 +1,5 @@
+PASS Unicode PDF text extraction (Hạ Long)
+PASS DOCX XML and relationship parsing
+PASS DOCX embedded JPEG image
+PASS output excludes internal note marker
+Visual PDF page1 reviewed after final table/page-break changes
