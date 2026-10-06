@@ -2,6 +2,7 @@ DirectoryIndex index.html index.php
 Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteRule ^\.user\.ini$ - [F,L]
 RewriteRule ^(?:docs|tests|verification)/ - [F,L]
 RewriteRule ^api/(?:bin|lib|migrations)/ - [F,L]
 RewriteRule ^api/(?:config(?:\.example)?\.php|install\.php)$ - [F,L]

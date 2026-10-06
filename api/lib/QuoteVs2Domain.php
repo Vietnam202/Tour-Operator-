@@ -66,7 +66,7 @@ final class QuoteVs2Domain {
     public static function schedule(array $days): array {
         if(count($days)>100)throw new InvalidArgumentException('Too many days');$out=[];$seen=[];
         foreach($days as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid day');$key=self::text($day['day_key']??('day-'.bin2hex(random_bytes(8))),80);if(isset($seen[$key]))throw new InvalidArgumentException('Duplicate day key');$seen[$key]=true;
-            $clean=['day'=>$i+1,'day_key'=>$key];foreach(['date','title','description','meals','overnight','notes','route','activities','transport_mode','cruise','special_requests'] as $field)$clean[$field]=self::text($day[$field]??'',10000,true);
+            $clean=['day'=>$i+1,'day_key'=>$key];foreach(['date','title','description','meals','overnight','notes','route','activities','transport_mode','cruise','special_requests','destination','hotel','public_notes','internal_notes'] as $field)$clean[$field]=self::text($day[$field]??'',10000,true);
             $clean['date']=self::date($clean['date'])??'';$clean['guide_required']=!empty($day['guide_required']);
             $overnightType=$day['overnight_type']??'UNREVIEWED';if(!in_array($overnightType,['UNREVIEWED','HOTEL','CRUISE','OTHER','NONE'],true))throw new InvalidArgumentException('Invalid overnight type');$clean['overnight_type']=$overnightType;$out[]=$clean;
         }return $out;

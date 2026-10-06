@@ -62,3 +62,8 @@ Auth::startSession($config);
 require_once __DIR__ . '/lib/QuoteExport.php';
 
 require_once __DIR__ . '/lib/InvoiceCommercial.php';
+
+require_once __DIR__.'/lib/MediaLibrary.php';
+require_once __DIR__.'/lib/MediaDrive.php';
+require_once __DIR__.'/lib/QuoteProposal.php';
+require_once __DIR__.'/lib/ProposalOutput.php';

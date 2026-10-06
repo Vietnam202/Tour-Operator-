@@ -19,6 +19,6 @@ final class QuoteExport {
   Auth::requirePermission($db,$u,'sales.view');
   try{$v=QuoteOptions::version($db,(int)$u['company_id'],(int)$m[1]);}catch(OutOfBoundsException $e){Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);}
   $q=$db->prepare('SELECT public_snapshot_json FROM quote_sent_bundles WHERE quote_version_id=?');$q->execute([$v['id']]);$raw=$q->fetchColumn()?:$v['sent_snapshot_json'];if(!$raw)Http::json(['ok'=>false,'error'=>'ISSUE_QUOTE_FIRST'],409);
-  $s=json_decode($raw,true,512,JSON_THROW_ON_ERROR);$s['quote_ref']=$v['quote_ref'];$s['version_no']=(int)$v['version_no'];header('Content-Type: text/html; charset=utf-8');header('Cache-Control: private, no-store');header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");echo self::html($s);exit;
+  $s=json_decode($raw,true,512,JSON_THROW_ON_ERROR);if(isset($s['presentation'])){header('Location: index.php?route=quote-versions/'.$v['id'].'/proposal/html');exit;}$s['quote_ref']=$v['quote_ref'];$s['version_no']=(int)$v['version_no'];header('Content-Type: text/html; charset=utf-8');header('Cache-Control: private, no-store');header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");echo self::html($s);exit;
  }
 }

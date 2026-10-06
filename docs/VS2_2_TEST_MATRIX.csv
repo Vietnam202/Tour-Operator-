@@ -1,0 +1,33 @@
+Gate,Scenario,Expected,Evidence
+V22-01,Existing VS1 inquiry quote options and revision,Legacy behavior preserved,44-suite regression
+V22-02,Existing VS21 quantities formulas FOC rates inclusion variants,All approved gates preserved,vs21-coverage.php and vs21-edge.php
+V22-03,Upgrade exact 028 database,029 then 030 only; six empty tables; 16 FK columns,vs22-migrations.php
+V22-04,Historical source and issued snapshots,001-028 and all historical bytes unchanged,vs22-migrations.php and staging fingerprints
+V22-05,PC JPEG PNG WebP upload,Original retained; optimized image and thumbnail private,vs22-native.php and actual browser
+V22-06,Unsupported oversized or invalid image,Rejected before usable asset; clear error,vs22-native.php
+V22-07,Duplicate favourites low resolution,Scoped dedup; own favourite; quality warning,vs22-native.php and UI
+V22-08,Company library approval,Only approved company assets usable for final Send,vs22-native.php
+V22-09,Personal and tenant access,Other owner/tenant cannot read assets,vs22-native.php and independent HTTP
+V22-10,Cover hero gallery hotel cruise service assignments,Stable separate assignments across template/day reorder,vs22-native.php and vs22-ui.cjs
+V22-11,Day add duplicate reorder remove program import,Single schedule; stable keys; draft review after structural change,vs22-ui.cjs
+V22-12,Four template switch,Same quote schedule costing and media IDs,vs22-native.php and UI
+V22-13,B2B and white label,Brand/partner controls; no supplier costs or margin,output QA and permission tests
+V22-14,B2C Explorer Premium,Visual customer blocks; no agent metadata/net commissions,vs22-native.php and output QA
+V22-15,Hotel cruise independent stars Custom Mix,Public structured lists and existing reviewed choices,vs21-coverage.php and VS22 renderer
+V22-16,Price modes exact guest profile,Reviewed existing selling amounts only; no inferred pax bands,vs22-native.php
+V22-17,Unreviewed rates or stale revision,Price withheld in Draft; validator blocks Send; stale writes conflict,vs22-native.php and independent HTTP
+V22-18,PDF typography long tables Vietnamese,No clipped cells; repeated headers and page breaks; Unicode,all-page visual QA
+V22-19,DOCX,Native editable paragraphs tables images; valid OOXML,output QA ZIP/XML
+V22-20,Desktop mobile print candidate,Same public representation; responsive preview,actual browser and output QA
+V22-21,Anonymous public Web PDF DOCX images,Sent only; scoped bound images; no internal fields,independent HTTP and native
+V22-22,Expired revoked disabled-policy link,Generic 404 and no content,vs22-native.php and independent HTTP
+V22-23,Drive no authentication,Picker boundary setup state; PC/library remain usable,vs22-ui.cjs and staging
+V22-24,Selective Drive import linked update,Allowed parent only; new immutable asset on update,vs22-native.php fixture
+V22-25,Cost-denied viewer,No supplier cost/profit/notes in load or outputs,independent HTTP
+V22-26,Edit send approve white-label permissions,Server enforcement and CSRF; UI follows permission,independent HTTP and native
+V22-27,Sent immutability library archive/update,Frozen bundle/html/blocks/media bytes unaffected,vs22-native.php
+V22-28,Create Revision,Existing revision flow; copied assignments; new Draft review required,independent HTTP and native
+V22-29,Approve Send Accept Booking,Existing central validator and snapshot links carry presentation,vs22-native.php and staging lifecycle
+V22-30,Staging backup restore,Fresh isolated restore matches all 103 table counts/checksums,checkpoint restore evidence
+V22-31,Staging deployment,Exact source; 28 ledger entries; no-op; private config preserved,deployment evidence
+V22-32,Staging smoke and owner handoff,Visual builder formats privacy legacy flow and immutable lifecycle pass,staging evidence and owner checklist
