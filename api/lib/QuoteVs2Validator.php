@@ -23,7 +23,7 @@ final class QuoteVs2Validator {
         $g=QuoteVs2Repository::graph($db,$v);$reqs=array_column($g['requirements'],null,'id');
         try{$guests=QuoteVs2Domain::guests($v,$g['profile']);}catch(Throwable $e){$add('PAX_SEGMENT_REVIEW_REQUIRED');return ['valid'=>false,'errors'=>$errors,'warnings'=>[]];}
         if(!QuoteVs2Repository::decode($v['schedule_json']??'[]'))$add('ITINERARY_NEEDED');
-        $dayKeys=array_column(QuoteVs2Repository::decode($v['schedule_json']??'[]'),'day_key');
+        $days=QuoteVs2Repository::decode($v['schedule_json']??'[]');$dayKeys=array_column($days,'day_key');
         foreach($reqs as $req)if($req['requirement_state']!=='NOT_APPLICABLE'&&$req['day_key']&&!in_array($req['day_key'],$dayKeys,true))$add('REQUIREMENT_DAY_MISSING',null,null,(int)$req['id']);
         $policy=self::policy($db,(int)$v['company_id']);if($policy===null)$warnings[]=['code'=>'POLICY_NOT_CONFIGURED','severity'=>'WARNING'];
         $offered=array_filter($g['variants'],fn($variant)=>(bool)$variant['is_offered']);if(!$offered)$add('OFFERED_VARIANT_NEEDED');
@@ -33,8 +33,9 @@ final class QuoteVs2Validator {
                 if(!$req['service_date'])$add('SERVICE_DATE_NEEDED',$vid,null,(int)$req['id']);
                 $lines=array_filter($variant['lines'],fn($line)=>(int)$line['requirement_id']===(int)$req['id']&&$line['line_kind']==='SERVICE'&&QuoteVs2Domain::applies($req,$variant,$line));
                 if(count($lines)!==1)$add(count($lines)?'DUPLICATE_COST':'MISSING_REQUIRED_SERVICE',$vid,null,(int)$req['id']);
-                $scope=QuoteVs2Repository::decode($req['scope_json']);$dates=$scope['dates']??[];
-                if(in_array($req['category'],['HOTEL','GUIDE'],true)&&(!$dates||count($dates)!==(int)$req['service_units']))$add($req['category']==='HOTEL'?'HOTEL_NIGHTS_MISMATCH':'GUIDE_DAYS_MISMATCH',$vid,null,(int)$req['id']);
+                $scope=QuoteVs2Repository::decode($req['scope_json']);
+                try{QuoteVs2Domain::destination($scope);}catch(Throwable){$add('SERVICE_DESTINATION_INVALID',$vid,null,(int)$req['id']);}
+                if(in_array($req['category'],['HOTEL','GUIDE'],true)&&!QuoteVs2Domain::serviceDates($req,$days))$add($req['category']==='HOTEL'?'HOTEL_NIGHTS_MISMATCH':'GUIDE_DAYS_MISMATCH',$vid,null,(int)$req['id']);
                 if($req['category']==='MEAL'&&count($scope['occurrences']??[])!==(int)$req['service_units'])$add('MEAL_COUNT_MISMATCH',$vid,null,(int)$req['id']);
                 if($req['category']==='ATTRACTION'&&empty($scope['attraction_key']))$add('ATTRACTION_SCOPE_NEEDED',$vid,null,(int)$req['id']);
             }
@@ -69,7 +70,11 @@ final class QuoteVs2Validator {
                         if($matchCount!==1)throw new DomainException('DUPLICATE_PACKAGE_COVERAGE');
                     }elseif($line['coverage_state']==='NO_COST'){
                         if(!$line['manual_reason']||empty(QuoteVs2Repository::decode($line['manual_contract_json'])['evidence'])||Vs2Decimal::parse((string)$line['total_vnd'])!==0)throw new DomainException('NO_COST_REVIEW');
-                    }else throw new DomainException('RATE_NEEDED');
+                    }else{
+                        // An unresolved selected rate still needs its live eligibility error at Send.
+                        if($line['rate_version_id']!==null)Vs2RateResolver::resolve($db,$v,$guests,$req,$variant,$line);
+                        throw new DomainException('RATE_NEEDED');
+                    }
                     if($line['review_required']||!$line['reviewed_by'])throw new DomainException('REVIEW_REQUIRED');
                     $review=SmartCosting::reviewHash($v,$g['profile'],$req,$variant,$line,$rate);if(!hash_equals($line['reviewed_context_hash']??'',$review))throw new DomainException('CONTEXT_REVIEW_REQUIRED');
                     $path=[];$cursor=$line;while($cursor['included_by_line_id']){if(isset($path[$cursor['id']]))throw new DomainException('INCLUSION_CYCLE');$path[$cursor['id']]=true;$cursor=$byId[$cursor['included_by_line_id']]??throw new DomainException('FOREIGN_PACKAGE_LINE');}

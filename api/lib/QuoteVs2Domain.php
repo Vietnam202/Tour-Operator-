@@ -5,6 +5,7 @@ final class QuoteVs2Domain {
     public const SOURCES=['TOTAL_GUESTS','PAYING_PAX','HOTEL_PAX','CRUISE_PAX','VISA_PAX','MEAL_PAX','TICKET_PAX','CUSTOM_QTY'];
     public const BASE=['adults','children','infants','foc','total_guests','paying_pax'];
     public const PROFILE=['hotel_pax','cruise_pax','visa_pax','meal_pax','ticket_pax'];
+    public const OPERATIONAL_SCOPE=['destination','dates','occurrences','route','attraction_key','meal_key','eligibility_group','transport_leg'];
     public const FORMULAS=['TRANSPORT'=>'TRANSFER_PACKAGE','GUIDE'=>'GUIDE_DAY','HOTEL'=>'HOTEL_PAX_NIGHT','CRUISE'=>'CRUISE_PAX','VISA'=>'VISA_PAX','MEAL'=>'MEAL_PAX_COUNT','ATTRACTION'=>'TICKET_PAX','TOUR'=>'SIC_PAX','OTHER'=>'CUSTOM'];
     public static function count($value,bool $nullable=false): ?int {
         if($nullable&&$value===null)return null;
@@ -26,8 +27,33 @@ final class QuoteVs2Domain {
     }
     public static function applies(array $req,array $variant,?array $line=null): bool {
         if($req['requirement_state']==='NOT_APPLICABLE')return false;
+        // Completeness is a property of requirements, even when their only line was removed.
+        if($variant['costing_mode']==='HYBRID'&&$line===null)return true;
         $mode=$variant['costing_mode']==='HYBRID'?($line['service_mode']??'PRIVATE'):$variant['costing_mode'];
         return $req['service_mode']==='BOTH'||$req['service_mode']===$mode;
+    }
+    public static function destination(array $scope): string {
+        return self::text($scope['destination']??'',160,true);
+    }
+    public static function serviceDates(array $req,array $days): bool {
+        $scope=QuoteVs2Repository::decode($req['scope_json']);$dates=$scope['dates']??null;
+        if(!is_array($dates)||!array_is_list($dates)||!$dates||count($dates)!==(int)$req['service_units'])return false;
+        $itinerary=[];
+        foreach($days as $day){$date=$day['date']??null;
+            try{$date=self::date($date);}catch(InvalidArgumentException){return false;}
+            if($date){
+            if(isset($itinerary[$date]))return false;
+            $itinerary[$date]=$day;
+        }}
+        $seen=[];
+        foreach($dates as $date){
+            try{$date=self::date($date);}catch(InvalidArgumentException){return false;}
+            if(!$date||isset($seen[$date])||!isset($itinerary[$date]))return false;
+            $seen[$date]=true;$day=$itinerary[$date];
+            if($req['category']==='HOTEL'&&($day['overnight_type']??'')!=='HOTEL')return false;
+            if($req['category']==='GUIDE'&&empty($day['guide_required']))return false;
+        }
+        return true;
     }
     public static function text($value,int $max=1000,bool $empty=false): string {
         if(!is_string($value)||strlen($value)>$max||(!$empty&&trim($value)===''))throw new InvalidArgumentException('Valid text required');return trim($value);
@@ -41,7 +67,8 @@ final class QuoteVs2Domain {
         if(count($days)>100)throw new InvalidArgumentException('Too many days');$out=[];$seen=[];
         foreach($days as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid day');$key=self::text($day['day_key']??('day-'.bin2hex(random_bytes(8))),80);if(isset($seen[$key]))throw new InvalidArgumentException('Duplicate day key');$seen[$key]=true;
             $clean=['day'=>$i+1,'day_key'=>$key];foreach(['date','title','description','meals','overnight','notes','route','activities','transport_mode','cruise','special_requests'] as $field)$clean[$field]=self::text($day[$field]??'',10000,true);
-            $clean['date']=self::date($clean['date'])??'';$clean['guide_required']=!empty($day['guide_required']);$out[]=$clean;
+            $clean['date']=self::date($clean['date'])??'';$clean['guide_required']=!empty($day['guide_required']);
+            $overnightType=$day['overnight_type']??'UNREVIEWED';if(!in_array($overnightType,['UNREVIEWED','HOTEL','CRUISE','OTHER','NONE'],true))throw new InvalidArgumentException('Invalid overnight type');$clean['overnight_type']=$overnightType;$out[]=$clean;
         }return $out;
     }
     /** Cosmetic prose deliberately excluded from transport scope. */

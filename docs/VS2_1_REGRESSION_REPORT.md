@@ -18,7 +18,7 @@ Exactly six child tables are added by 025_vs21_shared_requirements.sql, 026_vs21
 
 ## C. Automated validation
 
-All 42 combined regression suites passed: 20 JavaScript/UI suites (287 PASS groups) and 22 backend suites (1348 PASS groups). This includes the 19 original JavaScript suites and new VS2 UI checks.
+All 42 combined regression suites passed again after the PR #18 review fixes: 20 JavaScript/UI suites (287 PASS groups) and 22 backend suites (1363 PASS groups). This includes the 19 original JavaScript suites and new VS2 UI checks. The 15 additional backend PASS groups are deterministic review-fix checks in `vs21-unit.php`.
 
 | Additional evidence | PASS assertions/groups | Result |
 | --- | ---: | --- |
@@ -28,15 +28,18 @@ All 42 combined regression suites passed: 20 JavaScript/UI suites (287 PASS grou
 | migration | 9 | PASS |
 | vs1 | 120 | PASS |
 | installer | 4 | PASS |
-| unit | 112 | PASS |
+| unit | 125 | PASS |
 | ui | 5 | PASS |
 | pwa | 5 | PASS |
-| syntax | 1 | PASS |
+| syntax | 1 (99 PHP files) | PASS |
 | quote | 61 | PASS |
 | vs0 | 76 | PASS |
-| browser | 23 | PASS |
+| browser | 31 | PASS |
+| review blocker integration | 94 (84 inherited native + 10 new) | PASS |
 
-PHP 8.3.35, MariaDB 11.4.11, Node 24.19 and installed Chromium were exercised locally. PHP syntax checked 98 files. Fresh installation and 022-to-025–028 upgrades, no-op reruns, incompatible candidate history and partial-migration failure were tested on disposable databases. Dedicated VS1 handover/upgrade passed 120 assertions.
+PHP 8.3.35, MariaDB 11.4.11, Node 24.19 and installed Chromium were exercised locally. PHP syntax checked 99 files. Fresh installation and 022-to-025–028 upgrades, no-op reruns, incompatible candidate history and partial-migration failure were tested on disposable databases. Dedicated VS1 handover/upgrade passed 120 assertions.
+
+PR #18 review-fix evidence is in the workspace's local `outputs/VS2_1_REVIEW_JS_RESULTS.json`, `outputs/VS2_1_REVIEW_PHP_RESULTS.json`, `outputs/VS2_1_REVIEW_BLOCKERS.log`, `outputs/VS2_1_REVIEW_BROWSER.log`, and `outputs/VS2_1_REVIEW_VS1_UPGRADE.log` (sibling of the `work/` checkout, not tracked in Git). The blocker integration run includes the native suite plus deletion of a required HYBRID SIC line and invalid/valid hotel and guide date cases. The browser run uses the actual requirement and rate editors for a destination-specific approved rate, rejects a mismatched destination, tests cost-free privacy, and hides Send after SENT. These are local synthetic fixtures; staging verification remains required after merge.
 
 VS2 native evidence includes every global quantity dependency against saved line bytes/hash/trace/timestamps, local CUSTOM_QTY, stable reviewed overrides, capacity/material-scope checks, six variants and independent cruise changes, exact package coverage, duplicate/cycle/partial/full-tour overlap blockers, signed adjustments, actual source/FX/terms/scope/policy/offer hash drift, immutable send retry and relational revision/reuse remapping. Parallel native writers prove one winning revision and idempotent concurrent initial Send, exact acceptance and booking.
 
@@ -46,7 +49,7 @@ All 52 approved release-gate IDs are mapped to executed evidence in VS2_1_TEST_C
 
 ## D. Browser acceptance
 
-23 real browser assertions passed with zero uncaught errors. The flow uses the existing Inquiry/Program Library/Quote workspace, explicit activation, presets, visible missing-rate validation, a real supplier line edit, real Approve/Send/Accept/Booking/Revision buttons and existing booking navigation. Guest-only GET/PUT, monetary denial, explicit profit DENY on quote and booking, missing CSRF and foreign-tenant access were tested against the real local PHP server. Desktop and 390px mobile screenshots are included.
+31 real browser assertions passed with zero uncaught errors. The flow uses the existing Inquiry/Program Library/Quote workspace, explicit activation, presets, visible missing-rate validation, a real supplier line edit, real Approve/Send/Accept/Booking/Revision buttons and existing booking navigation. It creates or reuses an approved destination-specific Hanoi hotel rate, enters the destination through the actual requirement editor, prices and sends it, and confirms that changing the destination to Halong produces blocking `RATE_UNAVAILABLE`. Three distinct hotel nights are marked on the shared itinerary. Guest-only GET/PUT, monetary denial, confidential metadata/scope/itinerary-note redaction and preservation on cost-free edits, explicit profit DENY, missing CSRF and foreign-tenant access were tested against the local PHP server. Sent UI hides the Send action. Desktop and 390px mobile screenshots are included.
 
 ## E. API and schema documentation
 

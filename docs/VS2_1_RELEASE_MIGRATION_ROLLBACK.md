@@ -20,6 +20,8 @@ The migration runner preserves its database migration lock/checksum ledger. Reru
 
 There is no data backfill into VS2. Old legacy costs/options remain retained and inactive only after explicit activation. Historical sent/accepted JSON/hash bytes are untouched. Version activation cannot occur on issued data. New variants use the existing hotel-parent index and separate child IDs.
 
+The PR #18 review fixes use existing `quote_service_requirements.scope_json.destination` and `quote_versions.schedule_json.overnight_type`; no SQL migration or historical data rewrite is needed. Existing draft days without a typed overnight remain unreviewed for hotel-night pricing until a user classifies them in the shared itinerary. Existing Sent/Accepted snapshot bytes remain frozen. A destination-bound rate now has an explicit editable service destination and visible rate eligibility context. Cost-denied context omits confidential requirement metadata, while edits retain those saved fields.
+
 ## Rollback
 
 Set VTA_VS21_CREATION=0 to stop explicit VS1-to-VS2 activation while retaining compatible readers for existing drafts, variants and snapshots. Existing VS2 draft maintenance/revision remains available. If all mutations must stop, use maintenance access control for the affected environment; do not uninstall the reader while VS2 data exists.
@@ -32,6 +34,8 @@ Use disposable local data and a real browser; never production bookings.
 
 - Sign in; create an existing inquiry/quote; select Program Library; verify one shared itinerary.
 - Activate Smart Costing; review explicit service populations and stable day/requirement scope.
+- Mark each hotel, cruise, other or no-overnight day in the one shared itinerary; verify hotel nights and guide days use distinct eligible itinerary dates. Enter the service destination explicitly for any destination-bound approved rate, confirm its eligibility in the picker, and verify a wrong destination blocks Send.
+- Offer a HYBRID variant, then remove its required SIC tour line on a disposable draft; verify `MISSING_REQUIRED_SERVICE` blocks Send. Restore the line before proceeding. Check that cost-denied users cannot read internal supplier notes and that Sent quotes have no active Send action.
 - Generate PRIVATE/SIC presets, retain a Custom Mix, and confirm repeated generation keeps edits/IDs.
 - Change HOTEL_PAX/VISA_PAX/MEAL_PAX independently; inspect trace and review flags. Override quantities remain stable. Transfer guest changes validate capacity and scope.
 - Offer a draft variant with missing sources; Check Quote and first Send block. Enter/select documented supplier sources and review dates/units/contract basis.

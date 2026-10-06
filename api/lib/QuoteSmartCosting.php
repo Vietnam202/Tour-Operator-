@@ -31,7 +31,13 @@ final class QuoteSmartCosting {
             foreach(['tour_name','included_text','excluded_text','terms_text'] as $key)if(isset($body[$key]))$fields[$key]=QuoteVs2Domain::text($body[$key],10000,true);
             foreach(['start_date','end_date'] as $key)if(array_key_exists($key,$body))$fields[$key]=QuoteVs2Domain::date($body[$key]);
             if(isset($body['document_language'])){if(!in_array($body['document_language'],['en','vi'],true))throw new InvalidArgumentException('Invalid language');$fields['document_language']=$body['document_language'];}
-            if(isset($body['schedule']))$fields['schedule_json']=QuoteVs2Repository::json(QuoteVs2Domain::schedule($body['schedule']));
+            if(isset($body['schedule'])){
+                $days=$body['schedule'];if(!Auth::can($db,(int)$u['id'],'quote.view_cost')){
+                    $prior=array_column(QuoteVs2Repository::decode($v['schedule_json']),'notes','day_key');
+                    foreach($days as &$day)if(is_array($day)){$key=$day['day_key']??null;unset($day['notes']);if($key!==null&&isset($prior[$key]))$day['notes']=$prior[$key];}unset($day);
+                }
+                $fields['schedule_json']=QuoteVs2Repository::json(QuoteVs2Domain::schedule($days));
+            }
             if(isset($body['fx_rate'])){Auth::requirePermission($db,$u,'quote.view_cost');$fx=Vs2Decimal::parse($body['fx_rate'],6);if($fx<1||$fx>1000000000000)throw new InvalidArgumentException('Invalid FX');$fields['fx_rate']=Vs2Decimal::format($fx,6);}
             if($fields)self::q($db,'UPDATE quote_versions SET '.implode(',',array_map(fn($k)=>$k.'=?',array_keys($fields))).' WHERE id=?',[...array_values($fields),$id]);
             self::q($db,'UPDATE quote_guest_profiles SET hotel_pax=?,cruise_pax=?,visa_pax=?,meal_pax=?,ticket_pax=?,review_metadata_json=?,updated_by=? WHERE quote_version_id=?',[...array_map(fn($key)=>$profile[$key],QuoteVs2Domain::PROFILE),QuoteVs2Repository::json($metadata),$u['id'],$id]);
@@ -55,6 +61,15 @@ final class QuoteSmartCosting {
         if(!in_array($r['service_mode'],['BOTH','PRIVATE','SIC'],true)||!in_array($r['requirement_state'],['NEEDS_REVIEW','REQUIRED','NOT_APPLICABLE'],true))throw new InvalidArgumentException('Invalid service state');
         $scope=$input['scope']??QuoteVs2Repository::decode($r['scope_json']);$meta=$input['metadata']??QuoteVs2Repository::decode($r['metadata_json']);
         if(!is_array($scope)||!is_array($meta))throw new InvalidArgumentException('Structured service scope required');
+        if(array_key_exists('destination',$scope))$scope['destination']=QuoteVs2Domain::destination($scope);
+        if(!Auth::can($db,(int)$u['id'],'quote.view_cost')){
+            $priorScope=QuoteVs2Repository::decode($old['scope_json']??null);
+            foreach(QuoteVs2Domain::OPERATIONAL_SCOPE as $key)if(!array_key_exists($key,$scope))unset($priorScope[$key]);
+            $scope=array_replace($priorScope,array_intersect_key($scope,array_flip(QuoteVs2Domain::OPERATIONAL_SCOPE)));
+            $previous=QuoteVs2Repository::decode($old['metadata_json']??null);
+            $reason=$meta['reason']??null;$meta=$previous;
+            if(is_string($reason)&&trim($reason)!=='')$meta['reason']=QuoteVs2Domain::text($reason);
+        }
         if($r['requirement_state']==='NOT_APPLICABLE'){QuoteVs2Domain::text($meta['reason']??'');$meta['reviewed_by']=(int)$u['id'];}
         if($r['day_key']){$days=QuoteVs2Repository::decode(self::q($db,'SELECT schedule_json FROM quote_versions WHERE id=?',[$version])->fetchColumn());if(!in_array($r['day_key'],array_column($days,'day_key'),true))throw new InvalidArgumentException('Day not in this itinerary');}
         if($r['package_requirement_id']){
