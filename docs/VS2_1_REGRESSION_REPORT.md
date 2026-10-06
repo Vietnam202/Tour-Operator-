@@ -34,12 +34,12 @@ All 42 combined regression suites passed again after the PR #18 review fixes: 20
 | syntax | 1 (99 PHP files) | PASS |
 | quote | 61 | PASS |
 | vs0 | 76 | PASS |
-| browser | 31 | PASS |
+| browser | 39 | PASS |
 | review blocker integration | 94 (84 inherited native + 10 new) | PASS |
 
 PHP 8.3.35, MariaDB 11.4.11, Node 24.19 and installed Chromium were exercised locally. PHP syntax checked 99 files. Fresh installation and 022-to-025–028 upgrades, no-op reruns, incompatible candidate history and partial-migration failure were tested on disposable databases. Dedicated VS1 handover/upgrade passed 120 assertions.
 
-PR #18 review-fix evidence is in the workspace's local `outputs/VS2_1_REVIEW_JS_RESULTS.json`, `outputs/VS2_1_REVIEW_PHP_RESULTS.json`, `outputs/VS2_1_REVIEW_BLOCKERS.log`, `outputs/VS2_1_REVIEW_BROWSER.log`, and `outputs/VS2_1_REVIEW_VS1_UPGRADE.log` (sibling of the `work/` checkout, not tracked in Git). The blocker integration run includes the native suite plus deletion of a required HYBRID SIC line and invalid/valid hotel and guide date cases. The browser run uses the actual requirement and rate editors for a destination-specific approved rate, rejects a mismatched destination, tests cost-free privacy, and hides Send after SENT. These are local synthetic fixtures; staging verification remains required after merge.
+PR #18 privacy-fix evidence is in the workspace's local `outputs/VS2_1_PRIVACY_JS_RESULTS.json`, `outputs/VS2_1_PRIVACY_PHP_RESULTS.json`, `outputs/VS2_1_PRIVACY_NATIVE_RESULTS.json`, `outputs/VS2_1_PRIVACY_VS1_UPGRADE.log`, and `outputs/VS2_1_PRIVACY_BROWSER.log` (sibling of the `work/` checkout, not tracked in Git). The blocker integration run includes the native suite plus deletion of a required HYBRID SIC line and invalid/valid hotel and guide date cases. The browser run uses actual requirement and rate editors for a destination-specific approved rate, rejects a mismatched destination, checks full quote/booking/Operations/order response payloads under cost and profit denial, and hides Send after SENT. These are local synthetic fixtures; staging verification remains required after merge.
 
 The review-fix source archive and both `SHA256SUMS` manifests are refreshed for the new test and changed files. All 448 packaged source entries, excluding the two self-referential manifests, are SHA-256 checked against the archive. Historical migration bytes remain unchanged.
 
@@ -51,7 +51,11 @@ All 52 approved release-gate IDs are mapped to executed evidence in VS2_1_TEST_C
 
 ## D. Browser acceptance
 
-31 real browser assertions passed with zero uncaught errors. The flow uses the existing Inquiry/Program Library/Quote workspace, explicit activation, presets, visible missing-rate validation, a real supplier line edit, real Approve/Send/Accept/Booking/Revision buttons and existing booking navigation. It creates or reuses an approved destination-specific Hanoi hotel rate, enters the destination through the actual requirement editor, prices and sends it, and confirms that changing the destination to Halong produces blocking `RATE_UNAVAILABLE`. Three distinct hotel nights are marked on the shared itinerary. Guest-only GET/PUT, monetary denial, confidential metadata/scope/itinerary-note redaction and preservation on cost-free edits, explicit profit DENY, missing CSRF and foreign-tenant access were tested against the local PHP server. Sent UI hides the Send action. Desktop and 390px mobile screenshots are included.
+39 real browser assertions passed with zero uncaught errors. The flow uses the existing Inquiry/Program Library/Quote workspace, explicit activation, presets, visible missing-rate validation, a real supplier line edit, real Approve/Send/Accept/Booking/Revision buttons and existing booking navigation. It creates or reuses an approved destination-specific Hanoi hotel rate, enters the destination through the actual requirement editor, prices and sends it, and confirms that changing the destination to Halong produces blocking `RATE_UNAVAILABLE`. Three distinct hotel nights are marked on the shared itinerary. The same-company cost-denied user sees full quote detail, smart context, booking detail, Operations timeline and supplier-order detail without confidential notes, costs, rate evidence or pricing policy. The profit-denied user sees no profit/margin/markup or pricing policy in full quote/options/booking JSON. A full-access user retains internal notes and cost; public Send and acceptance responses remain clean. Hidden itinerary notes survive cost-free edits. Missing CSRF and foreign-tenant access still reject. Sent UI hides Send. Desktop and 390px mobile screenshots are included.
+
+## Privacy projection review fix
+
+The previous projection only recognized VS2 booking payloads and stripped selected monetary field names. Quote detail returned raw `quote_versions.schedule_json` and `pricing_value`, while booking/service rows returned `notes`. The shared response filter now applies to VS1/VS2 quote and booking routes and uses permission-based field removal. Cost-free schedule projections use an explicit field allowlist; guest edits preserve hidden `notes` and `special_requests`. Supplier identities remain available only on operational dispatch/order routes where required. Public snapshots are still generated by their existing allowlist; no Sent or Accepted stored snapshot was changed. No migration was added or modified.
 
 ## E. API and schema documentation
 

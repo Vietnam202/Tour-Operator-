@@ -17,7 +17,7 @@ final class QuoteVs2 {
         $g=QuoteVs2Repository::graph($db,$v);$requirements=[];
         $cost=Auth::can($db,(int)$u['id'],'quote.view_cost');
         foreach($g['requirements'] as $r){$scope=QuoteVs2Repository::decode($r['scope_json']);$r['scope']=$cost?$scope:array_intersect_key($scope,array_flip(QuoteVs2Domain::OPERATIONAL_SCOPE));$r['metadata']=$cost?QuoteVs2Repository::decode($r['metadata_json']):[];unset($r['scope_json'],$r['metadata_json'],$r['updated_at'],$r['updated_by']);$requirements[]=$r;}
-        $schedule=QuoteVs2Repository::decode($v['schedule_json']);if(!$cost)foreach($schedule as &$day)unset($day['notes']);unset($day);
+        $schedule=QuoteVs2Repository::decode($v['schedule_json']);if(!$cost)$schedule=QuoteVs2Projection::safeSchedule($schedule);
         return ['costing_engine'=>QuoteVs2Repository::engine($v),'costing_revision'=>(int)$v['costing_revision'],'version_id'=>(int)$v['id'],'version_status'=>$v['version_status'],'guests'=>array_intersect_key($v,array_flip(QuoteVs2Domain::BASE)),'profile'=>array_intersect_key($g['profile'],array_flip(QuoteVs2Domain::PROFILE)),'suggestions'=>QuoteVs2Repository::decode($g['profile']['review_metadata_json']??null)['suggestions']??[],'schedule'=>$schedule,'requirements'=>$requirements];
     }
     public static function optionsDto(PDO $db,array $u,array $v): array {

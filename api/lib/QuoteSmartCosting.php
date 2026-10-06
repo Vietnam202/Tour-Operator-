@@ -33,8 +33,8 @@ final class QuoteSmartCosting {
             if(isset($body['document_language'])){if(!in_array($body['document_language'],['en','vi'],true))throw new InvalidArgumentException('Invalid language');$fields['document_language']=$body['document_language'];}
             if(isset($body['schedule'])){
                 $days=$body['schedule'];if(!Auth::can($db,(int)$u['id'],'quote.view_cost')){
-                    $prior=array_column(QuoteVs2Repository::decode($v['schedule_json']),'notes','day_key');
-                    foreach($days as &$day)if(is_array($day)){$key=$day['day_key']??null;unset($day['notes']);if($key!==null&&isset($prior[$key]))$day['notes']=$prior[$key];}unset($day);
+                    $prior=array_column(QuoteVs2Repository::decode($v['schedule_json']),null,'day_key');
+                    foreach($days as &$day)if(is_array($day)){$key=$day['day_key']??null;foreach(['notes','special_requests'] as $field){unset($day[$field]);if($key!==null&&isset($prior[$key][$field]))$day[$field]=$prior[$key][$field];}}unset($day);
                 }
                 $fields['schedule_json']=QuoteVs2Repository::json(QuoteVs2Domain::schedule($days));
             }
