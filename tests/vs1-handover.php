@@ -34,7 +34,7 @@ function v1effect(PDO $db,int $lead,int $version,string $event):void{
 $dsn=getenv('VS1_TEST_MYSQL_DSN')?:'';
 if($dsn==='')throw new RuntimeException('Set VS1_TEST_MYSQL_DSN to a newly created empty local vta_vs1_<random hex> database, plus VS1_TEST_MYSQL_PASSWORD');
 date_default_timezone_set('Asia/Ho_Chi_Minh');$db=v1connect($dsn);v1empty($db);
-$migrationDir=__DIR__.'/../api/migrations';$baselineDir=__DIR__.'/../../VTA_Unified_OS_RC5_3/api/migrations';
+$migrationDir=__DIR__.'/../api/migrations';$baselineDir=getenv('VS1_TEST_BASELINE_DIR')?:__DIR__.'/../../VTA_Unified_OS_RC5_3/api/migrations';
 $files=glob($migrationDir.'/*.sql')?:[];sort($files,SORT_STRING);$manifest=array_map(fn($p)=>basename($p,'.sql'),$files);
 v1check(in_array('022_lead_sales_handover',$manifest,true),'current migration manifest includes additive VS1 handover');
 $baseline=glob($baselineDir.'/*.sql')?:[];sort($baseline,SORT_STRING);
@@ -146,7 +146,7 @@ if($upgradeDsn!==''){
     $oldReq=v1insert($up,'lead_requests',['company_id'=>1,'source'=>'FACEBOOK','submission_key'=>v1key(),'payload_hash'=>str_repeat('a',64),'contact_name'=>'Historical converted lead','email'=>'legacy@example.invalid','total_guests'=>4,'paying_pax'=>3,'foc'=>1,'attribution_json'=>'{"utm_campaign":"preserved"}','status'=>'QUALIFIED']);
     $up->exec("INSERT INTO leads(company_id,request_id,owner_user_id,qualification_note,inquiry_id,status,qualified_by,converted_at) VALUES(1,$oldReq,1,'Historical qualification',1,'CONVERTED',1,'2020-01-01 00:00:00')");
     $beforeUser=$up->query('SELECT * FROM users')->fetchAll();$beforeRequest=$up->query('SELECT * FROM lead_requests')->fetchAll();$beforeTrip=$up->query('SELECT * FROM trips')->fetchAll();$beforeInquiry=$up->query('SELECT * FROM inquiries')->fetchAll();
-    v1check(Migrations::run($up,$migrationDir)===['022_lead_sales_handover'],'RC5.3-to-VS1 upgrade applies only additive 022');
+    v1check(Migrations::run($up,$migrationDir)===array_values(array_filter($manifest,fn($version)=>(int)$version>=22)),'RC5.3-to-current upgrade applies the exact additive manifest from 022');
     v1check($up->query('SELECT * FROM users')->fetchAll()===$beforeUser&&$up->query('SELECT * FROM trips')->fetchAll()===$beforeTrip&&$up->query('SELECT * FROM inquiries')->fetchAll()===$beforeInquiry,'upgrade preserves users/passwords and historic downstream identities');
     $newRequest=$up->query('SELECT * FROM lead_requests')->fetchAll();foreach($newRequest as &$row)unset($row['version_no']);unset($row);v1check($newRequest===$beforeRequest,'upgrade preserves request attribution fields');
     v1check($up->query("SELECT handover_status FROM leads WHERE inquiry_id=1")->fetchColumn()==='CONVERTED','upgrade marks only existing converted links without inventing acceptance history');

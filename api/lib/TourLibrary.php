@@ -219,6 +219,7 @@ final class TourLibrary {
     }
     /** A destination with any program/commercial/cost content is never overwritten. */
     public static function assertEmptyDraft(array $v,bool $hasCosts=false,bool $hasOptions=false,bool $hasSent=false): void {
+        if(($v['costing_engine']??'VS1')!=='VS1')throw new DomainException('Use the Smart Itinerary editor for an activated version');
         if(($v['quote_status']??'')!=='DRAFT'||($v['version_status']??'')!=='DRAFT'||$hasSent)throw new DomainException('Select an editable DRAFT quote that has not been sent');
         foreach(['schedule_json','cost_json','proposal_json'] as $k){$x=json_decode($v[$k]??'null',true,512,JSON_THROW_ON_ERROR);if($x!==null&&$x!==[]&&$x!=='')throw new DomainException('The target quote contains content. Select an empty draft to avoid overwriting it.');}
         foreach(['included_text','excluded_text','terms_text'] as $k)if(trim((string)($v[$k]??''))!=='')throw new DomainException('The target quote contains commercial terms. Select an empty draft.');

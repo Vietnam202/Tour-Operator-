@@ -9,7 +9,7 @@ final class QuoteCostItems {
  }
  public static function write(PDO $db,array $u,int $version,array $body,?int $delete=null): array {
   $own=!$db->inTransaction();if($own)$db->beginTransaction();try{
-   $v=QuoteOptions::version($db,(int)$u['company_id'],$version,true);
+   $v=QuoteOptions::version($db,(int)$u['company_id'],$version,true);QuoteVs2Repository::legacy($v);
    if(in_array($v['version_status'],['SENT','CONFIRMED','SUPERSEDED'],true))throw new DomainException('Issued version is immutable');
    if(self::q($db,'SELECT 1 FROM quote_options WHERE quote_version_id=? LIMIT 1',[$version])->fetchColumn())throw new DomainException('Edit the selected 3*/4*/5* option costs for this quote');
    $id=(int)($body['id']??$delete??0);$old=null;
