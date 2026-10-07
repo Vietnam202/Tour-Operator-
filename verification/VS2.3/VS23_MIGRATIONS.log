@@ -1,0 +1,48 @@
+PASS VS23 upgrade starts at exact VS22 28-entry baseline
+PASS VS23 applies only four additive migrations
+PASS VS23 preserves historical rows users
+PASS VS23 preserves historical rows trips
+PASS VS23 preserves historical rows quotes
+PASS VS23 preserves historical rows quote_versions
+PASS VS23 preserves historical rows quote_sent_bundles
+PASS VS23 historical migration unchanged 001_phase1_core.sql
+PASS VS23 historical migration unchanged 002_phase1_rate_rules_import.sql
+PASS VS23 historical migration unchanged 003_phase1_contracting_rules_reconciliation.sql
+PASS VS23 historical migration unchanged 004_sales_core.sql
+PASS VS23 historical migration unchanged 005_booking_operations.sql
+PASS VS23 historical migration unchanged 006_finance_control.sql
+PASS VS23 historical migration unchanged 007_lead_attribution.sql
+PASS VS23 historical migration unchanged 008_tour_inventory.sql
+PASS VS23 historical migration unchanged 009_quote_options.sql
+PASS VS23 historical migration unchanged 010_travel_documents.sql
+PASS VS23 historical migration unchanged 011_finance_ledgers.sql
+PASS VS23 historical migration unchanged 012_operations_resources_issues.sql
+PASS VS23 historical migration unchanged 013_invoice_schedules.sql
+PASS VS23 historical migration unchanged 014_service_travel_details.sql
+PASS VS23 historical migration unchanged 015_commercial_invoice_documents.sql
+PASS VS23 historical migration unchanged 016_rc1_editing.sql
+PASS VS23 historical migration unchanged 017_campaignpilot.sql
+PASS VS23 historical migration unchanged 018_ai_chat.sql
+PASS VS23 historical migration unchanged 019_marketing_studio.sql
+PASS VS23 historical migration unchanged 020_landing_pages.sql
+PASS VS23 historical migration unchanged 021_tour_library.sql
+PASS VS23 historical migration unchanged 022_lead_sales_handover.sql
+PASS VS23 historical migration unchanged 025_vs21_shared_requirements.sql
+PASS VS23 historical migration unchanged 026_vs21_rate_terms.sql
+PASS VS23 historical migration unchanged 027_vs21_variant_costs.sql
+PASS VS23 historical migration unchanged 028_vs21_acceptance_links.sql
+PASS VS23 historical migration unchanged 029_vs22_media_library.sql
+PASS VS23 historical migration unchanged 030_vs22_proposal_links.sql
+PASS VS23 child table starts empty commercial_policies
+PASS VS23 child table starts empty quote_price_matrices
+PASS VS23 child table starts empty quote_price_matrix_cells
+PASS VS23 child table starts empty commercial_overrides
+PASS VS23 child table starts empty quote_commercial_acceptances
+PASS VS23 child table starts empty booking_handovers
+PASS VS23 child table starts empty booking_handover_services
+PASS VS23 child table starts empty booking_handover_events
+PASS VS23 child table starts empty booking_change_requests
+PASS VS23 exact human-approved ADMIN-only grants
+PASS VS23 handover FK rejects booking without accepted snapshot
+PASS VS23 migration rerun NO_OP
+VS2.3 additive upgrade complete.

@@ -5,6 +5,8 @@ require_once __DIR__.'/QuoteCostItems.php';
 require_once __DIR__.'/QuoteVs2.php';
 require_once __DIR__.'/QuoteProposal.php';
 require_once __DIR__.'/ProposalOutput.php';
+require_once __DIR__.'/PriceMatrix.php';
+require_once __DIR__.'/SalesHandover.php';
 final class QuoteOptions {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
     private static function atomic(PDO $db,callable $fn): array {if($db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql')$db->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');$db->beginTransaction();try{$out=$fn();$db->commit();return $out;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}}
@@ -101,7 +103,7 @@ final class QuoteOptions {
         });
     }
     public static function bundle(PDO $db,array $v): array {
-        if(QuoteVs2Repository::engine($v)==='VS2_1')return QuoteProposal::extend($db,$v,Vs2Snapshots::bundle($db,$v));
+        if(QuoteVs2Repository::engine($v)==='VS2_1')return QuoteProposal::extend($db,$v,PriceMatrix::bundle($db,$v,Vs2Snapshots::bundle($db,$v)));
         $rows=self::q($db,'SELECT id,label,hotel_level,snapshot_json FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$v['id']])->fetchAll();
         if(!$rows)throw new DomainException('At least one priced option required');
         $segments=self::guestSegments($v);
@@ -145,11 +147,13 @@ final class QuoteOptions {
                 self::q($db,"UPDATE inquiries SET next_action='Follow up quotation',next_action_due=DATE_ADD(NOW(),INTERVAL 2 DAY) WHERE id=?",[$v['inquiry_id']]);
                 self::q($db,"INSERT INTO tasks(company_id,title,entity_type,entity_id,owner_user_id,due_at,priority,status,source,rule_code) SELECT ?,'Follow up quotation','quote',?,?,DATE_ADD(NOW(),INTERVAL 2 DAY),'NORMAL','OPEN','AUTOMATION','QUOTE_FOLLOWUP' WHERE NOT EXISTS(SELECT 1 FROM tasks WHERE company_id=? AND entity_type='quote' AND entity_id=? AND rule_code='QUOTE_FOLLOWUP' AND status IN ('OPEN','SNOOZED'))",[$user['company_id'],$v['quote_id'],$user['id'],$user['company_id'],$v['quote_id']]);
             }
+            PriceMatrix::sent($db,$v);
             Audit::log($db,(int)$user['company_id'],(int)$user['id'],'QUOTE_BUNDLE_SENT','quote_version',$version,null,['hash'=>$hash]);return ['customer_safe_snapshot'=>$public];
         });
     }
-    public static function confirm(PDO $db,array $user,int $version,int $option,int $variant=0,string $sentHash='',?int $expected=null): array {
-        return self::atomic($db,function()use($db,$user,$version,$option,$variant,$sentHash,$expected){$v=self::actionVersion($db,$user,$version,$expected);
+    public static function confirm(PDO $db,array $user,int $version,int $option,int $variant=0,string $sentHash='',?int $expected=null,?array $commercial=null): array {
+        return self::atomic($db,function()use($db,$user,$version,$option,$variant,$sentHash,$expected,$commercial){$v=self::actionVersion($db,$user,$version,$expected);
+            if(PriceMatrix::row($db,$v))return PriceMatrix::accept($db,$user,$v,$option,$variant,$sentHash,$commercial??[]);
             if(QuoteVs2Repository::engine($v)==='VS2_1')return Vs2Snapshots::confirm($db,$user,$v,$option,$variant,$sentHash);
             $sent=self::q($db,'SELECT * FROM quote_sent_bundles WHERE quote_version_id=?',[$version])->fetch();if(!$sent)throw new DomainException('Only sent options can be accepted');
             $old=self::q($db,'SELECT option_id FROM quote_acceptances WHERE quote_version_id=?',[$version])->fetchColumn();if($old){if((int)$old!==$option)throw new DomainException('Accepted option cannot be changed');return ['option_id'=>$option];}
@@ -167,7 +171,8 @@ final class QuoteOptions {
             $selection=QuoteVs2Repository::engine($v)==='VS2_1'?'a.variant_id':'NULL variant_id';
             $accepted=self::q($db,'SELECT a.option_id,'.$selection.',s.internal_snapshot_json,s.public_snapshot_json,s.content_hash FROM quote_acceptances a JOIN quote_sent_bundles s ON s.quote_version_id=a.quote_version_id WHERE a.quote_version_id=?',[$version])->fetch();
             if(!$accepted||$v['version_status']!=='CONFIRMED')throw new DomainException('Confirm a sent option first');
-            $bundle=json_decode($accepted['internal_snapshot_json'],true,512,JSON_THROW_ON_ERROR);$option=null;foreach($bundle['options'] as $o)if((int)$o['id']===(int)$accepted['option_id']&&(!($accepted['variant_id']??null)||(int)($o['variant_id']??0)===(int)$accepted['variant_id']))$option=$o;if(!$option)throw new RuntimeException('Accepted snapshot missing');$snap=$option['snapshot'];
+            $bundle=json_decode($accepted['internal_snapshot_json'],true,512,JSON_THROW_ON_ERROR);$bundle=PriceMatrix::bookingBundle($db,$v,$bundle);$option=null;foreach($bundle['options'] as $o)if((int)$o['id']===(int)$accepted['option_id']&&(!($accepted['variant_id']??null)||(int)($o['variant_id']??0)===(int)$accepted['variant_id']))$option=$o;if(!$option)throw new RuntimeException('Accepted snapshot missing');$snap=$option['snapshot'];
+            if(isset($bundle['commercial_commitment'])){$inputs=QuoteVs2Repository::decode($bundle['commercial']['matrix']['inputs_json']);foreach(['lead_contact_name','lead_whatsapp','lead_email','sales_owner_id','operations_owner_id'] as $field)$v[$field]=$inputs['graph']['version'][$field]??null;}
             $segments=self::guestSegments($bundle);$optionSegments=self::guestSegments($snap);
             if($segments!==$optionSegments)throw new DomainException('PAX_SEGMENT_REVIEW_REQUIRED: Accepted bundle and option guest counts differ; create a reviewed revision before booking.');
             $ref='BKG-'.date('Y').'-'.strtoupper(bin2hex(random_bytes(5)));
@@ -175,8 +180,14 @@ final class QuoteOptions {
             $smart=QuoteVs2Repository::engine($v)==='VS2_1';
             foreach($snap['lines'] as $i=>$line){$args=[$id,sprintf('SVC-%03d',$i+1),$line['category'],$line['service_name'],$line['service_date'],$line['pax'],$line['qty'],$line['supplier_id'],$line['total'],$line['currency'],$v['quote_ref'].' V'.$v['version_no'].' '.$option['hotel_level']];if($smart)$args[]=$line['notes']??null;self::q($db,"INSERT INTO booking_services(booking_id,service_ref,category,service_name,service_date,pax,qty,supplier_id,booking_status,planned_cost,cost_currency,source_type,source_ref".($smart?',notes':'').") VALUES(?,?,?,?,?,?,?,?,'PLANNED',?,?,'QUOTE_COST',?".($smart?',?':'').")",$args);}
             $public=json_decode($accepted['public_snapshot_json'],true,512,JSON_THROW_ON_ERROR);$public['options']=array_values(array_filter($public['options'],fn($o)=>(int)$o['id']===(int)$accepted['option_id']&&(!($accepted['variant_id']??null)||(int)($o['variant_id']??0)===(int)$accepted['variant_id'])));
+            if(isset($bundle['commercial_commitment'])){
+                $commit=$bundle['commercial_commitment'];$public=array_replace($public,array_intersect_key($commit['guests'],array_flip(QuoteVs2Domain::BASE)));
+                $public['commercial_commitment']=PriceMatrix::publicCommitment($commit);
+                foreach($public['options'] as &$publicOption){$publicOption['selling_per_pax']=$commit['pricing']['selling_per_pax'];$publicOption['total_selling']=$commit['pricing']['total_selling'];$publicOption['currency']=$commit['selling_currency'];}unset($publicOption);
+            }
             self::q($db,'INSERT INTO booking_quote_snapshots(booking_id,quote_version_id,option_id,public_snapshot_json,internal_snapshot_json,source_hash) VALUES(?,?,?,?,?,?)',[$id,$version,$accepted['option_id'],self::json($public),self::json(['quote'=>$bundle,'accepted_option'=>$option]),$accepted['content_hash']]);
             if($accepted['variant_id']??null)self::q($db,'UPDATE booking_quote_snapshots SET variant_id=? WHERE booking_id=?',[$accepted['variant_id'],$id]);
+            if(isset($bundle['commercial_commitment']))SalesHandover::create($db,$user,$id);
             self::q($db,"UPDATE trips SET lifecycle_stage='BOOKING' WHERE id=?",[$v['trip_id']]);Audit::log($db,$cid,$uid,'BOOKING_FROM_ACCEPTED_OPTION','booking',$id,null,['option_id'=>$accepted['option_id'],'source_hash'=>$accepted['content_hash']]);return ['id'=>$id,'booking_ref'=>$ref];
         });
     }

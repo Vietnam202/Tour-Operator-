@@ -1,0 +1,11 @@
+PASS Representative pax retained inside inclusive band
+PASS 100 percent deposit preserves net payable
+PASS Manual agent net rate is fixed per paying pax
+PASS Exact family composition and service populations preserve FOC
+PASS HYBRID includes SIC tour and suppresses exactly scoped Guide
+PASS DUPLICATE_INCLUDED_COST
+PASS PARTIAL_COVERAGE_REVIEW
+PASS Guide outside included package dates remains chargeable
+PASS MANUAL_OVERRIDE_REVIEW_REQUIRED
+PASS Reviewed manual quantities stay stable across bands
+VS2.3 scoped scenario checks complete.

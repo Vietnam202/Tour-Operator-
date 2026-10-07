@@ -4,6 +4,37 @@ require_once __DIR__.'/Vs2Decimal.php';
 require_once __DIR__.'/Vs2RateResolver.php';
 
 final class SmartCosting {
+    /** Pure scenario evaluator: same supplier resolver, formulas and scoped SIC rules. */
+    public static function scenario(PDO $db,array $v,array $guests,array $requirements,array $variant,array $lines): array {
+        $reqs=array_column($requirements,null,'id');$active=[];$rates=[];$cost=0;
+        foreach($lines as $line){$req=$reqs[$line['requirement_id']]??throw new DomainException('FOREIGN_REQUIREMENT');if(!QuoteVs2Domain::applies($req,$variant,$line))continue;
+            if($line['line_kind']==='ADJUSTMENT'){$active[]=$line;continue;}
+            if($line['coverage_state']==='NO_COST'){if(!$line['manual_reason']||empty(QuoteVs2Repository::decode($line['manual_contract_json'])['evidence']))throw new DomainException('NO_COST_REVIEW');$line['total_vnd']='0.00';}
+            elseif($line['coverage_state']==='INCLUDED'){$line['total_vnd']='0.00';}
+            else{$rate=Vs2RateResolver::resolve($db,$v,$guests,$req,$variant,$line);$rates[$line['id']]=$rate;$line=array_replace($line,self::calculate($line,$req,$guests,$rate,(string)$v['fx_rate']));}
+            if(in_array($line['coverage_state'],['NO_COST','INCLUDED'],true)){
+                $line['resolved_quantity']=QuoteVs2Domain::quantity($line,$guests);if($line['resolved_quantity']===null)throw new DomainException('QUANTITY_NEEDED');
+                $line['resolved_units']=in_array($line['formula_code'],['GUIDE_DAY','HOTEL_PAX_NIGHT','MEAL_PAX_COUNT','CUSTOM'],true)?($line['units_override']??$req['service_units']):1;
+            }
+            $active[]=$line;
+        }
+        $byId=array_column($active,null,'id');
+        foreach($active as &$line){$req=$reqs[$line['requirement_id']];
+            if($line['line_kind']==='ADJUSTMENT'){$parent=$byId[$line['adjusts_line_id']]??null;if(!$parent||$parent['coverage_state']!=='PRICED'||!QuoteVs2Domain::applies($req,$variant,$parent))throw new DomainException('INVALID_ADJUSTMENT');$line['total_vnd']=$line['adjustment_amount_vnd'];}
+            elseif($line['coverage_state']==='INCLUDED'){
+                $parent=$byId[$line['included_by_line_id']]??null;$rate=$rates[$parent['id']??0]??null;$rule=null;
+                foreach($rate['inclusions']??[] as $ir)if((int)$ir['id']===(int)$line['inclusion_rule_id'])$rule=$ir;
+                if(!$parent||!$rule||!Vs2Inclusions::covers($rule,$req,$line,$parent,$guests))throw new DomainException('PARTIAL_COVERAGE_REVIEW');
+            }elseif($line['coverage_state']==='PRICED'){
+                foreach($active as $package){if($package['id']===$line['id']||!in_array($reqs[$package['requirement_id']]['category'],['TOUR','CRUISE'],true))continue;
+                    foreach($rates[$package['id']]['inclusions']??[] as $ir)if(Vs2Inclusions::overlaps($ir,$req))throw new DomainException(Vs2Inclusions::covers($ir,$req,$line,$package,$guests)?'DUPLICATE_INCLUDED_COST':'PARTIAL_COVERAGE_REVIEW');
+                }
+            }
+            if($line['total_vnd']===null)throw new DomainException('RATE_NEEDED');$cost=Vs2Decimal::add($cost,Vs2Decimal::parse((string)$line['total_vnd']));
+        }
+        unset($line);if($cost<0)throw new DomainException('NEGATIVE_SERVICE_NET');
+        return ['cost_total_vnd'=>Vs2Decimal::format($cost),'cost_lines'=>$active,'lines'=>QuoteVs2Validator::bookingLines($active,$reqs,(string)$v['fx_rate']),'rate_sources'=>array_map(fn($r)=>['rate_version_id'=>$r['rate_version_id'],'source_hash'=>$r['source_hash']],$rates)];
+    }
     public static function calculate(array $line,array $req,array $guests,array $rate,string $fx): array {
         if(in_array($line['formula_code'],['TRANSFER_PACKAGE','GUIDE_DAY'],true)&&$line['quantity_source']!=='CUSTOM_QTY')throw new DomainException('RESOURCE_COUNT_NEEDED: Explicit vehicle or guide count required');
         $quantity=QuoteVs2Domain::quantity($line,$guests);if($quantity===null)throw new DomainException('QUANTITY_NEEDED');

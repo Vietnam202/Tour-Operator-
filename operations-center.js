@@ -3,6 +3,7 @@
  const list=x=>Array.isArray(x)?x:[];
  const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const tiles=[
+  ['intake','Operations Intake','Nhận bàn giao từ Sales, trả về để làm rõ và chuẩn bị đặt dịch vụ','IN','green','operations.view'],
   ['today','Today Operations','Hôm nay: dịch vụ, phân công và việc cần xử lý','TOD','blue','operations.view'],
   ['bookings','Booking Operations','Theo dõi booking và mức sẵn sàng khởi hành','BKG','green','booking.view'],
   ['arrivals','Arrivals / Departures','Chuyến bay, giờ đến và giờ đi theo booking','FLY','blue','booking.view'],
@@ -86,6 +87,7 @@
    const tile=tiles.find(x=>x[0]===id);if(id!=='home'&&(!tile||!can(tile[5])||(id==='reports'&&!can('operations.view'))))return;
    view=id;const n=++ticket;shell(id==='home'?cardGrid():'<div class="ops-empty" role="status">'+t('Loading…','Đang tải…')+'</div>');if(id==='home')bindCards();
    try{
+    if(id==='intake'){if(window.VTA_PREVIEW){shell(note(t('Synthetic commercial handovers will appear after a confirmed booking.','Bàn giao mẫu sẽ hiển thị sau khi booking được xác nhận.')));return;}await window.mountOperationsIntake(root.querySelector('[data-op-content]'),{api,navigate,toast});return;}
     let content='',resources=[];
     if(id==='home'){
      if(can('operations.view')){let d;try{d=await operations();}catch(error){if(!alive(n))return;shell(failure(error)+cardGrid());bindCards();return;}
