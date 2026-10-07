@@ -15,6 +15,7 @@ function harness(permissions,{actualCenters=false,handle=null}={}){
  w.VTA_PREVIEW=true;w.VTA_I18N={language:'en',t:x=>x};w.addEventListener('error',e=>{errors.push(e.error||e.message);e.preventDefault();});
  const bridge='window.shellTest={api,state,can,renderShell,navigate,showDocumentReview,showInquiryForm,showCustomerForm,showAgentForm,renderBookingFinanceV3};';
  assert.equal(appSource.match(/\nboot\(\);/g)?.length,1,'boot bridge must replace one call');w.eval(appSource.replace('\nboot();','\n'+bridge));
+ w.eval(fs.readFileSync(path.join(__dirname,'../quote-confirmation.js'),'utf8'));
  const a=w.shellTest;
  const booking=id=>copy({ok:true,booking:{...a.api.bookings[0],id,booking_ref:'BKG-'+id,lead_guest_name:'Guest '+id},trip:{...a.api.trip,title:'Trip '+id},guests:[],flights:[],services:[],orders:[],finance:{},documents:[],activity:[]});
  const quote=id=>copy({ok:true,quote:{...a.api.quote,id,quote_ref:'QT-'+id},trip:{...a.api.trip,title:'Quote trip '+id},version:{...a.api.qv,id:100+id,quote_id:id,tour_name:'Quote '+id,version_status:'SENT'},cost_items:[]});

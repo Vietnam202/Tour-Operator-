@@ -1,8 +1,8 @@
 (()=>{'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- window.mountQuoteConfirmation=async function(host,{api,quoteData,can,navigate,toast,refresh,standalone=false}){
+ window.mountQuoteConfirmation=async function(host,{api,quoteData,can,navigate,toast,refresh,standalone=false,isCurrent=()=>true}){
   const v=quoteData.version,q=quoteData.quote;if(!can('quote.confirm')&&!can('booking.manage'))return;
-  const data=await api.request('quote-versions/'+v.id+'/confirmation');if(!host.isConnected)return;
+  const data=await api.request('quote-versions/'+v.id+'/confirmation');if(!host.isConnected||!isCurrent())return;
   const sent=data.version_status==='SENT',confirmed=data.version_status==='CONFIRMED';
   const root=document.createElement('section');root.className='panel';root.dataset.quoteConfirmation='';
   const choices=data.choices||[];

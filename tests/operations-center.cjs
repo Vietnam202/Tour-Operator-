@@ -91,9 +91,11 @@ function selectBooking(h) {
   let h = harness();
   try {
     await h.render();
-    assert.deepEqual([...h.d.querySelectorAll('[data-op-tile]')].map(tile => tile.dataset.opTile).sort(), [...tiles].sort());
+    assert.deepEqual([...h.d.querySelectorAll('[data-op-tile]')].map(tile => tile.dataset.opTile).sort(), [...tiles, 'intake', 'quotes'].sort());
     assert(h.d.body.textContent.includes('Operations Control Center'));
     for (const key of tiles) { await open(h, key); await home(h); }
+    await click(h, '[data-op-tile="quotes"]');
+    assert.deepEqual(copy(h.navigation.at(-1)), ['quote-confirmations']);
     assert(h.calls.every(call => !call.route.includes('&date=')), 'Dates must use a real query string');
     console.log('PASS all 15 operations cards open functional modules and return home');
   } finally { h.close(); }
@@ -130,7 +132,7 @@ function selectBooking(h) {
     await home(h);
     release();
     await settle();
-    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 15);
+    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 17);
     assert.equal(h.d.querySelector('[data-op-booking-select]'), null);
     console.log('PASS a late booking response cannot replace a newer navigation');
   } finally { release(); h.close(); }
@@ -163,7 +165,7 @@ function selectBooking(h) {
     await home(h);
     releaseIncident();
     await settle();
-    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 15);
+    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 17);
     assert.equal(h.d.querySelector('[data-test-modal]'), null, 'Late incident loader opened a dialog after navigation');
     console.log('PASS late incident loader cannot open a dialog after returning home');
   } finally { releaseIncident(); h.close(); }

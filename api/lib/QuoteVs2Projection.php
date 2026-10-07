@@ -26,7 +26,7 @@ final class QuoteVs2Projection {
             $payload['schedule']=self::safeSchedule($payload['schedule']);
         }
         // Operations needs supplier identity for dispatch and communication.
-        $operational=str_starts_with($route,'operations/')||str_starts_with($route,'supplier-orders/');
+        $operational=str_starts_with($route,'operations/')||str_starts_with($route,'supplier-orders/')||preg_match('#^services/\d+/operations$#',$route)===1;
         $supplierFinance=str_starts_with($route,'supplier-payables/')||$route==='supplier-payables'||str_starts_with($route,'supplier-payments/');
         $visit=function(array $row)use(&$visit,$cost,$profit,$finance,$booking,$operational,$supplierFinance): array {
             foreach($row as $key=>$value){
