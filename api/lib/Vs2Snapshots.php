@@ -38,7 +38,9 @@ final class Vs2Snapshots {
     }
     public static function publicBundle(array $bundle): array {
         $safe=array_intersect_key($bundle,array_flip([...QuoteVs2Domain::BASE,'schema','quote_ref','version_no','tour_name','start_date','end_date','document_language','schedule','included','excluded','terms','presentation']));
-        $safe['options']=array_map(fn($o)=>['id'=>$o['id'],'option_id'=>$o['option_id'],'variant_id'=>$o['variant_id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],'cruise_level'=>$o['cruise_level'],'costing_mode'=>$o['costing_mode'],'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);return $safe;
+        $safe['options']=array_map(fn($o)=>['id'=>$o['id'],'option_id'=>$o['option_id'],'variant_id'=>$o['variant_id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],'cruise_level'=>$o['cruise_level'],'costing_mode'=>$o['costing_mode'],'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);
+        if(isset($bundle['commercial'])){$safe['commercial']=$bundle['commercial']['public'];$safe['options']=PriceMatrix::publicOptions($safe['commercial'],$bundle['paying_pax']);}
+        return $safe;
     }
     public static function copy(PDO $db,array $u,int $oldId,int $newId): void {
         $old=QuoteOptions::version($db,(int)$u['company_id'],$oldId);if(QuoteVs2Repository::engine($old)!=='VS2_1')return;$g=QuoteVs2Repository::graph($db,$old);

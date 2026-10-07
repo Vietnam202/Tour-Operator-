@@ -1,0 +1,79 @@
+PASS VS23 six PRIVATE/SIC star variants plus one independent Custom Mix
+PASS VS23 full 3/4/5 PRIVATE/SIC and Custom Mix matrix shares one itinerary
+PASS VS23 variant matrix does not duplicate or alter itinerary
+PASS VS23 scenario review PRIVATE PRIVATE Economy 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Premium 2-2
+PASS VS23 scenario review SIC SIC Economy 2-2
+PASS VS23 scenario review SIC SIC Recommended 2-2
+PASS VS23 scenario review SIC SIC Premium 2-2
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Economy 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Premium 3-4
+PASS VS23 scenario review SIC SIC Economy 3-4
+PASS VS23 scenario review SIC SIC Recommended 3-4
+PASS VS23 scenario review SIC SIC Premium 3-4
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Economy 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Premium 5-9
+PASS VS23 scenario review SIC SIC Economy 5-9
+PASS VS23 scenario review SIC SIC Recommended 5-9
+PASS VS23 scenario review SIC SIC Premium 5-9
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Economy 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Premium 10-14
+PASS VS23 scenario review SIC SIC Economy 10-14
+PASS VS23 scenario review SIC SIC Recommended 10-14
+PASS VS23 scenario review SIC SIC Premium 10-14
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Economy 15-20
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 15-20
+PASS VS23 scenario review PRIVATE PRIVATE Premium 15-20
+PASS VS23 scenario review SIC SIC Economy 15-20
+PASS VS23 scenario review SIC SIC Recommended 15-20
+PASS VS23 scenario review SIC SIC Premium 15-20
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 15-20
+PASS VS23 scenario review PRIVATE PRIVATE Economy 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Premium 2-2
+PASS VS23 scenario review SIC SIC Economy 2-2
+PASS VS23 scenario review SIC SIC Recommended 2-2
+PASS VS23 scenario review SIC SIC Premium 2-2
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 2-2
+PASS VS23 scenario review PRIVATE PRIVATE Economy 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Premium 3-4
+PASS VS23 scenario review SIC SIC Economy 3-4
+PASS VS23 scenario review SIC SIC Recommended 3-4
+PASS VS23 scenario review SIC SIC Premium 3-4
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 3-4
+PASS VS23 scenario review PRIVATE PRIVATE Economy 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Premium 5-9
+PASS VS23 scenario review SIC SIC Economy 5-9
+PASS VS23 scenario review SIC SIC Recommended 5-9
+PASS VS23 scenario review SIC SIC Premium 5-9
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 5-9
+PASS VS23 scenario review PRIVATE PRIVATE Economy 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Premium 10-14
+PASS VS23 scenario review SIC SIC Economy 10-14
+PASS VS23 scenario review SIC SIC Recommended 10-14
+PASS VS23 scenario review SIC SIC Premium 10-14
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 10-14
+PASS VS23 scenario review PRIVATE PRIVATE Economy 15-20
+PASS VS23 scenario review PRIVATE PRIVATE Recommended 15-20
+PASS VS23 scenario review PRIVATE PRIVATE Premium 15-20
+PASS VS23 scenario review SIC SIC Economy 15-20
+PASS VS23 scenario review SIC SIC Recommended 15-20
+PASS VS23 scenario review SIC SIC Premium 15-20
+PASS VS23 scenario review PRIVATE Custom Mix 4/5 15-20
+PASS VS23 SIC defaults generate exactly transfer hotel cruise SIC: ["CRUISE","HOTEL","TOUR","TRANSPORT"]
+PASS VS23 proposal channel changes require matrix revalidation
+PASS VS23 B2C frozen proposal hides agent and supplier commercial data
+PASS VS23 acceptance cannot select a different commercial channel from Sent
+PASS VS23 matrix variant testing preserves source Sent bytes
+VS2.3 multi-variant and channel acceptance complete.

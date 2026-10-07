@@ -5,7 +5,7 @@ const { JSDOM } = require('jsdom');
 
 // Exercise the shipped module and its DOM events; only the API and app shell are doubles.
 const source = fs.readFileSync(path.join(__dirname, '../operations-center.js'), 'utf8');
-const tiles = ['today', 'bookings', 'arrivals', 'schedule', 'guides', 'transport', 'hotel', 'activities', 'confirmations', 'vouchers', 'passengers', 'tasks', 'incidents', 'payments', 'reports'];
+const tiles = ['intake', 'today', 'bookings', 'arrivals', 'schedule', 'guides', 'transport', 'hotel', 'activities', 'confirmations', 'vouchers', 'passengers', 'tasks', 'incidents', 'payments', 'reports'];
 const date = new Date().toISOString().slice(0, 10);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -46,6 +46,8 @@ function harness({ responses = fixture(), can = () => true, fail = () => false, 
     d.body.append(m);
     return m;
   } };
+  responses['operations/intake']={items:[]};
+  w.eval(fs.readFileSync(path.join(__dirname,'../handover.js'),'utf8'));
   w.eval(source);
   const render = async () => { await w.VTAOperationsCenter(deps); await settle(); };
   return { dom, w, d, calls, navigation, documents, serviceDetails, errors, render, close: () => w.close() };
@@ -95,7 +97,7 @@ function selectBooking(h) {
     assert(h.d.body.textContent.includes('Operations Control Center'));
     for (const key of tiles) { await open(h, key); await home(h); }
     assert(h.calls.every(call => !call.route.includes('&date=')), 'Dates must use a real query string');
-    console.log('PASS all 15 operations cards open functional modules and return home');
+    console.log('PASS all 16 operations cards open functional modules and return home');
   } finally { h.close(); }
 
   const twoBookings = fixture();
@@ -130,7 +132,7 @@ function selectBooking(h) {
     await home(h);
     release();
     await settle();
-    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 15);
+    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, tiles.length);
     assert.equal(h.d.querySelector('[data-op-booking-select]'), null);
     console.log('PASS a late booking response cannot replace a newer navigation');
   } finally { release(); h.close(); }
@@ -163,7 +165,7 @@ function selectBooking(h) {
     await home(h);
     releaseIncident();
     await settle();
-    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, 15);
+    assert.equal(h.d.querySelectorAll('[data-op-tile]').length, tiles.length);
     assert.equal(h.d.querySelector('[data-test-modal]'), null, 'Late incident loader opened a dialog after navigation');
     console.log('PASS late incident loader cannot open a dialog after returning home');
   } finally { releaseIncident(); h.close(); }

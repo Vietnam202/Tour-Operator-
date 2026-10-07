@@ -1,0 +1,317 @@
+[
+  {
+    "suite": "frontend.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 16
+  },
+  {
+    "suite": "marketing-unit.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 9
+  },
+  {
+    "suite": "marketing-preview.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 8
+  },
+  {
+    "suite": "marketing-studio-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 14
+  },
+  {
+    "suite": "landing-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 15
+  },
+  {
+    "suite": "landing-pro.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 10
+  },
+  {
+    "suite": "ai-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 9
+  },
+  {
+    "suite": "pwa.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 5
+  },
+  {
+    "suite": "schedule-sections-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 10
+  },
+  {
+    "suite": "operations-center.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 20
+  },
+  {
+    "suite": "operations-demo.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 18
+  },
+  {
+    "suite": "tour-library-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 22
+  },
+  {
+    "suite": "tour-library-demo.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 12
+  },
+  {
+    "suite": "navigation-library.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 16
+  },
+  {
+    "suite": "workspace-centers-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 25
+  },
+  {
+    "suite": "workspace-demo.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 18
+  },
+  {
+    "suite": "ai-drawer.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 13
+  },
+  {
+    "suite": "vs0-shell.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 18
+  },
+  {
+    "suite": "vs1-workspace.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 24
+  },
+  {
+    "suite": "vs21-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 5
+  },
+  {
+    "suite": "vs22-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 7
+  },
+  {
+    "suite": "vs23-ui.cjs",
+    "kind": "JS",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 4
+  },
+  {
+    "suite": "ai-context.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 55
+  },
+  {
+    "suite": "ai-provider.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 27
+  },
+  {
+    "suite": "documents-extended.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 123
+  },
+  {
+    "suite": "finance-flow.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 106
+  },
+  {
+    "suite": "landing-pages.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 29
+  },
+  {
+    "suite": "lead-hub.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 38
+  },
+  {
+    "suite": "legacy-costs.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 44
+  },
+  {
+    "suite": "marketing-rules.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 26
+  },
+  {
+    "suite": "operations.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 117
+  },
+  {
+    "suite": "php-lint-all.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 1
+  },
+  {
+    "suite": "procurement-documents.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 78
+  },
+  {
+    "suite": "quote-options.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 61
+  },
+  {
+    "suite": "rc1-options.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 74
+  },
+  {
+    "suite": "rc1.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 79
+  },
+  {
+    "suite": "runtime-guard.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 5
+  },
+  {
+    "suite": "schedule-sections.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 20
+  },
+  {
+    "suite": "tour-library.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 142
+  },
+  {
+    "suite": "upgrade.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 7
+  },
+  {
+    "suite": "vs0-commercial.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 76
+  },
+  {
+    "suite": "vs0-finance-operations.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 64
+  },
+  {
+    "suite": "vs21-review-fixes.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 94
+  },
+  {
+    "suite": "vs21-unit.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 125
+  },
+  {
+    "suite": "workspace-center.php",
+    "kind": "PHP",
+    "exit_code": 0,
+    "error": null,
+    "pass_lines": 66
+  }
+]

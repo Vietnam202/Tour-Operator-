@@ -1,0 +1,13 @@
+# VS2.3 staging release / rollback
+
+Target only https://v2quote.vietnamtraveladvisor.com.vn, database v2qu_v2qu_vtaos, home /home/v2quote.vietnamtraveladvisor.com.vn. Baseline testing 9d50a623edc414b8a92442c91d45b309c1e1d189 has the same tree as deployed VS2.2 f256dc7f0d4181eb40eb39d5b28e27ebd6658aaa. Do not deploy main/production or merge VS2.3 automatically.
+
+1. Check actual environment, base URL, DB, PHP, source manifest and 28 APPLIED historical checksum entries ending 030. Stop on drift.
+2. Checkpoint source, config, private media/storage and database under maintenance. Verify archive/SQL hashes, every table row count/content digest, quote-version IDs and all Sent/accepted/booking snapshot digests. Keep artifacts private.
+3. Restore checkpoint into a fresh isolated database; compare all counts/content hashes and historical ledger/snapshot evidence. Record verified restore before cutover. Never overwrite the existing restore database or customer data.
+4. Verify candidate Git commit/tree/blob manifest, archive checksum and unchanged migrations 001–030. Preserve current source privately before copying reviewed source. Keep private config/storage intact. Public directories 0755, files 0644; private backup/helpers 0600. CLI PHP only: -d opcache.enable_cli=0; web settings unchanged.
+5. Apply 031_vs23_commercial_policies, 032_vs23_price_matrices, 033_vs23_commercial_acceptance, 034_vs23_sales_operations_handover in order through existing migration runner. Stop on failure; MariaDB DDL is not transactionally reversible. Do not retry blindly or modify checksum ledger.
+6. Verify 32 APPLIED entries, nine new tables, correct FKs/CHECK constraints, no backfill and exactly eight ADMIN-only new grants. Verify existing data/config/role grants and snapshot bytes unchanged. Second runner execution must be NO_OP.
+7. Exit maintenance with reviewed .htaccess. Run authenticated HTTP/privacy and synthetic full lifecycle plus actual desktop/mobile UI acceptance. Remove temporary cron and disable test accounts/revoke public links. Keep owner examples marked STAGING TEST.
+
+Rollback: source rollback uses preserved baseline source plus unchanged private config/storage only while maintenance is active. If any new commercial records exist, retain forward schema and reviewed compatible source; do not drop new tables or delete customer records. If DB recovery is necessary, restore the verified checkpoint to a fresh database and review cutover separately because newer staging edits would otherwise be lost. No destructive down migration is supplied. Production rollout needs separate approval and a fresh environment-specific backup/restore.
