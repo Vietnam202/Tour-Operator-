@@ -33,6 +33,72 @@ final class QuoteVs2 {
     public static function mutate(PDO $db,array $u,int $version,array $body,callable $fn,string $event): array {
         return QuoteVs2Repository::atomic($db,function()use($db,$u,$version,$body,$fn,$event){$v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$version,QuoteVs2Repository::expected($body));QuoteVs2Repository::mutable($db,$v);if(QuoteVs2Repository::engine($v)!=='VS2_1')throw new DomainException('ACTIVATE_SMART_COSTING');$out=$fn($v);QuoteVs2Repository::finish($db,$v,$u,$event,$out);return $out+['costing_revision'=>(int)$v['costing_revision']+1];});
     }
+    /** Spreadsheet commands compose existing writers; arithmetic and lifecycle stay in VS2.1. */
+    public static function sheet(PDO $db,array $u,array $v,array $b): array {
+        Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'quote.view_cost');
+        $action=$b['action']??'row';$ids=array_map('intval',$b['variant_ids']??[]);
+        if($action==='init'){
+            $mode=$b['mode']??'PRIVATE';$ids=Vs2Variants::generate($db,$u,$v,['modes'=>[$mode]]);
+            return ['variant_ids'=>$ids];
+        }
+        if(!$ids||count($ids)>3||count(array_unique($ids))!==count($ids))throw new InvalidArgumentException('Select one to three existing variants');
+        $variants=[];foreach($ids as $id)$variants[$id]=QuoteVs2Repository::variant($db,(int)$v['id'],$id);
+        if($action==='variant'){
+            $allowed=['is_offered','pricing_mode','pricing_value','rounding_step','selling_currency','cruise_level','label'];$changes=$b['changes']??[];
+            if(array_diff(array_keys($changes),$allowed))throw new InvalidArgumentException('Unsupported variant setting');
+            if(array_intersect(array_keys($changes),['pricing_mode','pricing_value']))Auth::requirePermission($db,$u,'quote.view_profit');
+            foreach($ids as $id)Vs2Variants::save($db,$u,$v,['variant_id'=>$id]+$changes);return ['variant_ids'=>$ids];
+        }
+        $input=$b['requirement']??[];$reqId=(int)($input['id']??$b['requirement_id']??0);
+        if($action==='remove'){
+            $dependents=QuoteVs2Repository::q($db,'SELECT id FROM quote_service_requirements WHERE quote_version_id=? AND package_requirement_id=? AND requirement_state<>?',[$v['id'],$reqId,'NOT_APPLICABLE'])->fetchColumn();
+            if($dependents)throw new DomainException('SERVICE_HAS_DEPENDENTS');
+            QuoteVs2Domain::text($b['reason']??'');
+            QuoteSmartCosting::requirement($db,$u,(int)$v['id'],['id'=>$reqId,'requirement_state'=>'NOT_APPLICABLE','metadata'=>['reason'=>$b['reason']]]);
+            SmartCosting::refresh($db,$v);Vs2Inclusions::apply($db,$v);return ['requirement_id'=>$reqId,'removed_from_sheet'=>true];
+        }
+        if(!in_array($action,['row','review'],true))throw new InvalidArgumentException('Unknown sheet command');
+        if($input)$reqId=QuoteSmartCosting::requirement($db,$u,(int)$v['id'],$input);
+        $req=QuoteVs2Repository::q($db,'SELECT * FROM quote_service_requirements WHERE quote_version_id=? AND id=?',[$v['id'],$reqId])->fetch();if(!$req)throw new OutOfBoundsException('Requirement not found');
+        $lineIds=[];$warnings=[];
+        foreach($variants as $id=>$variant){
+            Vs2Variants::lines($db,$u,$v,$id);
+            $line=QuoteVs2Repository::q($db,"SELECT * FROM quote_variant_cost_lines WHERE variant_id=? AND requirement_id=? AND line_kind='SERVICE' ORDER BY id LIMIT 1",[$id,$reqId])->fetch();
+            if($action==='review'){Vs2LineEditor::review($db,$u,$v,$id,(int)$line['id'],['review_reason'=>$b['review_reason']??'']);$lineIds[]=(int)$line['id'];continue;}
+            $edit=($b['shared']??true)?($b['line']??[]):($b['lines'][(string)$id]??[]);
+            if(!is_array($edit))throw new InvalidArgumentException('Structured line input required');
+            // A manual entry must explicitly detach an approved rate; never alter its price.
+            if(array_key_exists('unit_amount_original',$edit)){
+                $edit['rate_version_id']=null;
+                $contract=$edit['manual_contract']??QuoteVs2Repository::decode($line['manual_contract_json']);
+                $contract['formula_code']=$line['formula_code'];
+                if($req['category']==='HOTEL')$contract['star_level']=(int)$variant['hotel_level'];
+                if($req['category']==='CRUISE')$contract['star_level']=$variant['cruise_level'];
+                $edit['manual_contract']=$contract;
+            }
+            if(!$line['rate_version_id']&&$line['unit_amount_original']===null&&!array_key_exists('unit_amount_original',$edit)){
+                $candidateLine=array_replace($line,$edit);$g=QuoteVs2Repository::graph($db,$v);$guests=QuoteVs2Domain::guests($v,$g['profile']);$valid=[];$conflict=false;
+                $candidates=QuoteVs2Repository::q($db,"SELECT t.rate_version_id,t.formula_code,t.star_level,t.rate_eligibility_source FROM rate_version_vs2_terms t JOIN rate_versions rv ON rv.id=t.rate_version_id JOIN rates r ON r.id=rv.rate_id WHERE r.company_id=? AND r.category=? AND rv.approval_status='APPROVED' AND t.approval_state='APPROVED' ORDER BY t.rate_version_id LIMIT 201",[$v['company_id'],$req['category']])->fetchAll();
+                if(count($candidates)>200)$conflict=true;
+                else foreach($candidates as $c){
+                    if($c['formula_code']!==$candidateLine['formula_code']||($req['category']==='HOTEL'&&(int)$c['star_level']!==(int)$variant['hotel_level'])||($req['category']==='CRUISE'&&(int)$c['star_level']!==(int)$variant['cruise_level']))continue;
+                    try{Vs2RateResolver::resolve($db,$v,$guests,$req,$variant,array_replace($candidateLine,['rate_version_id'=>$c['rate_version_id']]));$valid[]=(int)$c['rate_version_id'];}
+                    catch(DomainException $e){
+                        if(str_contains($e->getMessage(),'CONFLICT'))$conflict=true;
+                        // Expired, unrelated or blacked-out contracts do not make a valid match ambiguous.
+                        if($e->getMessage()==='RATE_UNAVAILABLE'){$scope=QuoteVs2Repository::decode($req['scope_json']);$pax=$guests[strtolower($c['rate_eligibility_source'])]??0;$date=($scope['dates']??[$req['service_date']])[0]??null;if($pax&&$date)foreach(RateEngine::match($db,(int)$v['company_id'],['category'=>$req['category'],'destination'=>QuoteVs2Domain::destination($scope),'travel_date'=>$date,'market'=>$v['market']??'','pax'=>$pax,'trip_ref'=>$v['trip_ref']??'']) as $match)if((int)$match['rate_version_id']===(int)$c['rate_version_id']&&$match['conflict'])$conflict=true;}
+                    }
+                }
+                if(count($valid)===1&&!$conflict)$edit['rate_version_id']=$valid[0];
+                else $warnings[]=['variant_id'=>$id,'line_id'=>(int)$line['id'],'code'=>count($valid)>1||$conflict?'RATE_CONFLICT':'RATE_NEEDED'];
+            }
+            $out=Vs2LineEditor::write($db,$u,$v,$id,$edit,'save',(int)$line['id']);$lineIds[]=$out['line_id'];
+        }
+        // Requirement changes affect every bound variant, including variants outside the visible sheet.
+        SmartCosting::refresh($db,$v,[],false,$input?[['id'=>$reqId]]:[],[]);Vs2Inclusions::apply($db,$v);
+        foreach($warnings as $warning)if($warning['code']==='RATE_CONFLICT')QuoteVs2Repository::q($db,"UPDATE quote_variant_cost_lines SET rate_status='RATE_CONFLICT' WHERE id=? AND coverage_state='UNRESOLVED'",[$warning['line_id']]);
+        return ['requirement_id'=>$reqId,'line_ids'=>$lineIds,'warnings'=>$warnings];
+    }
     public static function handle(string $route,string $method,PDO $db,array $u): void {
         try{
             if(preg_match('#^rate-versions/(\d+)/vs2-terms$#',$route,$m)){
@@ -53,7 +119,8 @@ final class QuoteVs2 {
                     Auth::requirePermission($db,$u,'quote.edit');$body=Http::body();
                     if($suffix===''||$suffix==='smart-costing/context')Http::json(['ok'=>true]+QuoteSmartCosting::context($db,$u,$id,$body));
                     Auth::requirePermission($db,$u,'quote.view_cost');
-                    if($suffix==='options')$out=self::mutate($db,$u,$id,$body,fn($v)=>['variant_id'=>Vs2Variants::save($db,$u,$v,$body)],'VS21_VARIANT_SAVED');
+                    if($suffix==='smart-costing/sheet')$out=self::mutate($db,$u,$id,$body,fn($v)=>self::sheet($db,$u,$v,$body),'VS21_SHEET_UPDATED');
+                    elseif($suffix==='options')$out=self::mutate($db,$u,$id,$body,fn($v)=>['variant_id'=>Vs2Variants::save($db,$u,$v,$body)],'VS21_VARIANT_SAVED');
                     elseif($suffix==='smart-costing/template')$out=self::mutate($db,$u,$id,$body,fn($v)=>['variant_ids'=>Vs2Variants::generate($db,$u,$v,$body)],'VS21_TEMPLATE_GENERATED');
                     elseif($suffix==='smart-costing/recalculate')$out=self::mutate($db,$u,$id,$body,function($v)use($db,$body){$ids=SmartCosting::refresh($db,$v,[],!isset($body['line_ids']),[],array_map('intval',$body['line_ids']??[]));Vs2Inclusions::apply($db,$v);return ['recalculated_line_ids'=>$ids];},'VS21_RECALCULATED');
                     elseif(preg_match('#^smart-costing/variants/(\d+)/lines(?:/(\d+)(?:/(review|duplicate|reorder))?)?$#',$suffix,$parts)){

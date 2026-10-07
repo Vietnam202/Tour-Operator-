@@ -7,6 +7,44 @@ final class QuoteProposal {
  public const TEMPLATES=['VTA_STANDARD_B2B'=>'VTA Standard B2B','VTA_B2B_WHITE_LABEL'=>'VTA B2B White Label','VTA_EXPLORER_B2C'=>'VTA Explorer B2C','VTA_PREMIUM_B2C'=>'VTA Premium B2C'];
  public const SECTIONS=['briefing','highlights','schedule','price','hotel','cruise','itinerary','included','excluded','children','payment','cancellation','notes','contact'];
  public const ROLES=['COVER','DAY_HERO','DAY_GALLERY','HOTEL','HOTEL_GALLERY','CRUISE','CRUISE_GALLERY','SERVICE','LOGO'];
+ public const DOCUMENT_SECTIONS=['briefing','highlights','services','included','excluded','children','payment','cancellation','terms','notes'];
+ /** Typed public blocks, never executable HTML or commercial inputs. */
+ public static function runs($runs):array {
+  if(!is_array($runs)||!array_is_list($runs)||count($runs)>500)throw new InvalidArgumentException('Invalid document text runs');$out=[];
+  foreach($runs as $r){if(!is_array($r))throw new InvalidArgumentException('Invalid document run');MediaLibrary::text($r['text']??'',20000);$text=$r['text']??'';if($text!=='')$out[]=['text'=>$text,'bold'=>!empty($r['bold']),'italic'=>!empty($r['italic'])];}return $out;
+ }
+ public static function richBlocks($blocks):array {
+  if(!is_array($blocks)||!array_is_list($blocks)||count($blocks)>1000)throw new InvalidArgumentException('Invalid document blocks');$out=[];
+  foreach($blocks as $b){if(!is_array($b))throw new InvalidArgumentException('Invalid document block');$type=$b['type']??'';
+   if(in_array($type,['paragraph','heading'],true)){$r=['type'=>$type,'runs'=>self::runs($b['runs']??[])];if($type==='heading'){$level=(int)($b['level']??2);if($level<1||$level>6)throw new InvalidArgumentException('Heading level 1–6 required');$r['level']=$level;}}
+   elseif($type==='list'){$items=$b['items']??[];if(!is_array($items)||!array_is_list($items)||count($items)>200)throw new InvalidArgumentException('Invalid list');$r=['type'=>'list','ordered'=>!empty($b['ordered']),'items'=>array_map([self::class,'runs'],$items)];}
+   elseif($type==='table'){$rows=$b['rows']??[];if(!is_array($rows)||!array_is_list($rows)||!$rows||count($rows)>150)throw new InvalidArgumentException('Invalid table');$clean=[];$width=null;foreach($rows as $row){if(!is_array($row)||!array_is_list($row)||!$row||count($row)>12||($width!==null&&count($row)!==$width))throw new InvalidArgumentException('Malformed document table; review cells');$width=count($row);$clean[]=array_map([self::class,'runs'],$row);}$r=['type'=>'table','rows'=>$clean];}
+   else throw new InvalidArgumentException('Unsupported document block');$out[]=$r;
+  }if(strlen(MediaLibrary::json($out))>350000)throw new InvalidArgumentException('Document section too long');return $out;
+ }
+ public static function blockText(array $blocks):string {
+  $run=fn($r)=>implode('',array_column($r,'text'));$lines=[];foreach($blocks as $b){if(isset($b['runs']))$lines[]=$run($b['runs']);elseif($b['type']==='list')foreach($b['items'] as $i=>$r)$lines[]=($b['ordered']?($i+1).'. ':'• ').$run($r);elseif($b['type']==='table')foreach($b['rows'] as $row)$lines[]=implode("\t",array_map($run,$row));}return implode("\n",$lines);
+ }
+ public static function document($d):array {
+  if(!is_array($d)||($d['schema']??'')!=='VTA_DOC_1')throw new InvalidArgumentException('Invalid document representation');
+  $out=['schema'=>'VTA_DOC_1','title'=>MediaLibrary::text($d['title']??'',1000),'sections'=>[],'days'=>[]];
+  if(!is_array($d['sections']??[])||!is_array($d['days']??[])||count($d['days']??[])>90)throw new InvalidArgumentException('Invalid document sections');
+  foreach($d['sections']??[] as $key=>$blocks){if(!in_array($key,self::DOCUMENT_SECTIONS,true))throw new InvalidArgumentException('Unsupported document section');$out['sections'][$key]=self::richBlocks($blocks);}
+  foreach($d['days']??[] as $key=>$blocks){$key=MediaLibrary::text((string)$key,80);$out['days'][$key]=self::richBlocks($blocks);}
+  $review=$d['review']??[];$numbers=$review['source_numbers']??[];if(!is_array($numbers)||!array_is_list($numbers)||count($numbers)>90)throw new InvalidArgumentException('Invalid source day numbers');foreach($numbers as $n)if(!is_int($n)||$n<1||$n>999)throw new InvalidArgumentException('Invalid source day number');
+  $out['review']=['source_numbers'=>$numbers,'duration_days'=>(int)($review['duration_days']??0),'acknowledged'=>!empty($review['acknowledged'])];if($out['review']['duration_days']<0||$out['review']['duration_days']>999)throw new InvalidArgumentException('Invalid source duration');
+  if(strlen(MediaLibrary::json($out))>900000)throw new InvalidArgumentException('Proposal is too long');return $out;
+ }
+ public static function documentCheck(array $s,array $days):array {
+  $d=$s['document']??[];$warnings=[];$numbers=$d['review']['source_numbers']??[];
+  if($numbers&&count(array_unique($numbers))!==count($numbers))$warnings[]='Duplicate Day in imported source.';
+  if($numbers&&$numbers!==range(1,count($numbers)))$warnings[]='Missing Day or numbering jump in imported source; review before using the draft sequence.';
+  if(!empty($d['review']['duration_days'])&&$d['review']['duration_days']!==count($days))$warnings[]='Duration differs from detailed itinerary day count.';
+  foreach($days as $i=>$day)if(trim($day['title']??'')==='')$warnings[]='Day '.($i+1).' is missing a title.';
+  if($d&&trim($d['title']??'')==='')$warnings[]='Tour title is empty.';
+  foreach(['included','excluded','payment'] as $key)if(array_key_exists($key,$d['sections']??[])&&trim(self::blockText($d['sections'][$key]))==='')$warnings[]=ucfirst($key).' section is empty.';
+  return array_values(array_unique($warnings));
+ }
  private static function q(PDO $db,string $s,array $a=[]): PDOStatement {return MediaLibrary::q($db,$s,$a);}
  public static function settings(array $b): array {
   $template=$b['template']??'VTA_STANDARD_B2B';if(!isset(self::TEMPLATES[$template]))throw new InvalidArgumentException('Choose a proposal template');$channel=str_contains($template,'B2B')?'B2B':'B2C';
@@ -23,6 +61,7 @@ final class QuoteProposal {
   $sections=$b['sections']??self::SECTIONS;if(!is_array($sections)||!array_is_list($sections)||count(array_unique($sections))!==count($sections)||array_diff($sections,self::SECTIONS))throw new InvalidArgumentException('Invalid section order');$s['sections']=$sections;
   $rows=$b['accommodation']??[];if(!is_array($rows)||!array_is_list($rows)||count($rows)>50)throw new InvalidArgumentException('Use up to 50 accommodation rows');$s['accommodation']=[];
   foreach($rows as $r){if(!is_array($r)||!in_array($r['type']??'',['HOTEL','CRUISE'],true))throw new InvalidArgumentException('Accommodation type required');$n=$r['nights']??0;if(!is_numeric($n)||(int)$n!=(float)$n||$n<0||$n>90)throw new InvalidArgumentException('Invalid nights');$row=['type'=>$r['type'],'nights'=>(int)$n];foreach(['destination','three_star','four_star','five_star'] as $key)$row[$key]=MediaLibrary::text($r[$key]??'',500);$s['accommodation'][]=$row;}
+  if(array_key_exists('document',$b))$s['document']=self::document($b['document']);
   return $s;
  }
  public static function config(array $v): ?array {$p=json_decode($v['proposal_json']??'null',true);return is_array($p)&&($p['schema']??'')==='VS2_2'?self::settings($p):null;}
@@ -38,7 +77,9 @@ final class QuoteProposal {
   $days=$locked&&$p?array_map(fn($d)=>$d['schedule']+['day_key'=>$d['key']],$p['days']):self::days($v,Auth::can($db,(int)$u['id'],'quote.view_cost'));
   $keys=array_column($days,'day_key');$orphan=array_values(array_filter($links,fn($l)=>$l['day_key']!==''&&!in_array($l['day_key'],$keys,true)));
   $choices=$locked&&$s?($s['options']??[]):(QuoteVs2Repository::engine($v)==='VS2_1'?self::q($db,'SELECT c.id variant_id,c.label,c.costing_mode,o.hotel_level,c.cruise_level FROM quote_option_variants c JOIN quote_options o ON o.id=c.quote_option_id WHERE o.quote_version_id=? AND c.is_offered=1 ORDER BY c.sort_order,c.id',[$v['id']])->fetchAll():self::q($db,'SELECT id variant_id,label,hotel_level FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$v['id']])->fetchAll());
-  return ['settings'=>$settings,'days'=>$days,'links'=>$links,'orphan_links'=>$orphan,'variant_choices'=>$choices,'immutable'=>$locked,'enabled'=>(bool)self::config($v),'templates'=>self::TEMPLATES,'costing_revision'=>(int)$v['costing_revision'],'requirements'=>QuoteVs2Repository::engine($v)==='VS2_1'?QuoteVs2::contextDto($db,$u,$v)['requirements']:[]];
+  $selling=$locked&&$s?($s['options']??[]):[];
+  if(!$locked&&QuoteVs2Repository::engine($v)==='VS2_1')foreach(self::q($db,'SELECT c.id variant_id,c.label,c.costing_mode,o.hotel_level,c.cruise_level,c.selling_currency,c.pricing_result_json FROM quote_option_variants c JOIN quote_options o ON o.id=c.quote_option_id WHERE o.quote_version_id=? AND c.is_offered=1 ORDER BY c.sort_order,c.id',[$v['id']])->fetchAll() as $o){$p=QuoteVs2Repository::decode($o['pricing_result_json']);unset($o['pricing_result_json'],$o['selling_currency']);if(isset($p['selling_per_pax']))$selling[]=$o+['selling_per_pax'=>$p['selling_per_pax'],'total_selling'=>$p['total_selling'],'currency'=>$p['selling_currency']];}
+  return ['settings'=>$settings,'days'=>$days,'links'=>$links,'orphan_links'=>$orphan,'variant_choices'=>$choices,'selling_options'=>$selling,'immutable'=>$locked,'enabled'=>(bool)self::config($v),'templates'=>self::TEMPLATES,'costing_revision'=>(int)$v['costing_revision'],'document_check'=>self::documentCheck($settings,$days),'requirements'=>QuoteVs2Repository::engine($v)==='VS2_1'?QuoteVs2::contextDto($db,$u,$v)['requirements']:[]];
  }
  public static function save(PDO $db,array $u,int $id,array $b): array {
   return QuoteVs2Repository::atomic($db,function()use($db,$u,$id,$b){
@@ -48,6 +89,7 @@ final class QuoteProposal {
    $before=self::days($v);$prior=array_column($before,null,'day_key');
    foreach($days as &$d){if(!is_array($d))throw new InvalidArgumentException('Invalid day');if(!Auth::can($db,(int)$u['id'],'quote.view_cost'))foreach(['notes','internal_notes','special_requests'] as $key){unset($d[$key]);if(isset($prior[$d['day_key']??''][$key]))$d[$key]=$prior[$d['day_key']][$key];}}unset($d);
    $days=QuoteVs2Domain::schedule($days);$keys=array_column($days,'day_key');$links=$b['links']??[];
+   foreach($settings['document']['days']??[] as $key=>$blocks){if(!in_array($key,$keys,true))throw new InvalidArgumentException('Document day is not in this itinerary');$day=$days[array_search($key,$keys,true)];if(trim(self::blockText($blocks))!==$day['description'])throw new InvalidArgumentException('Document and itinerary text must match');}
    if(!is_array($links)||!array_is_list($links)||count($links)>80)throw new InvalidArgumentException('Use up to 80 media assignments');$valid=[];$single=[];$unique=[];$bytes=0;
    foreach($links as $i=>$l){$role=$l['role']??'';$key=$l['day_key']??'';$ref=MediaLibrary::text($l['reference_key']??'');
     if(!in_array($role,self::ROLES,true)||!is_string($key)||($key!==''&&!in_array($key,$keys,true))||(in_array($role,['COVER','LOGO'],true)&&$key!=='')||(in_array($role,['DAY_HERO','DAY_GALLERY'],true)&&$key===''))throw new InvalidArgumentException('Invalid image role/day');
@@ -121,6 +163,10 @@ final class QuoteProposal {
   if(!preg_match('#^quote-versions/(\d+)/proposal(?:/(.*))?$#',$route,$m))return;Auth::requirePermission($db,$u,'sales.view');$id=(int)$m[1];$action=$m[2]??'';
   try {
    $v=QuoteOptions::version($db,(int)$u['company_id'],$id);
+   if($method==='POST'&&$action==='import-preview'){
+    Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');QuoteVs2Repository::mutable($db,$v);
+    $b=isset($_FILES['file'])?$_POST:Http::body();$out=isset($_FILES['file'])?ScheduleImport::documentUpload($_FILES['file']):ScheduleImport::documentPreview((string)($b['text']??''));Http::json(['ok'=>true]+$out);
+   }
    if($method==='GET'&&$action==='')Http::json(['ok'=>true]+self::context($db,$u,$v));
    if($method==='PUT'&&$action===''){Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');Auth::requirePermission($db,$u,'media.view');Http::json(['ok'=>true]+self::save($db,$u,$id,Http::body()));}
    if($method==='GET'&&preg_match('#^images/(\d+)$#',$action,$im)){$s=self::publicQuote($db,$v);$a=self::snapshotAsset($db,$v,$s,(int)$im[1]);if(!hash_equals($a['content_sha256'],hash_file('sha256',MediaLibrary::path($cfg,$a))))throw new OutOfBoundsException('Media bytes changed');MediaLibrary::stream($cfg,$a);}

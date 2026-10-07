@@ -2,6 +2,45 @@
 declare(strict_types=1);
 
 final class DocumentParser {
+    /** Ordered presentation blocks; existing supplier extraction remains unchanged. */
+    public static function proposal(string $path,string $extension): array {
+        if(strtolower($extension)!=='docx')return self::extract($path,$extension)+['blocks'=>[],'images'=>[]];
+        $xml=self::zipEntry($path,'word/document.xml');
+        if(!$xml||!class_exists('DOMDocument'))return self::extract($path,'docx')+['blocks'=>[],'images'=>[]];
+        $dom=new DOMDocument();$old=libxml_use_internal_errors(true);
+        try{if(!$dom->loadXML($xml,LIBXML_NONET)||$dom->doctype)throw new RuntimeException('Unsafe XML');}finally{libxml_clear_errors();libxml_use_internal_errors($old);}
+        $xp=new DOMXPath($dom);$xp->registerNamespace('w','http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $xp->registerNamespace('a','http://schemas.openxmlformats.org/drawingml/2006/main');$xp->registerNamespace('r','http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+        $relationships=[];$rels=self::zipEntry($path,'word/_rels/document.xml.rels');
+        $numbering=[];$numberXml=self::zipEntry($path,'word/numbering.xml');
+        if($numberXml){$nd=new DOMDocument();if(@$nd->loadXML($numberXml,LIBXML_NONET)&&!$nd->doctype){$nx=new DOMXPath($nd);$nx->registerNamespace('w','http://schemas.openxmlformats.org/wordprocessingml/2006/main');foreach($nx->query('//w:num') as $num){$abstract=$nx->query('./w:abstractNumId',$num)->item(0)?->getAttribute('w:val');if($abstract!==null&&ctype_digit($abstract))foreach($nx->query('//w:abstractNum[@w:abstractNumId="'.$abstract.'"]/w:lvl') as $level)$numbering[$num->getAttribute('w:numId')][$level->getAttribute('w:ilvl')]=$nx->query('./w:numFmt',$level)->item(0)?->getAttribute('w:val')??'bullet';}}}
+        if($rels){$rd=new DOMDocument();if(@$rd->loadXML($rels,LIBXML_NONET)&&!$rd->doctype)foreach($rd->getElementsByTagName('Relationship') as $rel)if($rel->getAttribute('TargetMode')!=='External')$relationships[$rel->getAttribute('Id')]=$rel->getAttribute('Target');}
+        $runs=function(DOMNode $node)use($xp):array{$out=[];foreach($xp->query('.//w:r',$node) as $run){$text='';foreach($run->childNodes as $n){if($n->localName==='t')$text.=$n->textContent;elseif(in_array($n->localName,['br','cr'],true))$text.="\n";elseif($n->localName==='tab')$text.="\t";}if($text!=='')$out[]=['text'=>$text,'bold'=>(bool)$xp->query('./w:rPr/w:b[not(@w:val="0") and not(@w:val="false")]',$run)->length,'italic'=>(bool)$xp->query('./w:rPr/w:i[not(@w:val="0") and not(@w:val="false")]',$run)->length];}return $out;};
+        $blocks=[];$images=[];$imageBytes=0;$warnings=[];$text=[];$body=$xp->query('//w:body')->item(0);
+        if(!$body)throw new InvalidArgumentException('DOCX body missing');
+        foreach($body->childNodes as $node){
+            if(count($blocks)>=1500)throw new InvalidArgumentException('Document has too many blocks');
+            if($node->localName==='p'){
+                $r=$runs($node);$plain=implode('',array_column($r,'text'));$style=$xp->query('./w:pPr/w:pStyle',$node)->item(0)?->getAttribute('w:val')??'';
+                if($r){$b=['type'=>preg_match('/^Heading[1-6]$/i',$style)?'heading':'paragraph','runs'=>$r];if($b['type']==='heading')$b['level']=(int)substr($style,-1);
+                    if($xp->query('./w:pPr/w:numPr',$node)->length){$num=$xp->query('./w:pPr/w:numPr/w:numId',$node)->item(0)?->getAttribute('w:val');$level=$xp->query('./w:pPr/w:numPr/w:ilvl',$node)->item(0)?->getAttribute('w:val')??'0';$format=$numbering[$num][$level]??null;$b=['type'=>'list','ordered'=>$format!==null&&$format!=='bullet','items'=>[$r]];if($format===null||$level!=='0')$warnings[]='DOCX list nesting / numbering requires review.';}
+                    $blocks[]=$b;$text[]=$plain;
+                }
+                foreach($xp->query('.//a:blip',$node) as $blip){$target=$relationships[$blip->getAttribute('r:embed')]??'';
+                    if(!preg_match('#^media/[A-Za-z0-9_. -]+\.(png|jpe?g|webp)$#iD',$target)||count($images)>=12){$warnings[]='An embedded image needs manual Media Library import.';continue;}
+                    $bytes=self::zipEntry($path,'word/'.$target);if(!$bytes||strlen($bytes)>4194304||$imageBytes+strlen($bytes)>12582912){$warnings[]='Embedded image size limit; upload separately.';continue;}
+                    $info=@getimagesizefromstring($bytes);if(!$info||!in_array($info[2],[IMAGETYPE_JPEG,IMAGETYPE_PNG,IMAGETYPE_WEBP],true)||$info[0]*$info[1]>16000000){$warnings[]='Unsupported embedded image; upload JPEG/PNG/WebP separately.';continue;}
+                    $idx=count($images);$images[]=['index'=>$idx,'name'=>basename($target),'mime'=>$info['mime'],'base64'=>base64_encode($bytes)];$imageBytes+=strlen($bytes);$blocks[]=['type'=>'image_candidate','image_index'=>$idx];
+                }
+            }elseif($node->localName==='tbl'){
+                $rows=[];foreach($xp->query('./w:tr',$node) as $tr){$row=[];foreach($xp->query('./w:tc',$tr) as $tc){$cell=[];foreach($xp->query('./w:p',$tc) as $paragraph){if($cell)$cell[]=['text'=>"\n",'bold'=>false,'italic'=>false];$cell=[...$cell,...$runs($paragraph)];}$row[]=$cell;if($xp->query('./w:tcPr/w:gridSpan|./w:tcPr/w:vMerge',$tc)->length)$warnings[]='Merged table cells require review.';}$rows[]=$row;}
+                if(count($rows)>150||max(array_map('count',$rows)?:[0])>12)throw new InvalidArgumentException('Imported table is too large');
+                if(!$rows||count(array_unique(array_map('count',$rows)))!==1||!count($rows[0])){$warnings[]='Table could not be fully classified; review text extracted from cells.';foreach($rows as $row)$blocks[]=['type'=>'paragraph','runs'=>[['text'=>implode(" | ",array_map(fn($c)=>implode('',array_column($c,'text')),$row)),'bold'=>false,'italic'=>false]]];}else $blocks[]=['type'=>'table','rows'=>$rows];foreach($rows as $row)$text[]=implode("\t",array_map(fn($c)=>implode('',array_column($c,'text')),$row));
+            }
+        }
+        $plain=implode("\n",$text);if(strlen($plain)>250000)throw new InvalidArgumentException('Document is too long; split before importing');
+        return ['text'=>$plain,'quality'=>'MEDIUM','note'=>'Ordered DOCX content extracted. Review numbering, merged tables, images and metadata before import.','blocks'=>$blocks,'images'=>$images,'warnings'=>array_values(array_unique($warnings))];
+    }
     public static function extract(string $path, string $extension): array {
         $extension=strtolower($extension);
         try {
@@ -26,7 +65,7 @@ final class DocumentParser {
     private static function zipEntry(string $path, string $entry): ?string {
         if(class_exists('ZipArchive')) {
             $zip=new ZipArchive();
-            if($zip->open($path)===true){$stat=$zip->statName($entry);if($stat&&$stat['size']>4194304){$zip->close();throw new RuntimeException('Expanded entry too large');}$data=$zip->getFromName($entry);$zip->close();if($data!==false)return $data;}
+            if($zip->open($path)===true){$stat=$zip->statName($entry);if($stat&&$stat['size']>4194304){$zip->close();throw new RuntimeException('Expanded entry too large');}$data=$zip->getFromName($entry);$zip->close();return $data===false?null:$data;}
         }
         if(function_exists('shell_exec')) {
             $cmd='unzip -p '.escapeshellarg($path).' '.escapeshellarg($entry).' 2>/dev/null';
@@ -94,7 +133,7 @@ final class DocumentParser {
     private static function pdf(string $path): array {
         if(!function_exists('shell_exec')) return ['text'=>'','quality'=>'LOW','note'=>'PDF text extraction is unavailable on this server. Original PDF is preserved.'];
         $cmd='pdftotext -layout '.escapeshellarg($path).' - 2>'.(PHP_OS_FAMILY==='Windows'?'NUL':'/dev/null');
-        $text=(string)@shell_exec($cmd);
+        $text=str_replace("\f","\n",(string)@shell_exec($cmd));
         if(trim($text)==='') return ['text'=>'','quality'=>'LOW','note'=>'Searchable PDF text could not be extracted. The PDF may be scanned/image-only; original PDF is preserved for manual review.'];
         return ['text'=>self::limit($text),'quality'=>'MEDIUM','note'=>'Searchable PDF text extracted; verify every rate and term against the original.'];
     }
