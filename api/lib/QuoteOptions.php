@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__.'/QuoteCostItems.php';
 require_once __DIR__.'/QuoteVs2.php';
+require_once __DIR__.'/QuoteProposal.php';
+require_once __DIR__.'/ProposalOutput.php';
 final class QuoteOptions {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
     private static function atomic(PDO $db,callable $fn): array {if($db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql')$db->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');$db->beginTransaction();try{$out=$fn();$db->commit();return $out;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}}
@@ -99,7 +101,7 @@ final class QuoteOptions {
         });
     }
     public static function bundle(PDO $db,array $v): array {
-        if(QuoteVs2Repository::engine($v)==='VS2_1')return Vs2Snapshots::bundle($db,$v);
+        if(QuoteVs2Repository::engine($v)==='VS2_1')return QuoteProposal::extend($db,$v,Vs2Snapshots::bundle($db,$v));
         $rows=self::q($db,'SELECT id,label,hotel_level,snapshot_json FROM quote_options WHERE quote_version_id=? ORDER BY hotel_level',[$v['id']])->fetchAll();
         if(!$rows)throw new DomainException('At least one priced option required');
         $segments=self::guestSegments($v);
@@ -109,15 +111,15 @@ final class QuoteOptions {
         }unset($row);
         $schedule=json_decode($v['schedule_json']??'[]',true,512,JSON_THROW_ON_ERROR);if(!$schedule||!is_array($schedule))throw new DomainException('Itinerary required');
         $publicDays=[];foreach($schedule as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid itinerary');$clean=['day'=>$i+1];foreach(['date','title','description','meals','overnight'] as $key){if(isset($day[$key])&&!is_string($day[$key]))throw new InvalidArgumentException('Itinerary text required');$clean[$key]=(string)($day[$key]??'');}$publicDays[]=$clean;}
-        return $segments+['document_language'=>$v['document_language']??'en','quote_ref'=>$v['quote_ref'],'version_no'=>(int)$v['version_no'],'tour_name'=>$v['tour_name'],'start_date'=>$v['start_date'],'end_date'=>$v['end_date'],'schedule'=>$publicDays,'included'=>$v['included_text'],'excluded'=>$v['excluded_text'],'terms'=>$v['terms_text'],'options'=>$rows];
+        return QuoteProposal::extend($db,$v,$segments+['document_language'=>$v['document_language']??'en','quote_ref'=>$v['quote_ref'],'version_no'=>(int)$v['version_no'],'tour_name'=>$v['tour_name'],'start_date'=>$v['start_date'],'end_date'=>$v['end_date'],'schedule'=>$publicDays,'included'=>$v['included_text'],'excluded'=>$v['excluded_text'],'terms'=>$v['terms_text'],'options'=>$rows]);
     }
     public static function publicBundle(array $bundle): array {
         if(($bundle['schema']??'')==='VS2_1')return Vs2Snapshots::publicBundle($bundle);
         $bundle['options']=array_map(fn($o)=>['id'=>(int)$o['id'],'label'=>$o['label'],'hotel_level'=>$o['hotel_level'],'selling_per_pax'=>$o['snapshot']['pricing']['selling_per_pax'],'total_selling'=>$o['snapshot']['pricing']['total_selling'],'currency'=>$o['snapshot']['selling_currency']],$bundle['options']);return $bundle;
     }
-    public static function publicSchedule($schedule): array {
+    public static function publicSchedule($schedule,bool $visual=false): array {
         if(!is_array($schedule)||!$schedule)throw new InvalidArgumentException('Itinerary required');$safe=[];
-        foreach($schedule as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid itinerary day');$clean=['day'=>$i+1];foreach(['date','title','description','meals','overnight'] as $key)$clean[$key]=is_string($day[$key]??'')?(string)($day[$key]??''):'';$safe[]=$clean;}
+        foreach($schedule as $i=>$day){if(!is_array($day))throw new InvalidArgumentException('Invalid itinerary day');$clean=['day'=>$i+1];$keys=['date','title','description','meals','overnight'];if($visual)$keys=[...$keys,'route','destination','activities','hotel','cruise','public_notes','transport_mode'];foreach($keys as $key)$clean[$key]=is_string($day[$key]??'')?(string)($day[$key]??''):'';$safe[]=$clean;}
         return $safe;
     }
     public static function approve(PDO $db,array $user,int $version,string $reason,?int $expected=null): array {
@@ -131,6 +133,7 @@ final class QuoteOptions {
         return self::atomic($db,function()use($db,$user,$version,$expected){$v=self::actionVersion($db,$user,$version,$expected);
             $old=self::q($db,'SELECT public_snapshot_json FROM quote_sent_bundles WHERE quote_version_id=?',[$version])->fetchColumn();if($old)return ['customer_safe_snapshot'=>json_decode($old,true)];
             if(QuoteVs2Repository::engine($v)==='VS2_1')QuoteVs2Validator::assertValid($db,$v);
+            if(QuoteProposal::config($v)&&!Auth::can($db,(int)$user['id'],'proposal.send'))throw new DomainException('PROPOSAL_SEND_PERMISSION_REQUIRED');
             if($v['version_status']!=='APPROVED')throw new DomainException('Approve this quote bundle before sending');
             $bundle=self::bundle($db,$v);$hash=hash('sha256',self::json($bundle));$approved=self::q($db,'SELECT content_hash FROM quote_bundle_approvals WHERE quote_version_id=?',[$version])->fetchColumn();
             if(!$approved||!hash_equals($approved,$hash))throw new DomainException('Quote changed since approval');

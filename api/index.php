@@ -119,6 +119,8 @@ try {
         Http::json(['ok'=>true,'user'=>Auth::requireUser($db)]);
     }
 
+    QuoteProposal::publicHandle($route,$method,$db,$config);
+
     $user=Auth::requireUser($db);
     $companyId=(int)$user['company_id'];
     $userId=(int)$user['id'];
@@ -131,6 +133,9 @@ try {
     CampaignPilot::handle($route,$method,$db,$user);
     AiChat::handle($route,$method,$db,$config,$user);
     TourInventory::handle($route,$method,$db,$user);
+    MediaLibrary::handle($route,$method,$db,$config,$user);
+    MediaDrive::handle($route,$method,$db,$config,$user);
+    QuoteProposal::handle($route,$method,$db,$config,$user);
     QuoteVs2::handle($route,$method,$db,$user);
     QuoteOptions::handle($route,$method,$db,$user);
     ScheduleImport::handle($route,$method,$db,$user);

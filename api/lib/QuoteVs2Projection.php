@@ -4,7 +4,7 @@ declare(strict_types=1);
 /** Field-level projection for quote and booking responses; stored rows are never changed. */
 final class QuoteVs2Projection {
     public static function safeSchedule(array $days): array {
-        $allowed=array_flip(['day','day_key','date','title','route','activities','description','transport_mode','overnight','overnight_type','guide_required','cruise','meals']);
+        $allowed=array_flip(['day','day_key','date','title','route','activities','description','transport_mode','overnight','overnight_type','guide_required','cruise','meals','destination','hotel','public_notes']);
         return array_map(static fn($day)=>is_array($day)?array_intersect_key($day,$allowed):[], $days);
     }
 

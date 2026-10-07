@@ -42,3 +42,10 @@ return [
         'max_output_tokens' => 2000,
     ],
 ];
+
+// VS2.2: optional, per-company read-only Drive credentials and explicit folder allowlist.
+// Add inside the returned configuration array, never in database/UI:
+// 'media_drive'=>['accounts'=>[COMPANY_ID=>['allowed_folder_ids'=>[],
+// 'oauth_client_id'=>'','oauth_client_secret'=>'','oauth_refresh_token'=>'',
+// 'service_account_json'=>'/private/service-account.json']]],
+// 'proposal'=>['public_links'=>true], // false disables anonymous link publication
