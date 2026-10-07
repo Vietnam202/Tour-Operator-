@@ -73,6 +73,14 @@ final class Auth {
         }
     }
 
+    /** Confirming an issued quotation requires public reading, not Sales/CRM access. */
+    public static function requireQuoteRead(PDO $db,array $user,array $version): void {
+        if(self::can($db,(int)$user['id'],'sales.view'))return;
+        self::requirePermission($db,$user,'quote.confirm');
+        if(!in_array($version['version_status'],['SENT','CONFIRMED','SUPERSEDED'],true))
+            throw new DomainException('Only issued quotations are available for confirmation');
+    }
+
     public static function publicUser(PDO $db, int $id): array {
         $st=$db->prepare("SELECT u.id,u.company_id,u.full_name,u.email,u.mobile,u.status,u.last_login_at,r.code role_code,r.name role_name FROM users u JOIN roles r ON r.id=u.role_id WHERE u.id=? LIMIT 1");
         $st->execute([$id]);

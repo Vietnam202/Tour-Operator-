@@ -3,6 +3,8 @@
  const list=x=>Array.isArray(x)?x:[];
  const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const tiles=[
+  ['quotes','Quotation Confirmation','Xác nhận phương án khách đã chọn trong báo giá đã gửi','QT','green','quote.confirm'],
+  ['intake','Operations Intake','Nhận bàn giao từ Sales, trả về để làm rõ và chuẩn bị đặt dịch vụ','IN','green','operations.view'],
   ['today','Today Operations','Hôm nay: dịch vụ, phân công và việc cần xử lý','TOD','blue','operations.view'],
   ['bookings','Booking Operations','Theo dõi booking và mức sẵn sàng khởi hành','BKG','green','booking.view'],
   ['arrivals','Arrivals / Departures','Chuyến bay, giờ đến và giờ đi theo booking','FLY','blue','booking.view'],
@@ -86,6 +88,7 @@
    const tile=tiles.find(x=>x[0]===id);if(id!=='home'&&(!tile||!can(tile[5])||(id==='reports'&&!can('operations.view'))))return;
    view=id;const n=++ticket;shell(id==='home'?cardGrid():'<div class="ops-empty" role="status">'+t('Loading…','Đang tải…')+'</div>');if(id==='home')bindCards();
    try{
+    if(id==='intake'){if(window.VTA_PREVIEW){shell(note(t('Synthetic commercial handovers will appear after a confirmed booking.','Bàn giao mẫu sẽ hiển thị sau khi booking được xác nhận.')));return;}await window.mountOperationsIntake(root.querySelector('[data-op-content]'),{api,navigate,toast});return;}
     let content='',resources=[];
     if(id==='home'){
      if(can('operations.view')){let d;try{d=await operations();}catch(error){if(!alive(n))return;shell(failure(error)+cardGrid());bindCards();return;}
@@ -104,7 +107,7 @@
       const groups={};d.movement.forEach(s=>{const key=s.category||'OTHER';groups[key]=(groups[key]||0)+1;});
       content=note(t('Daily services and readiness; open incidents cover all dates. Amounts and financial reports remain in Finance.','Dịch vụ và readiness theo ngày; sự cố đang mở tính tất cả ngày.'))+'<div class="ops-metrics">'+metric(d.movement.length,t('Services','Dịch vụ'))+metric(d.movement.filter(s=>s.booking_status==='CONFIRMED').length,t('Confirmed services','Dịch vụ xác nhận'))+metric(d.readiness.length,t('Bookings','Booking'))+metric(d.issues.length,t('Open incidents','Sự cố đang mở'))+'</div>'+section(t('Services by category','Dịch vụ theo nhóm'),Object.entries(groups).map(([k,v])=>'<div class="ops-row"><strong>'+safe(k)+'</strong><span>'+v+'</span></div>').join('')||empty())+section(t('Readiness by booking','Readiness theo booking'),readinessRows(d.readiness));
      }
-    }else if(id==='bookings'){const response=await request('bookings');content='<div class="ops-bookings">'+bookingCards(items(response))+'</div>';
+    }else if(id==='quotes'){await navigate('quote-confirmations');return;}else if(id==='bookings'){const response=await request('bookings');content='<div class="ops-bookings">'+bookingCards(items(response))+'</div>';
     }else if(['arrivals','schedule','hotel','activities','vouchers','passengers'].includes(id)){
      const selected=await selectedBooking(n);if(!selected)return;const {bookings,detail}=selected;
      content=bookingPicker(bookings);if(!detail)content+=empty(t('Create a booking to use this section.','Cần có booking để sử dụng mục này.'));else{

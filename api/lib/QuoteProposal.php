@@ -160,9 +160,9 @@ final class QuoteProposal {
   if(!$r)throw new OutOfBoundsException('Proposal unavailable');$v=QuoteOptions::version($db,(int)$r['company_id'],(int)$r['quote_version_id']);return ['version'=>$v,'snapshot'=>self::publicQuote($db,$v)];
  }
  public static function handle(string $route,string $method,PDO $db,array $cfg,array $u): void {
-  if(!preg_match('#^quote-versions/(\d+)/proposal(?:/(.*))?$#',$route,$m))return;Auth::requirePermission($db,$u,'sales.view');$id=(int)$m[1];$action=$m[2]??'';
+  if(!preg_match('#^quote-versions/(\d+)/proposal(?:/(.*))?$#',$route,$m))return;$id=(int)$m[1];$action=$m[2]??'';
   try {
-   $v=QuoteOptions::version($db,(int)$u['company_id'],$id);
+   $v=QuoteOptions::version($db,(int)$u['company_id'],$id);Auth::requireQuoteRead($db,$u,$v);
    if($method==='POST'&&$action==='import-preview'){
     Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');QuoteVs2Repository::mutable($db,$v);
     $b=isset($_FILES['file'])?$_POST:Http::body();$out=isset($_FILES['file'])?ScheduleImport::documentUpload($_FILES['file']):ScheduleImport::documentPreview((string)($b['text']??''));Http::json(['ok'=>true]+$out);

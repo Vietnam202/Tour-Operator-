@@ -25,6 +25,25 @@ final class ProposalOutput {
    case 'highlights':$docSection('highlights',$b2b?'Highlights':"Why you'll love this trip",$c['highlights']??'');break;
    case 'schedule':$table('Schedule Summary',['Day','Date','Journey','Meals','Overnight'],array_map(fn($d)=>[(string)$d['day'],$d['date'],$d['title'],$d['meals'],$d['overnight']],$s['schedule']??[]));break;
    case 'price':
+    if(isset($s['commercial'])){
+     $commercial=$s['commercial'];$groups=[];$mix=[];
+     foreach($commercial['cells'] as $cell){
+      if(($c['pricing_display']??'')==='SELECTED_OPTION'&&(int)$cell['variant_id']!==(int)($c['selected_variant_id']??0))continue;
+      $value=$cell['currency'].' '.number_format((float)$cell['selling_per_pax'],2).($cell['recommended']?' · Recommended':'');
+      $band=$cell['pax_min']===$cell['pax_max']?(string)$cell['pax_min']:$cell['pax_min'].'–'.$cell['pax_max'];
+      $hotel=rtrim((string)$cell['hotel_level'],'*★');$cruise=rtrim((string)($cell['cruise_level']??''),'*★');
+      if(in_array($hotel,['3','4','5'],true)&&($cruise===$hotel||$cruise===''))$groups[$cell['mode']][$band][$hotel]=$value;
+      else $mix[]=[$band,$cell['mode'],$hotel.'★',$cruise!==''?$cruise.'★':'N/A',$value,$cell['label']];
+     }
+     foreach($groups as $mode=>$bands){$rows=[];foreach($bands as $band=>$levels)$rows[]=[$band,$levels['3']??'—',$levels['4']??'—',$levels['5']??'—','Per paying guest'];$table(($b2b?'Best Price Offer':'Choose Your Stay').' · '.$mode,['Pax','3★','4★','5★','Price basis'],$rows);}
+     if($mix)$table('Custom Mix',['Pax','Mode','Hotel','Cruise','Per paying guest','Option'],$mix);
+     if(!$groups&&!$mix)$b[]=['type'=>'text','text'=>'No commercial option selected.'];
+     $text('Quote validity',$commercial['valid_until']??'');
+     $b[]=['type'=>'text','text'=>'Prices apply to the offered paying-pax bands. Final confirmation requires an exact guest profile review.'];
+     if($b2b)foreach($commercial['cells'] as $cell)if((float)($cell['commission_pct']??0)>0){$b[]=['type'=>'text','text'=>$cell['label'].': net '.$cell['currency'].' '.$cell['net_per_pax'].' per paying guest; agent commission '.$cell['commission_pct'].'%.'];break;}
+     if(!$b2b)foreach($commercial['cells'] as $cell){$b[]=['type'=>'text','text'=>'Deposit '.$cell['deposit_pct'].'%; balance payable under the payment terms.'];break;}
+     break;
+    }
     $options=$s['options']??[];$display=$c['pricing_display']??'NET';if($display==='SELECTED_OPTION')$options=array_values(array_filter($options,fn($o)=>(int)($o['variant_id']??$o['id'])===(int)$c['selected_variant_id']));
     $heading=$b2b?'Best Price Offer':'Choose Your Stay · Price';
     if($display==='PAX_BAND')$heading.=' · Exact '.($s['paying_pax']??0).' paying pax';
@@ -47,8 +66,8 @@ final class ProposalOutput {
    case 'included':$docSection('included','Included',$s['included']??'');break;
    case 'excluded':$docSection('excluded','Excluded',$s['excluded']??'');break;
    case 'children':$docSection('children','Children Policy',$c['children_policy']??'');break;
-   case 'payment':$docSection('payment','Payment Terms',($c['payment_terms']??'')?:($s['terms']??''));break;
-   case 'cancellation':$docSection('cancellation','Cancellation Policy',$c['cancellation_policy']??'');break;
+   case 'payment':if(isset($s['commercial']))$text('Payment Terms',implode("\n",array_unique(array_column($s['commercial']['cells'],'payment_terms'))));else $docSection('payment','Payment Terms',($c['payment_terms']??'')?:($s['terms']??''));break;
+   case 'cancellation':if(isset($s['commercial']))$text('Cancellation Policy',implode("\n",array_unique(array_column($s['commercial']['cells'],'cancellation_policy'))));else $docSection('cancellation','Cancellation Policy',$c['cancellation_policy']??'');break;
    case 'notes':$docSection('terms','Terms & Conditions');$docSection('notes','Important Notes',$c['important_notes']??'');break;
    case 'contact':$text('Contact Details',trim($brand."\n".($c['contact_email']??'')."\n".($c['contact_phone']??'')."\n".($c['contact_address']??'')));if(!$b2b)$b[]=['type'=>'cta','text'=>($c['cta_label']??'')?:'Book Now / Request Change','url'=>($c['cta_url']??'')?:'#contact'];break;
   }}return $b;

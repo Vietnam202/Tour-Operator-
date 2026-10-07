@@ -135,6 +135,8 @@ try {
     TourInventory::handle($route,$method,$db,$user);
     MediaLibrary::handle($route,$method,$db,$config,$user);
     MediaDrive::handle($route,$method,$db,$config,$user);
+    PriceMatrix::handle($route,$method,$db,$user);
+    SalesHandover::handle($route,$method,$db,$user);
     QuoteProposal::handle($route,$method,$db,$config,$user);
     QuoteVs2::handle($route,$method,$db,$user);
     QuoteOptions::handle($route,$method,$db,$user);

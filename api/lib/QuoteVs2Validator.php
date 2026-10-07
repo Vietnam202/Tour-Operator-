@@ -18,14 +18,15 @@ final class QuoteVs2Validator {
             $out[]=['category'=>$req['category'],'service_name'=>$req['service_name'],'service_date'=>$req['service_date'],'pax'=>$line['resolved_quantity'],'qty'=>$line['resolved_units'],'supplier_id'=>$line['supplier_id'],'total'=>Vs2Decimal::format($net),'currency'=>$line['original_currency'],'notes'=>QuoteVs2Repository::decode($req['metadata_json'])['internal_notes']??'', 'requirement_id'=>$req['id'],'line_id'=>$line['id']];
         }return $out;
     }
-    public static function validate(PDO $db,array $v): array {
+    public static function validate(PDO $db,array $v,bool $costOnly=false): array {
         $errors=[];$warnings=[];$add=function(string $code,?int $variant=null,?int $line=null,?int $req=null)use(&$errors){$errors[]=['code'=>$code,'severity'=>'BLOCKING','variant_id'=>$variant,'line_id'=>$line,'requirement_id'=>$req];};
         $g=QuoteVs2Repository::graph($db,$v);$reqs=array_column($g['requirements'],null,'id');
         try{$guests=QuoteVs2Domain::guests($v,$g['profile']);}catch(Throwable $e){$add('PAX_SEGMENT_REVIEW_REQUIRED');return ['valid'=>false,'errors'=>$errors,'warnings'=>[]];}
         if(!QuoteVs2Repository::decode($v['schedule_json']??'[]'))$add('ITINERARY_NEEDED');
         $days=QuoteVs2Repository::decode($v['schedule_json']??'[]');$dayKeys=array_column($days,'day_key');
         foreach($reqs as $req)if($req['requirement_state']!=='NOT_APPLICABLE'&&$req['day_key']&&!in_array($req['day_key'],$dayKeys,true))$add('REQUIREMENT_DAY_MISSING',null,null,(int)$req['id']);
-        $policy=self::policy($db,(int)$v['company_id']);if($policy===null)$warnings[]=['code'=>'POLICY_NOT_CONFIGURED','severity'=>'WARNING'];
+        $commercial=!$costOnly&&class_exists('PriceMatrix')&&PriceMatrix::row($db,$v)!==null;
+        $policy=self::policy($db,(int)$v['company_id']);if($policy===null&&!$commercial)$warnings[]=['code'=>'POLICY_NOT_CONFIGURED','severity'=>'WARNING'];
         $offered=array_filter($g['variants'],fn($variant)=>(bool)$variant['is_offered']);if(!$offered)$add('OFFERED_VARIANT_NEEDED');
         foreach($offered as $variant){$vid=(int)$variant['id'];$byId=array_column($variant['lines'],null,'id');$seen=[];$active=[];$rates=[];
             foreach($reqs as $req){if(!QuoteVs2Domain::applies($req,$variant))continue;
@@ -91,10 +92,11 @@ final class QuoteVs2Validator {
                 $pricing=SmartCosting::pricing($cost,$guests['paying_pax'],(string)$v['fx_rate'],$variant);
                 if(QuoteVs2Domain::hash($pricing)!==QuoteVs2Domain::hash(QuoteVs2Repository::decode($variant['pricing_result_json'])))throw new DomainException('STALE_PRICING');
                 if(Vs2Decimal::parse($pricing['total_selling'])<=0)throw new DomainException('SELLING_PRICE_NEEDED');
-                if($policy!==null&&Vs2Decimal::parse($pricing['margin_pct'],4)<Vs2Decimal::parse($policy,4))throw new DomainException('MINIMUM_MARGIN');
+                if($policy!==null&&!$commercial&&Vs2Decimal::parse($pricing['margin_pct'],4)<Vs2Decimal::parse($policy,4))throw new DomainException('MINIMUM_MARGIN');
                 self::bookingLines($active,$reqs,(string)$v['fx_rate']);
             }catch(Throwable $e){$add(strtok($e->getMessage(),':'),$vid);}
         }
+        if($commercial){$matrix=PriceMatrix::validation($db,$v);foreach($matrix['errors'] as $error)$errors[]=$error+['severity'=>'BLOCKING'];$warnings=[...$warnings,...$matrix['warnings']];}
         return ['valid'=>!$errors,'errors'=>$errors,'warnings'=>$warnings];
     }
     public static function assertValid(PDO $db,array $v): void {
