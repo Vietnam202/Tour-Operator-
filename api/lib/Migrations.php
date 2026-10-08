@@ -61,12 +61,19 @@ final class Migrations {
             foreach($files as $file) {
                 $version=basename($file,'.sql');$hash=hash_file('sha256',$file);
                 if($version==='025_vs21_shared_requirements') {
+                    // Apply the legacy candidate-history guard only BEFORE the
+                    // first 025 upgrade. A legitimate 025-applied DB will later
+                    // include Marketing 023/024 entries and must stay re-runnable.
+                    $previous025=$db->prepare('SELECT 1 FROM schema_migrations WHERE version=?');
+                    $previous025->execute([$version]);
+                    if(!$previous025->fetchColumn()) {
                     $bad=$db->query("SELECT version FROM schema_migrations WHERE version REGEXP '^02[34]_' LIMIT 1")->fetchColumn();
                     if($bad)throw new RuntimeException('Candidate 023/024 history requires an approved adapter; VS2.1 upgrade stopped');
                     $candidate=$db->query("SHOW COLUMNS FROM quote_options LIKE 'costing_mode'")->fetch();
                     if($candidate)throw new RuntimeException('Candidate quote option schema detected; upgrade stopped');
                     $index=$db->query("SHOW INDEX FROM quote_options WHERE Key_name='uq_option_level'")->fetchAll(PDO::FETCH_ASSOC);
                     if(array_column($index,'Column_name')!==['quote_version_id','hotel_level'])throw new RuntimeException('Historical hotel option unique index mismatch; upgrade stopped');
+                    }
                 }
                 $s=$db->prepare('SELECT * FROM migration_checksums WHERE version=?');$s->execute([$version]);$tracked=$s->fetch(PDO::FETCH_ASSOC);
                 if($tracked && !hash_equals($tracked['sha256'],$hash)) throw new RuntimeException('Migration checksum changed: '.$version);
