@@ -1,1 +1,20 @@
 .vs23 .matrix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px}.vs23 label{display:flex;flex-direction:column;gap:5px}.vs23 label.check{flex-direction:row;align-items:center}.vs23 input,.vs23 select,.vs23 textarea{max-width:100%;box-sizing:border-box}.vs23 .matrix-scroll{overflow:auto}.vs23 table{width:100%;border-collapse:collapse}.vs23 th,.vs23 td{padding:10px;border-bottom:1px solid var(--border,#ddd);text-align:left;vertical-align:top}.vs23 .matrix-card{padding:10px;border:1px solid var(--border,#ddd);border-radius:8px;min-width:210px}.vs23 .matrix-card p{margin:5px 0}.vs23 .matrix-card.invalid{border-color:#b94b30;background:#fff6f2}.vs23 .trace{white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto;font-size:12px}.vs23 .actions{flex-wrap:wrap;gap:8px}.vs23 .notice{margin:10px 0}.vs23 .handover-service{border-bottom:1px solid var(--border,#ddd);padding:15px 0}@media(max-width:600px){.vs23 .matrix-grid{grid-template-columns:1fr}.vs23 .page-head{flex-wrap:wrap}.vs23 .panel-body{padding:12px}.vs23 .matrix-card{min-width:160px}}
+
+/* RC6 Group Pricing: five compact editable rows and customer-safe comparison. */
+.vs23 .vta-vehicles{min-width:700px;background:#fff}
+.vs23 .vta-vehicles th,.vs23 .vta-vehicles td{padding:9px 11px;vertical-align:top}
+.vs23 .vta-vehicles input{font-size:13px;padding:7px;border:1px solid #d6e1eb;border-radius:6px;max-width:200px;background:#fff}
+.vs23 .vta-vehicles input[name=vehicle_reason]{min-width:200px}
+.vs23 .vta-vehicles details{min-width:215px}
+.vs23 .vta-vehicles details label{margin:8px 0;font-size:11px;color:#50647b;gap:4px}
+.vs23 .vta-vehicles details select{background:#fff;border:1px solid #d6e1eb;border-radius:6px;padding:7px;max-width:280px}
+.vs23 .vta-price-heading{margin-top:12px;padding:8px 12px;background:#eef3f9;border-radius:7px}
+.vs23 .vta-price-heading h3{margin:0 0 4px;font-size:15px;color:#17365d}
+.vs23 .vta-price-heading p{margin:0;font-size:11px;color:#5a6d81}
+.vs23 .vta-price-compact{min-width:770px;font-size:12px}
+.vs23 .vta-price-compact th,.vs23 .vta-price-compact td{font-variant-numeric:tabular-nums;padding:10px 12px}
+.vs23 .vta-price-compact thead{background:#f4f7fc;color:#243e63}
+.vs23 .vta-price-compact td small{display:block;margin-top:4px;font-size:10px;color:#758ba2}
+.vs23 .vta-price-advanced{margin-top:14px;border:1px solid #dce4ed;border-radius:7px;padding:10px}
+.vs23 .vta-price-advanced summary{cursor:pointer;color:#3c5975;font-size:12px}
+@media(max-width:600px){.vs23 .vta-price-compact{min-width:700px}.vs23 .vta-vehicles{min-width:680px}.vs23 .vta-price-heading h3{font-size:13px}}
