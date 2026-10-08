@@ -162,6 +162,8 @@
       return '<article class="vta-cost-summary" data-vta-summary="' + i + '">' +
         '<strong>Option ' + String.fromCharCode(65+i) + ' · Hotel ' + star + '★ / Cruise ' +
         (p.cruise_level==null?'—':p.cruise_level+'★') + '</strong>' +
+        '<div class="vta-mix-selectors"><label>Hotel ' + selectHTML([[3,'3★'],[4,'4★'],[5,'5★']],star,'data-mix-hotel="' + i + '"' + (!edit?' disabled':'')) +
+        '</label><label>Cruise ' + selectHTML([['','None'],[3,'3★'],[4,'4★'],[5,'5★']],p.cruise_level ?? '','data-mix-cruise="' + i + '"' + (!edit?' disabled':'')) + '</label></div>' +
         '<span>Total cost <b data-total>' + money(p.pricing?.cost_total_vnd) + '</b> VND</span>' +
         '<span>Cost / paying pax <b data-per-pax>' + money(per) + '</b> VND</span>' +
         '</article>';
@@ -279,6 +281,24 @@
           box.textContent=r.valid?'Quote checks passed':(r.errors||[]).concat(r.warnings||[]).map(x=>x.code).join(' · ') || 'Review cost and supplier rates';
         }catch(e){toast(e.message,true);}
       };
+      host.querySelectorAll('[data-mix-hotel],[data-mix-cruise]').forEach(control=>control.onchange=()=>{
+        const index=Number(control.dataset.mixHotel ?? control.dataset.mixCruise);
+        const card=host.querySelector('[data-vta-summary="' + index + '"]');
+        const hotel=Number(card.querySelector('[data-mix-hotel]').value);
+        const cruiseValue=card.querySelector('[data-mix-cruise]').value;
+        const cruise=cruiseValue===''?null:Number(cruiseValue);
+        const existing=data.items.find(p=>p.costing_mode===mode && parseInt(p.hotel_level,10)===hotel &&
+          (p.cruise_level==null?null:Number(p.cruise_level))===cruise);
+        const selectVariant=id=>{
+          const chosen=ids();chosen[index]=Number(id);
+          host.dataset.vtaCostVariants=JSON.stringify(chosen);
+          packages=getPackages();render();
+        };
+        if(existing){selectVariant(existing.variant_id);return;}
+        send({variant_ids:ids(),action:'mix',mode,hotel_level:hotel,cruise_level:cruise})
+          .then(result=>{if(result?.variant_id){selectVariant(result.variant_id);
+            status('Combination saved · supplier rates require review');}});
+      });
       host.querySelectorAll('[data-vta-row]').forEach(bindRow);
       host.querySelector('[data-add]')?.addEventListener('click',()=>{
         const category=host.querySelector('[data-new-service]').value;
