@@ -245,6 +245,8 @@ final class TourLibrary {
         $days=json_decode($r['days_json']??'[]',true,512,JSON_THROW_ON_ERROR);$tags=json_decode($r['tags_json']??'[]',true,512,JSON_THROW_ON_ERROR);
         $out=[];foreach(['title','destination','language','source_name','source_type','source_url','status','updated_at'] as $k)$out[$k]=$r[$k]??'';
         $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=count($days);$out['has_source']=!empty($r['source_storage_path']);
+        $proposalList=json_decode($r['proposal_json']??'null',true);$proposalList=is_array($proposalList)?$proposalList:[];
+        $out['tour_code']=(string)($proposalList['tour_code']??'');$out['tour_type']=(string)($proposalList['tour_type']??'');
         if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';$out['proposal']=json_decode($r['proposal_json']??'null',true)?:[];}
         return $out;
     }
