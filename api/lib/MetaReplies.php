@@ -47,11 +47,14 @@ final class MetaReplies {
         $clockOk=$last!==null&&strtotime($last.' UTC')>time()-(23*3600+50*60)
             &&strtotime($last.' UTC')<=time()+60;
         $open=$row['status']!=='CLOSED';
+        $requireCheck=($cfg['integrations']['meta_connection_check']['enforce_messenger_verified']??false)===true;
+        $recentCheck=!$requireCheck||MetaConnectionHealth::isRecentVerified(
+            $db,$company,$account['alias'],'MESSENGER',$account['page_id']);
         $sender=(string)$row['external_conversation_id'];
         $recipientOk=preg_match('/^[0-9]{8,40}$/D',$sender)===1&&$sender!==$account['page_id'];
         return ['conversation_id'=>$conversation,'provider'=>'FACEBOOK_MESSENGER',
-            'can_send'=>$account['ready']&&$clockOk&&$open&&$recipientOk,
-            'reason'=>!$account['ready']?'ACCOUNT_NOT_AUTHORIZED':(!$clockOk?'OUTSIDE_24H_WINDOW':(!$open?'CLOSED':(!$recipientOk?'INVALID_RECIPIENT':null))),
+            'can_send'=>$account['ready']&&$clockOk&&$open&&$recipientOk&&$recentCheck,
+            'reason'=>!$account['ready']?'ACCOUNT_NOT_AUTHORIZED':(!$clockOk?'OUTSIDE_24H_WINDOW':(!$open?'CLOSED':(!$recipientOk?'INVALID_RECIPIENT':(!$recentCheck?'CONNECTION_CHECK_REQUIRED':null)))),
             'last_inbound_at'=>$last,
             'source_code'=>$row['source_code']];
     }
