@@ -76,21 +76,36 @@ final class QuoteVs2 {
                     $requirement=$candidate;break;
                 }
                 if(!$requirement||$requirement['requirement_state']==='NOT_APPLICABLE')continue;
-                $donor=null;
+                // Rate reuse is allowed only when every eligible donor agrees on the supplier,
+                // per-service basis and amount. A legacy disagreement must remain unresolved,
+                // never silently take the first option's rate.
+                $donors=[];
                 foreach($graph['variants'] as $source){
                     if($source['costing_mode']!==$mode)continue;
                     if($requirement['category']==='HOTEL'&&(int)$source['hotel_level']!==$hotel)continue;
                     if($requirement['category']==='CRUISE'&&
                         ($source['cruise_level']===null?null:(int)$source['cruise_level'])!==$cruise)continue;
                     foreach($source['lines'] as $candidate){
-                        if((int)$candidate['requirement_id']===(int)$target['requirement_id']&&
-                            $candidate['line_kind']==='SERVICE'&&
-                            ($candidate['rate_version_id']!==null||$candidate['unit_amount_original']!==null)){
-                            $donor=$candidate;break 2;
-                        }
+                        if((int)$candidate['requirement_id']!==(int)$target['requirement_id']||
+                            $candidate['line_kind']!=='SERVICE'||
+                            ($candidate['rate_version_id']===null&&$candidate['unit_amount_original']===null))continue;
+                        $identity=[
+                            'rate_version_id'=>$candidate['rate_version_id'],
+                            'amount'=>$candidate['unit_amount_original'],
+                            'currency'=>$candidate['original_currency'],
+                            'supplier'=>$candidate['supplier_id'],
+                            'formula'=>$candidate['formula_code'],
+                            'quantity_source'=>$candidate['quantity_source'],
+                            'custom_quantity'=>$candidate['custom_quantity'],
+                            'quantity_override'=>$candidate['quantity_override'],
+                            'units_override'=>$candidate['units_override'],
+                            'service_mode'=>$candidate['service_mode']
+                        ];
+                        $donors[QuoteVs2Domain::hash($identity)]=$candidate;
                     }
                 }
-                if(!$donor)continue; // Need Rate, never substitute an unrelated star's amount.
+                if(count($donors)!==1)continue; // Missing / contradictory rates must be reviewed.
+                $donor=reset($donors);
                 $entry=[
                     'quantity_source'=>$donor['quantity_source'],
                     'quantity_override'=>$donor['quantity_override'],
