@@ -42,7 +42,7 @@
       try {selection = JSON.parse(host.dataset.vtaCostVariants || 'null');} catch (_) {}
       if (Array.isArray(selection) && selection.length === 3) {
         const picked = selection.map(id => data.items.find(x => Number(x.variant_id) === Number(id)));
-        if (picked.every(p => p && p.costing_mode === mode)) return picked;
+        if (new Set(selection.map(Number)).size === 3 && picked.every(p => p && p.costing_mode === mode)) return picked;
       }
       return [3,4,5].map(star => data.items.find(p => p.costing_mode === mode &&
         parseInt(p.hotel_level,10) === star && p.variant_key === mode.toLowerCase() + '-' + star + '-' + star) ||
@@ -75,6 +75,13 @@
           if (output) output.textContent = l?.coverage_state === 'INCLUDED' ? 'Included' : money(l?.total_vnd);
           const warning = row.querySelector('[data-review="' + i + '"]');
           if (warning) warning.hidden = !(l?.review_required || l?.coverage_state === 'UNRESOLVED');
+          const rate = row.querySelector('[data-rate="' + i + '"]');
+          if (rate && rate !== host.ownerDocument.activeElement) {
+            const next = l?.unit_rate_vnd ?? '';
+            if (rate.value !== String(next)) rate.value = String(next);
+          }
+          const review = row.querySelector('[data-review-action="' + i + '"]');
+          if (review) review.hidden = !(l?.review_required && ['PRICED','INCLUDED','NO_COST'].includes(l?.coverage_state));
         });
       });
     };
@@ -99,7 +106,7 @@
         } catch (error) {
           status('Save failed — changes not saved');
           toast(error.message || 'Could not save cost',true);
-          throw error;
+          return null;
         }
       });
       return queue;
@@ -113,6 +120,10 @@
         '</label><label>Evidence<input data-evidence value="' + escapeHTML(reason) +
         '" placeholder="Contract / rate reason" ' + (!edit?'disabled':'') + '></label>' +
         (edit?'<button type="button" class="vta-proof-apply" data-apply="' + i + '">Apply rate</button>':'') +
+        (edit?'<label>Review reason<input data-review-note placeholder="Reviewed with supplier / source"></label>' +
+          '<button type="button" data-review-action="' + i + '"' +
+          (!(l?.review_required && ['PRICED','INCLUDED','NO_COST'].includes(l?.coverage_state))?' hidden':'') +
+          '>✓ Confirm reviewed cost</button>':'') +
         '</div></details>';
     };
     const input = (attr,value,classes='',extra='') => '<input class="' + classes + '" ' + attr +
@@ -255,6 +266,15 @@
       row.querySelector('[data-cancel-count]').onclick=()=>{row.querySelector('.vta-override').hidden=true;count.value=guestCount(r,line(packages[0],r),context);};
       row.querySelectorAll('[data-rate]').forEach(input=>input.onchange=()=>saveRate(row,Number(input.dataset.rate)));
       row.querySelectorAll('[data-apply]').forEach(btn=>btn.onclick=()=>saveRate(row,Number(btn.dataset.apply)));
+      row.querySelectorAll('[data-review-action]').forEach(btn=>btn.onclick=()=>{
+        const target=Number(btn.dataset.reviewAction);
+        const proof=row.querySelector('[data-proof="' + target + '"]');
+        const reason=proof.querySelector('[data-review-note]').value.trim();
+        if(!reason){proof.open=true;status('Review reason is required');proof.querySelector('[data-review-note]').focus();return;}
+        const pack=packages[target];
+        sheet({action:'review',requirement_id:id,variant_ids:
+          isStay(r)?[Number(pack.variant_id)]:ids(),review_reason:reason},true);
+      });
       row.querySelectorAll('[data-property]').forEach(input=>input.onchange=e=>{
         const idx=Number(e.target.dataset.property),p=packages[idx];
         const key=r.category==='HOTEL'?'hotel_names':'cruise_names';
@@ -269,7 +289,9 @@
       row.querySelector('[data-confirm-remove]').onclick=()=>{
         const reason=confirm.querySelector('[data-remove-reason]').value.trim();
         if(!reason){status('Removal reason is required');return;}
-        pendingUndo={id,reason};sheet({action:'remove',requirement_id:id,reason},true);
+        sheet({action:'remove',requirement_id:id,reason},true).then(result=>{
+          if (result){pendingUndo={id,reason};render();}
+        });
       };
     }
     function bind() {
@@ -311,12 +333,16 @@
           (p.cruise_level==null?null:Number(p.cruise_level))===cruise);
         const selectVariant=id=>{
           const chosen=ids();chosen[index]=Number(id);
+          if(new Set(chosen).size!==3){
+            status('This combination is already selected in another option');
+            render();return false;
+          }
           host.dataset.vtaCostVariants=JSON.stringify(chosen);
-          packages=getPackages();render();
+          packages=getPackages();render();return true;
         };
         if(existing){selectVariant(existing.variant_id);return;}
         send({variant_ids:ids(),action:'mix',mode,hotel_level:hotel,cruise_level:cruise})
-          .then(result=>{if(result?.variant_id){selectVariant(result.variant_id);
+          .then(result=>{if(result?.variant_id && selectVariant(result.variant_id)){
             status('Combination saved · supplier rates require review');}});
       });
       host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
@@ -339,8 +365,9 @@
       host.querySelector('[data-undo]')?.addEventListener('click',()=>{
         if(!pendingUndo)return;
         const id=pendingUndo.id;
-        pendingUndo=null;
-        sheet({requirement:{id,requirement_state:'REQUIRED'},line:{}},true);
+        sheet({requirement:{id,requirement_state:'REQUIRED'},line:{}},true).then(result=>{
+          if(result){pendingUndo=null;render();}
+        });
       });
     }
     render();
