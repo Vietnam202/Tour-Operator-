@@ -16,7 +16,7 @@ The subsequent quotation-confirmation/booking/handover browser smoke is incomple
 a deliberately below-policy quote correctly returned `MARGIN_REVIEW_REQUIRED`.
 Do not mark the owner-test checkpoint complete solely from deployment health.
 
-**Fast deployment activation is pending hosting access.** The controller has local
+**Fast deployment activation has not yet been confirmed.** The controller has local
 safety tests; no persistent server deployment trigger has been installed yet.
 Do not describe this mechanism as operational until the adoption, no-op deployment,
 rollback rehearsal and server checks below have passed.
@@ -62,7 +62,7 @@ git clone --single-branch --branch codex/Vietnam/rc6.2-testing \
   https://github.com/Vietnam202/Tour-Operator-.git "$CONTROL/source"
 test "$(git -C "$CONTROL/source" rev-parse HEAD)" = REVIEWED_DEPLOY_COMMIT || exit 1
 /bin/sh -n "$CONTROL/source/deploy/deploy-staging.sh"
-/usr/local/lsws/lsphp83/bin/php -l "$CONTROL/source/deploy/staging-release.php"
+/usr/local/lsws/lsphp83/bin/php -d opcache.enable_cli=0 -l "$CONTROL/source/deploy/staging-release.php"
 install -m 700 "$CONTROL/source/deploy/deploy-staging.sh" "$CONTROL/deploy-staging.sh"
 install -m 600 "$CONTROL/source/deploy/staging-release.php" "$CONTROL/staging-release.php"
 /bin/sh "$CONTROL/deploy-staging.sh" --adopt 9de9f6c951df1e1a1ad6231bb02d402e2420109c
@@ -70,19 +70,94 @@ install -m 600 "$CONTROL/source/deploy/staging-release.php" "$CONTROL/staging-re
 ```
 
 Adoption verifies the actual VS2.4 completion record, staging configuration,
-all managed source bytes, every applied SQL checksum, database connectivity and
-HTTP/API/assets. It refuses unrelated runtime changes between the checkpoint and
-controller commit. A non-SQL file with the same content but CRLF/LF representation
+all managed source bytes against the immutable VS2.4 Git tree, every applied SQL
+checksum, database connectivity and HTTP/API/assets. It may then deploy a newer
+Document Editor target through the normal guarded delta plan. Unexpected hosting
+edits, migration changes and untracked source collisions still stop deployment. A non-SQL file with the same content but CRLF/LF representation
 can be adopted; those server bytes remain intact until that file actually changes.
 It never rebases/replaces a migration checksum. It does not alter source or database
 while recording the initial baseline.
 
-The initial controller-only release creates a rollback journal with zero application
-file changes. Rehearse rollback using the exact `backup` identifier in the private
+A controller-only release creates a rollback journal with zero application file
+changes. An adoption targeting Document Editor creates the normal source-change
+backup and rollback journal before installing the editor. Rehearse rollback using the exact `backup` identifier in the private
 `last-result.json`, verify `--check`, then `--resume` and run the controller once.
 Read-only inspection should confirm that private config, uploads/documents and
 historical snapshots are intact. The replay must advance to the reviewed testing
 commit and the next invocation must print `UNCHANGED`.
+
+## PHP CLI workaround and existing-controller update
+
+On the VPS, ordinary PHP 8.3.30 CLI lint exited 139 while the same lint with
+-d opcache.enable_cli=0 exited 0. Every wrapper entry and child lint/health command
+uses this CLI-only override. Do not use -n for server deployment: it drops normal
+INI loading and can hide PDO MySQL/curl. Do not edit php.ini, .user.ini or live
+website OPcache settings.
+
+These commands update an already-cloned private checkout and controller.
+Run as vquot8508 with the canonical fast-deploy/source checkout; replace
+REVIEWED_DEPLOY_COMMIT with the exact published patch SHA. Stop on any failed
+guard. Do not change ownership of public/customer directories to bypass errors.
+
+~~~sh
+set -eu
+umask 077
+test "$(id -un)" = vquot8508
+CONTROL=/home/v2quote.vietnamtraveladvisor.com.vn/vta_private/fast-deploy
+SOURCE="$CONTROL/source"
+PHP=/usr/local/lsws/lsphp83/bin/php
+BRANCH=codex/Vietnam/rc6.2-testing
+RELEASE=REVIEWED_DEPLOY_COMMIT
+test "$(readlink -f "$CONTROL")" = "$CONTROL"
+test "$(readlink -f "$SOURCE")" = "$SOURCE"
+test "$(git -C "$SOURCE" remote get-url origin)" = https://github.com/Vietnam202/Tour-Operator-.git
+test "$(git -C "$SOURCE" branch --show-current)" = "$BRANCH"
+exec 9>"$CONTROL/deploy.lock"; flock -n 9
+exec 8>"$CONTROL/release.lock"; flock -n 8
+test -z "$(git -C "$SOURCE" status --porcelain --untracked-files=all)"
+git -C "$SOURCE" -c http.sslVerify=true fetch --no-tags origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+test "$(git -C "$SOURCE" rev-parse "origin/$BRANCH")" = "$RELEASE"
+git -C "$SOURCE" merge --ff-only "$RELEASE"
+test "$(git -C "$SOURCE" rev-parse HEAD)" = "$RELEASE"
+test "$(stat -c %U "$CONTROL")" = vquot8508
+git -C "$SOURCE" diff --exit-code 9de9f6c951df1e1a1ad6231bb02d402e2420109c "$RELEASE" -- api/migrations .user.ini
+"$PHP" -d opcache.enable_cli=0 -r 'foreach (["pdo_mysql","curl"] as $e) {if (!extension_loaded($e)) {fwrite(STDERR,"MISSING ".$e."\n");exit(1);}} if (!in_array("mysql",PDO::getAvailableDrivers(),true)) exit(1); echo "PASS PDO MySQL/curl; CLI OPcache=".(ini_get("opcache.enable_cli")?:0)."\n";'
+/bin/sh -n "$SOURCE/deploy/deploy-staging.sh"
+"$PHP" -d opcache.enable_cli=0 -l "$SOURCE/deploy/staging-release.php"
+BACKUP="$CONTROL/controller-backups/$(date -u +%Y%m%dT%H%M%SZ)-$(printf %.12s "$RELEASE")"
+test ! -e "$BACKUP"; mkdir -m 700 -p "$BACKUP"
+for FILE in deploy-staging.sh staging-release.php; do
+  test ! -L "$CONTROL/$FILE"
+  if test -e "$CONTROL/$FILE"; then
+    cp -p "$CONTROL/$FILE" "$BACKUP/$FILE"
+    cmp -s "$CONTROL/$FILE" "$BACKUP/$FILE"
+  fi
+done
+test ! -e "$CONTROL/deploy-staging.sh.new"
+test ! -e "$CONTROL/staging-release.php.new"
+install -m 700 "$SOURCE/deploy/deploy-staging.sh" "$CONTROL/deploy-staging.sh.new"
+install -m 600 "$SOURCE/deploy/staging-release.php" "$CONTROL/staging-release.php.new"
+cmp -s "$SOURCE/deploy/deploy-staging.sh" "$CONTROL/deploy-staging.sh.new"
+cmp -s "$SOURCE/deploy/staging-release.php" "$CONTROL/staging-release.php.new"
+mv "$CONTROL/staging-release.php.new" "$CONTROL/staging-release.php"
+mv "$CONTROL/deploy-staging.sh.new" "$CONTROL/deploy-staging.sh"
+flock -u 8; flock -u 9
+if test -e "$CONTROL/deployed.json"; then
+  /bin/sh "$CONTROL/deploy-staging.sh" --check
+  /bin/sh "$CONTROL/deploy-staging.sh"
+else
+  /bin/sh "$CONTROL/deploy-staging.sh" --adopt 9de9f6c951df1e1a1ad6231bb02d402e2420109c
+fi
+/bin/sh "$CONTROL/deploy-staging.sh" --check
+"$PHP" -d opcache.enable_cli=0 -r '$r=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);if(($r["result"]??"")!=="PASS"||($r["commit"]??"")!==$argv[2]||($r["database"]??"")!=="UNCHANGED")exit(1);echo json_encode($r,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n";' "$CONTROL/last-result.json" "$RELEASE"
+~~~
+
+The extension check above verifies the actual VPS runtime; local tests do not
+establish VPS extension availability. Keep the controller backup path and
+deployment backup ID. If HALTED, baseline drift or a migration error occurs, stop;
+do not delete state/markers, rewrite SQL, or restore an older database.
+After PASS, log in to staging and run Document import → edit → save → refresh/reopen
+→ DOCX/PDF export, then open existing 3★/4★/5★ costing. CLI health is not browser acceptance.
 
 ## Commit-triggered deployment
 
@@ -166,10 +241,10 @@ saved for rollback, rather than executing new deployment code fetched by cron.
 ## Local focused verification
 
 ```sh
-php -l deploy/staging-release.php
-php -l tests/staging_deploy_safety.php
+php -d opcache.enable_cli=0 -l deploy/staging-release.php
+php -d opcache.enable_cli=0 -l tests/staging_deploy_safety.php
 /bin/sh -n deploy/deploy-staging.sh
-php tests/staging_deploy_safety.php
+php -d opcache.enable_cli=0 tests/staging_deploy_safety.php
 ```
 
 The disposable fixture checks real cutover/rollback, interrupted writes, exact

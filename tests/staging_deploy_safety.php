@@ -64,6 +64,21 @@ try {
     StagingRelease::atomic($root.'/api/migrations/'.$version.'.sql',"edited historical SQL\n");
     reject(fn()=>StagingRelease::validateLedger($root,$before,$rows,[$version]),'SERVER_MIGRATION_DRIFT','host migration byte change blocks deploy');
     StagingRelease::atomic($root.'/api/migrations/'.$version.'.sql',"approved SQL bytes\n");
+    $adopt=$before; $adopt['commit']=StagingRelease::BASELINE;
+    $baselineBytes=[];foreach($adopt['files'] as $path=>$file)$baselineBytes[$path]=str_replace("\r\n","\n",(string)file_get_contents($root.'/'.$path));
+    $adopted=StagingRelease::adoptionState($root,$adopt,fn($p)=>$baselineBytes[$p]);
+    check($adopted['files']===$before['files'],'adopt exact historical baseline while Document Editor target differs');
+    check(file_get_contents($root.'/app.js')==="old app\n",'adoption verifies source without installing the target');
+    check($adopted['files']['api/lib/LineEnding.php']['deployed']!==$adopted['files']['api/lib/LineEnding.php']['source'],'adoption preserves CRLF runtime bytes for unchanged non-SQL source');
+    $badBytes=$baselineBytes;$badBytes['app.js']="new app\n";
+    reject(fn()=>StagingRelease::adoptionState($root,$adopt,fn($p)=>$badBytes[$p]),'BASELINE_SOURCE_CHANGED','adoption cannot substitute target bytes for historical baseline');
+    StagingRelease::atomic($root.'/app.js',"unreviewed hosting edit\n");
+    reject(fn()=>StagingRelease::adoptionState($root,$adopt,fn($p)=>$baselineBytes[$p]),'BASELINE_DRIFT','adoption rejects existing hosting source drift');StagingRelease::atomic($root.'/app.js',"old app\n");
+    StagingRelease::atomic($root.'/api/migrations/'.$version.'.sql',"approved SQL bytes\r\n");
+    reject(fn()=>StagingRelease::adoptionState($root,$adopt,fn($p)=>$baselineBytes[$p]),'BASELINE_DRIFT','adoption rejects even SQL line-ending rewrites');StagingRelease::atomic($root.'/api/migrations/'.$version.'.sql',"approved SQL bytes\n");
+    $wrong=$adopt;$wrong['commit']=str_repeat('b',40);
+    reject(fn()=>StagingRelease::adoptionState($root,$wrong,fn($p)=>$baselineBytes[$p]),'INITIAL_BASELINE_ONLY','only verified VS24 baseline can be adopted');
+    StagingRelease::requiredExtensions();check(true,'PDO MySQL driver and curl are loaded with normal INI plus CLI OPcache override');
     $backup=$base.'/backup'; $journal=StagingRelease::backup($backup,$root,$base.'/config.php',$before,$after,$changes);
     check(StagingRelease::digest($backup.'/config.php')===StagingRelease::digest($base.'/config.php'),'private configuration backup is verified');
     StagingRelease::maintenance($root); StagingRelease::installChanges($root,$source,$changes);
@@ -90,6 +105,27 @@ try {
     check(str_contains($script,'set -eu') && !preg_match('/^\s*git .*clean\b/m',$script) && !str_contains($script,'--hard'),'wrapper has strict mode and no destructive public reset or clean');
     check(str_contains($script,'refs/heads/$BRANCH:refs/remotes/origin/$BRANCH') && str_contains($script,'merge-base --is-ancestor'),'explicit ancestry check rejects branch history rewrites');
     check(str_contains($script,'flock -n 9') && str_contains($script,'--preflight') && str_contains($script,'HALTED'),'wrapper serializes deployments and honors failure halt');
+    preg_match_all('/^[ \t]*(?:exec\s+)?"\$PHP"\s+([^\r\n]+)/m',$script,$phpCalls);
+    check(count($phpCalls[1])===3,'wrapper has exactly three PHP controller invocation paths');
+    foreach($phpCalls[1] as $call)check(str_starts_with($call,'-d opcache.enable_cli=0 ')&&!str_contains($call,' -n'),'controller invocation disables CLI OPcache without dropping extensions');
+    $controller=file_get_contents(dirname(__DIR__).'/deploy/staging-release.php');
+    preg_match_all('/self::command\(\[PHP_BINARY,([^\]]+)\]/',$controller,$children);
+    check(count($children[1])===3,'all existing child PHP lint/health invocation paths retained');
+    foreach($children[1] as $call)check(str_contains($call,"'opcache.enable_cli=0'"),'child PHP lint/health disables only CLI OPcache');
+    if ($repo=getenv('VTA_DEPLOY_TEST_REPO')) {
+        $checkout=$base.'/git-source';
+        StagingRelease::command(['git','-c','safe.directory='.$repo,'clone','--no-checkout','--shared',$repo,$checkout]);
+        StagingRelease::command(['git','-C',$checkout,'config','core.autocrlf','false']);
+        StagingRelease::command(['git','-C',$checkout,'checkout','--quiet',StagingRelease::BRANCH]);
+        StagingRelease::command(['git','-C',$checkout,'remote','set-url','origin',StagingRelease::REPO]);
+        $target=StagingRelease::source($checkout);$historic=StagingRelease::source($checkout,StagingRelease::BASELINE);
+        check($historic['commit']===StagingRelease::BASELINE && $target['commit']!==StagingRelease::BASELINE,'real Git inspection retains current testing HEAD and selects immutable baseline tree');
+        check($target['files']['visual-proposal.js']['source']!==$historic['files']['visual-proposal.js']['source'],'real Git baseline is distinct from new Document Editor source');
+        check($target['files']['smart-costing.js']['source']===$historic['files']['smart-costing.js']['source'],'costing source stays unchanged in baseline-to-editor deployment');
+        foreach($historic['files'] as $path=>$file)if(str_starts_with($path,'api/migrations/'))check(($target['files'][$path]['source']??'')===$file['source'],'real Git migration unchanged '.$path);
+        reject(fn()=>StagingRelease::source($checkout,$target['commit']),'BASELINE_REF_REQUIRED','arbitrary adoption reference cannot replace historical baseline');
+        check(trim(StagingRelease::command(['git','-C',$checkout,'rev-parse','HEAD']))===$target['commit'],'baseline inspection never rewinds the private source checkout');
+    }
     reject(fn()=>StagingRelease::run(['test']),'STAGING_PHP_REQUIRED','controller refuses this non-staging runtime before database access');
     echo "RESULT PASS $passed deployment safety checks; no application regression suite rerun\n";
 } finally {

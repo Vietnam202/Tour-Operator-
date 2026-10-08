@@ -69,13 +69,17 @@ final class StagingRelease {
         self::need(proc_close($process) === 0, 'COMMAND_FAILED: '.basename($args[0]));
         return (string)$text;
     }
-    public static function source(string $directory): array {
+    public static function source(string $directory, string $ref = ''): array {
         self::need(trim(self::command(['git','-C',$directory,'remote','get-url','origin'])) === self::REPO, 'WRONG_REPOSITORY');
         self::need(trim(self::command(['git','-C',$directory,'branch','--show-current'])) === self::BRANCH, 'WRONG_BRANCH');
         self::need(trim(self::command(['git','-C',$directory,'status','--porcelain','--untracked-files=all'])) === '', 'DIRTY_CACHE');
         $sha = trim(self::command(['git','-C',$directory,'rev-parse','HEAD']));
         self::need($sha === trim(self::command(['git','-C',$directory,'rev-parse','refs/remotes/origin/'.self::BRANCH])), 'HEAD_NOT_TESTING');
         self::need((bool)preg_match('/^[0-9a-f]{40}$/D', $sha), 'INVALID_COMMIT');
+        // Only the verified historical baseline may be inspected outside the current testing HEAD.
+        self::need($ref === '' || $ref === self::BASELINE, 'BASELINE_REF_REQUIRED');
+        if ($ref !== '') self::command(['git','-C',$directory,'merge-base','--is-ancestor',$ref,$sha]);
+        $tree = $ref !== '' ? $ref : $sha;
         // Preserve existing committed test evidence, but never release it or permit new logs.
         $historicalLogs = [];
         foreach (explode("\0", self::command(['git','-C',$directory,'ls-tree','-rz',self::BASELINE,'--','verification'])) as $entry) {
@@ -84,7 +88,7 @@ final class StagingRelease {
             if (str_ends_with($path,'.log')) $historicalLogs[$path] = $metadata;
         }
         $files = [];
-        foreach (explode("\0", self::command(['git','-C',$directory,'ls-tree','-rz','HEAD'])) as $entry) {
+        foreach (explode("\0", self::command(['git','-C',$directory,'ls-tree','-rz',$tree])) as $entry) {
             if ($entry === '') continue;
             [$metadata, $path] = explode("\t", $entry, 2);
             self::path($path);
@@ -92,12 +96,29 @@ final class StagingRelease {
             self::need(self::permittedTracked($path,$metadata,$historicalLogs), 'TRACKED_SERVER_DATA: '.$path);
             if (!self::managed($path)) continue;
             self::need((bool)preg_match('/^100(?:644|755) blob [0-9a-f]{40}$/D', $metadata), 'NON_REGULAR_SOURCE: '.$path);
-            $file = self::safeTarget($directory, $path);
-            $files[$path] = ['source'=>self::digest($file), 'deployed'=>self::digest($file)];
+            $hash = $ref === '' ? self::digest(self::safeTarget($directory, $path))
+                : hash('sha256', self::command(['git','-C',$directory,'show',$tree.':'.$path]));
+            $files[$path] = ['source'=>$hash, 'deployed'=>$hash];
         }
         ksort($files);
         foreach (['.htaccess','index.html','api/index.php','api/bootstrap.php','api/bin/healthcheck.php','app.js','smart-costing.js','quote-confirmation.js','booking-operations.js'] as $key) self::need(isset($files[$key]), 'INCOMPLETE_RELEASE');
-        return ['commit'=>$sha, 'files'=>$files];
+        return ['commit'=>$tree, 'files'=>$files];
+    }
+    public static function requiredExtensions(): void {
+        self::need(extension_loaded('pdo_mysql') && class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers(), true), 'PDO_MYSQL_EXTENSION_REQUIRED');
+        self::need(extension_loaded('curl'), 'CURL_EXTENSION_REQUIRED');
+    }
+    public static function adoptionState(string $root, array $baseline, callable $readBlob): array {
+        self::need(($baseline['commit']??'') === self::BASELINE, 'INITIAL_BASELINE_ONLY');
+        foreach ($baseline['files'] as $path=>&$file) {
+            self::need(self::managed($path), 'UNMANAGED_STATE_PATH');
+            $blob = $readBlob($path);
+            self::need(is_string($blob) && hash('sha256',$blob) === $file['source'], 'BASELINE_SOURCE_CHANGED: '.$path);
+            $actual = (string)file_get_contents(self::safeTarget($root,$path));
+            self::need($actual === $blob || (!str_starts_with($path,'api/migrations/') && str_replace("\r\n","\n",$actual) === str_replace("\r\n","\n",$blob)), 'BASELINE_DRIFT: '.$path);
+            $file['deployed'] = hash('sha256',$actual);
+        } unset($file);
+        return $baseline;
     }
     public static function verify(string $root, array $state): void {
         foreach ($state['files'] as $path=>$file) {
@@ -222,7 +243,7 @@ final class StagingRelease {
         $config = require $configPath;
         self::need(($config['app']['env']??'') === 'staging' && rtrim($config['app']['base_url']??'', '/') === self::URL && rtrim($config['security']['allowed_origin']??'', '/') === self::URL, 'STAGING_CONFIG_FAILED');
         self::need(($config['db']['host']??'') === '127.0.0.1' && ($config['db']['database']??'') === 'v2qu_v2qu_vtaos', 'STAGING_DATABASE_FAILED');
-        self::need(extension_loaded('curl'), 'CURL_EXTENSION_REQUIRED');
+        self::requiredExtensions();
         $lock = fopen($control.'/release.lock','c'); self::need($lock !== false && flock($lock,LOCK_EX|LOCK_NB), 'DEPLOY_BUSY');
         $cfg = $config['db'];
         $db = new PDO('mysql:host=127.0.0.1;port='.(int)($cfg['port']??3306).';dbname=v2qu_v2qu_vtaos;charset=utf8mb4', $cfg['username'], $cfg['password'], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
@@ -237,7 +258,7 @@ final class StagingRelease {
                 self::need(unlink($journalFile), 'JOURNAL_REMOVE_FAILED');
                 throw new RuntimeException('INTERRUPTED_DEPLOY_ROLLED_BACK');
             }
-            if ($mode === '--preflight') { echo "PASS staging identity and no active cutover\n"; return; }
+            if ($mode === '--preflight') { echo "PASS staging identity, PDO MySQL/curl and no active cutover\n"; return; }
             if ($mode === '--rollback') {
                 $id = $args[2]??''; self::need((bool)preg_match('/^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}-[0-9a-f]{6}$/D',$id), 'BACKUP_ID_REQUIRED');
                 $directory = $control.'/backups/'.$id; $journal = self::json($directory.'/journal.json');
@@ -259,16 +280,10 @@ final class StagingRelease {
                 self::command(['git','-C',$source,'merge-base','--is-ancestor',self::BASELINE,$target['commit']]);
                 $complete = self::json($private.'/vs24-final-complete.json');
                 self::need(($complete['result']??'') === 'PASS' && ($complete['commit']??'') === self::BASELINE && ($complete['migration_035']??'') === 'PASS', 'VS24_CHECKPOINT_REQUIRED');
-                $diff = self::command(['git','-C',$source,'diff','--name-only','--no-renames',self::BASELINE,$target['commit']]);
-                foreach (array_filter(explode("\n",trim($diff))) as $path) self::need(!self::managed($path),'INITIAL_RUNTIME_CHANGE: '.$path);
-                // Runtime must equal the verified baseline; only non-SQL CRLF/LF representation may differ.
-                foreach ($target['files'] as $path=>&$file) {
-                    $blob = (string)file_get_contents(self::safeTarget($source,$path));
-                    $actual = (string)file_get_contents(self::safeTarget($root,$path));
-                    self::need($actual === $blob || (!str_starts_with($path,'api/migrations/') && str_replace("\r\n","\n",$actual) === str_replace("\r\n","\n",$blob)), 'BASELINE_DRIFT: '.$path);
-                    $file['deployed'] = hash('sha256',$actual);
-                } unset($file);
-                $baseline = $target; $baseline['commit'] = self::BASELINE;
+                // Compare live bytes to the immutable baseline tree, never to the new target.
+                // The normal plan below still rejects migration changes, drift and collisions.
+                $baseline = self::adoptionState($root, self::source($source,self::BASELINE),
+                    fn(string $path): string => self::command(['git','-C',$source,'show',self::BASELINE.':'.$path]));
                 self::ledger($db,$root,$baseline); self::health($root,$baseline); self::save($stateFile,$baseline);
                 echo "PASS adopted verified VS24 baseline; no source or database writes\n";
             } else self::need($mode === '', 'UNSUPPORTED_COMMAND');

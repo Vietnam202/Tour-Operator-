@@ -21,13 +21,13 @@ export VTA_CONFIG_FILE="$HOME_DIR/vta_private/config.php"
 
 case "${1:-}" in
   --check|--rollback|--resume)
-    exec "$PHP" "$CONTROL/staging-release.php" "$@"
+    exec "$PHP" -d opcache.enable_cli=0 "$CONTROL/staging-release.php" "$@"
     ;;
   ''|--adopt) ;;
   *) echo 'REFUSED: unsupported deploy command'; exit 1 ;;
 esac
 [ ! -e "$CONTROL/HALTED" ] || { echo 'HALTED: review last-result.json before resuming'; exit 1; }
-"$PHP" "$CONTROL/staging-release.php" --preflight
+"$PHP" -d opcache.enable_cli=0 "$CONTROL/staging-release.php" --preflight
 if [ ! -e "$SOURCE" ]; then
   mkdir -m 700 "$SOURCE"
   git -C "$SOURCE" init --quiet
@@ -49,4 +49,4 @@ if [ -n "$PREVIOUS" ]; then
 fi
 # Checkout resets only the isolated source cache, never the public application tree.
 git -C "$SOURCE" checkout --quiet -B "$BRANCH" "$TARGET"
-"$PHP" "$CONTROL/staging-release.php" "$@"
+"$PHP" -d opcache.enable_cli=0 "$CONTROL/staging-release.php" "$@"
