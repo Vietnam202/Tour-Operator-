@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/GroupVehiclePricing.php';
 
 /** Scenario guest inputs are projections. FOC and unrelated fixed resource counts survive. */
 final class PaxScenario {
@@ -28,7 +29,14 @@ final class PaxScenario {
     public static function calculate(PDO $db,array $graph,array $variant,int $pay,array $config,string $fx,?array $confirmed=null): array {
         $v=$graph['version'];$g=self::guests($v,$graph['profile'],$pay,$config,$confirmed);$v=array_replace($v,array_intersect_key($g,array_flip(QuoteVs2Domain::BASE)),['fx_rate'=>$fx]);
         $lines=$variant['lines'];$reqs=array_column($graph['requirements'],null,'id');$base=QuoteVs2Domain::guests($graph['version'],$graph['profile']);$review=[];
-        foreach($lines as &$l){$resource=$config['resource_counts'][(string)$l['id']]??null;
+        foreach($lines as &$l){
+            if(($config['vehicle_bands']??[])&&$l['line_kind']==='SERVICE'&&$l['formula_code']==='TRANSFER_PACKAGE'){
+                $rateId=GroupVehiclePricing::rate($config,(int)$l['id'],$pay);
+                $l['rate_version_id']=$rateId;$l['unit_amount_original']=null;
+                $l['manual_reason']=null;$l['manual_contract_json']='{}';
+                // Scenario supplier rate and contract are validated by Vs2RateResolver per pax.
+            }
+            $resource=$config['resource_counts'][(string)$l['id']]??null;
             if($resource!==null){if($l['quantity_source']!=='CUSTOM_QTY'||!in_array($l['formula_code'],['TRANSFER_PACKAGE','GUIDE_DAY'],true)||!is_array($resource))throw new InvalidArgumentException('Resource scenarios need an explicit vehicle/guide count');
                 if(isset($resource['counts'][(string)$pay])){$n=QuoteVs2Domain::count($resource['counts'][(string)$pay]);if($n<1)throw new InvalidArgumentException('Resource count must be positive');QuoteVs2Domain::text($resource['reason']??'',1000);$l['quantity_override']=null;$l['custom_quantity']=$n;}
             }
