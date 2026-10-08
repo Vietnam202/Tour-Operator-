@@ -34,7 +34,15 @@ final class PaxScenario {
                 $rateId=GroupVehiclePricing::rate($config,(int)$l['id'],$pay);
                 $l['rate_version_id']=$rateId;$l['unit_amount_original']=null;
                 $l['manual_reason']=null;$l['manual_contract_json']='{}';
-                // Scenario supplier rate and contract are validated by Vs2RateResolver per pax.
+                // Supplier-approved capacity drives vehicle count including FOC guests.
+                // Explicit reviewed resource_counts below can increase the fleet for luggage.
+                $capacity=QuoteVs2Repository::q($db,
+                    "SELECT capacity FROM rate_version_vs2_terms WHERE rate_version_id=? AND approval_state='APPROVED'",
+                    [$rateId])->fetchColumn();
+                if(!$capacity||(int)$capacity<1)throw new DomainException('VEHICLE_CAPACITY_REVIEW_REQUIRED');
+                $l['quantity_override']=null;
+                $l['custom_quantity']=intdiv($g['total_guests']+(int)$capacity-1,(int)$capacity);
+                // Vs2RateResolver independently checks supplier, date, eligibility and itinerary scope.
             }
             $resource=$config['resource_counts'][(string)$l['id']]??null;
             if($resource!==null){if($l['quantity_source']!=='CUSTOM_QTY'||!in_array($l['formula_code'],['TRANSFER_PACKAGE','GUIDE_DAY'],true)||!is_array($resource))throw new InvalidArgumentException('Resource scenarios need an explicit vehicle/guide count');
