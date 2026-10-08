@@ -182,7 +182,7 @@ final class PartnerHub {
                 if($method==='GET'){
                     $file=(string)($agency['logo_path']??'');
                     if(!$file||!is_file($file)||!hash_equals((string)$agency['logo_sha256'],hash_file('sha256',$file)))throw new OutOfBoundsException('Logo unavailable');
-                    header('Content-Type: image/png');header('Content-Disposition: inline; filename="agency-logo.png"');
+                    header('Content-Type: image/jpeg');header('Content-Disposition: inline; filename="agency-logo.jpg"');
                     header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');readfile($file);exit;
                 }
                 if($method==='POST'){
@@ -193,17 +193,17 @@ final class PartnerHub {
                     $src=$info[2]===IMAGETYPE_PNG?@imagecreatefrompng($file['tmp_name']):@imagecreatefromjpeg($file['tmp_name']);
                     if(!$src)throw new InvalidArgumentException('Invalid logo pixels');
                     $scale=min(1,800/max($info[0],$info[1]));$width=max(1,(int)round($info[0]*$scale));$height=max(1,(int)round($info[1]*$scale));
-                    $dst=imagecreatetruecolor($width,$height);imagealphablending($dst,false);imagesavealpha($dst,true);
+                    $dst=imagecreatetruecolor($width,$height);$white=imagecolorallocate($dst,255,255,255);imagefilledrectangle($dst,0,0,$width,$height,$white);imagealphablending($dst,true);
                     imagecopyresampled($dst,$src,0,0,0,0,$width,$height,$info[0],$info[1]);imagedestroy($src);
                     $base=rtrim((string)($cfg['storage']['local_path']??''),'/\\\\');if(!$base)throw new DomainException('Private storage unavailable');
-                    $dir=$base.'/b2b-agency-logos';if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new DomainException('Private logo directory unavailable');
+                    $dir=$base.'/b2b-agency-logos';if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new DomainException('Private logo directory unavailable');RuntimeGuard::privatePath($dir);
                     $temp=tempnam($dir,'logo-');if(!$temp){imagedestroy($dst);throw new DomainException('Cannot store agency logo');}
-                    $ok=imagepng($dst,$temp);imagedestroy($dst);
+                    $ok=imagejpeg($dst,$temp,92);imagedestroy($dst);
                     if(!$ok){@unlink($temp);throw new DomainException('Cannot process agency logo');}
-                    $hash=hash_file('sha256',$temp);$path=$dir.'/agency-'.$agency['id'].'-'.$hash.'.png';
+                    $hash=hash_file('sha256',$temp);$path=$dir.'/agency-'.$agency['id'].'-'.$hash.'.jpg';
                     if(!rename($temp,$path)){@unlink($temp);throw new DomainException('Cannot write logo');}
                     @chmod($path,0640);
-                    self::q($db,'UPDATE b2b_agencies SET logo_path=?,logo_mime=?,logo_sha256=? WHERE company_id=? AND id=?',[$path,'image/png',$hash,$company,$agency['id']]);
+                    self::q($db,'UPDATE b2b_agencies SET logo_path=?,logo_mime=?,logo_sha256=? WHERE company_id=? AND id=?',[$path,'image/jpeg',$hash,$company,$agency['id']]);
                     Audit::log($db,$company,$user,'B2B_LOGO_UPDATED','b2b_agency',(int)$agency['id']);Http::json(['ok'=>true,'sha256'=>$hash]);
                 }
             }
