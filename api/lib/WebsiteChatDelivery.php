@@ -41,6 +41,10 @@ final class WebsiteChatDelivery {
             $conv=self::q($db,"SELECT id,status FROM social_conversations WHERE company_id=? AND id=? FOR UPDATE",[$company,$id])->fetch();
             if(!$conv)throw new OutOfBoundsException('Conversation not found');
             if($conv['status']==='CLOSED')throw new DomainException('Closed conversation cannot receive replies');
+            if(array_key_exists('tour_advisor_draft_id',$input)&&$input['tour_advisor_draft_id']!==null) {
+                $draftId=self::positive($input['tour_advisor_draft_id'],'tour_advisor_draft_id');
+                MarketingTourAdvisor::validateDraftForSend($db,$company,$id,$draftId,$body);
+            }
             self::q($db,"INSERT INTO website_chat_outbound(company_id,conversation_id,request_key,payload_hash,body,created_by) VALUES(?,?,?,?,?,?)",[
                 $company,$id,$key,$hash,$body,(int)$user['id']]);
             $outId=(int)$db->lastInsertId();
