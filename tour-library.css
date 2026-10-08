@@ -3,3 +3,28 @@
 @media(max-width:820px){.tl-heading{flex-direction:column;align-items:flex-start;padding:12px 0}.tl-heading h1{font-size:25px}.tl-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tl-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.tl-import-sources{grid-template-columns:1fr}.tl-sections{grid-template-columns:1fr}.tl-card{padding:16px}.tl-card-actions .btn{min-height:40px}.tl-batch-bar{flex-direction:column;align-items:flex-start}.tl-day-meta{grid-template-columns:1fr 1fr}.tl-meta-fields{grid-template-columns:1fr}.tl-import-item{padding:16px}.tl-filters label{flex:1;min-width:140px}.tl-filters .tl-check{flex-basis:100%}.tl-import-item-head{flex-direction:column}.tl-import-item-head strong{max-width:100%}}
 @media(max-width:380px){.tl-grid{grid-template-columns:1fr}.tl-day-meta{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.tl-card{transition:none}}
+
+
+/* VTA approved V5 Library design: only inside Tour Program Library */
+.tour-library{--vta-navy:#0a2854;--vta-blue:#1768b0;--vta-gold:#f1b834}
+.tour-library .tl-heading h1{color:var(--vta-navy);font-size:26px}
+.tour-library .tl-metrics{grid-template-columns:repeat(3,minmax(0,1fr));margin:13px 0}
+.tour-library .tl-metric strong{color:var(--vta-blue);font-size:23px}
+.tour-library .tl-metric{padding:12px 16px}
+.tour-library .tl-grid{grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px}
+.tour-library .tl-card{padding:0;background:#fff;border-radius:13px;overflow:hidden;border-color:#dce6f1}
+.tour-library .tl-card-open{gap:0}
+.tour-library .tl-card-visual{width:100%;height:128px;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:12px;background:linear-gradient(125deg,#0a2854 1%,#1768b0 58%,#e9c779 100%)}
+.tour-library .tl-card-visual:before{content:"";position:absolute;inset:-50px -20px 15px 20%;background:radial-gradient(ellipse,transparent 43%,#ffffff24 45%,transparent 47%);transform:rotate(17deg)}
+.tour-library .tl-card-visual-code{position:relative;display:inline-block;padding:5px 8px;border-radius:5px;background:#ffffffed;color:#134773;font-weight:800;font-size:10px;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tour-library .tl-card-visual-brand{position:absolute;right:11px;top:12px;font-size:9px;color:#fff;letter-spacing:1.15px;font-weight:750}
+.tour-library .tl-card-details{padding:14px 15px 5px;display:grid;gap:7px;width:100%}
+.tour-library .tl-card-details strong{font-size:15px;color:#0a2854}
+.tour-library .tl-card-details span,.tour-library .tl-card-details small{font-size:11px;color:#6b8096}
+.tour-library .tl-tags{padding:0 15px;margin:7px 0 10px}
+.tour-library .tl-card-actions{padding:12px 15px 14px;gap:5px;border-top:1px solid #eef3f8}
+.tour-library .tl-card-actions .btn{font-size:11px;line-height:1.35;padding:8px 9px;border-radius:7px}
+.tour-library .tl-card-actions .btn:focus-visible,.tour-library .tl-card-open:focus-visible{outline:2px solid #1768b0;outline-offset:2px}
+.tour-library .tl-card-actions .btn[data-tl-edit]{background:#0a2854;color:#fff;border-color:#0a2854}
+@media(max-width:840px){.tour-library .tl-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}}
+@media(max-width:540px){.tour-library .tl-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.tour-library .tl-metric{padding:10px}.tour-library .tl-metric strong{font-size:21px}.tour-library .tl-metric span{font-size:10px}.tour-library .tl-filters{gap:8px}.tour-library .tl-grid{grid-template-columns:minmax(0,1fr)}}
