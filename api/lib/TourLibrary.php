@@ -172,7 +172,7 @@ final class TourLibrary {
     }
     private static function mime(string $ext): string { return match($ext){'pdf'=>'application/pdf','docx'=>'application/vnd.openxmlformats-officedocument.wordprocessingml.document','txt'=>'text/plain',default=>throw new InvalidArgumentException('Use DOCX, PDF or TXT')}; }
     public static function validateFile(string $path,string $ext): void {
-        self::mime($ext);$size=filesize($path);if($size===false||$size<1||$size>self::MAX_FILE_BYTES)throw new InvalidArgumentException('File must contain data and be at most 10 MB');
+        self::mime($ext);clearstatcache(true,$path);$size=filesize($path);if($size===false||$size<1||$size>self::MAX_FILE_BYTES)throw new InvalidArgumentException('File must contain data and be at most 10 MB');
         $head=file_get_contents($path,false,null,0,1024);if($head===false)throw new InvalidArgumentException('Cannot read uploaded file');
         if($ext==='pdf'&&!str_starts_with($head,'%PDF-'))throw new InvalidArgumentException('The file is not a PDF');
         if($ext==='docx') {
