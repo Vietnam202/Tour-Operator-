@@ -38,6 +38,22 @@ $raw=file_get_contents($path);
 foreach(explode(';',$raw) as $sql)if(trim($sql)!=='')$db->exec($sql);
 $extra=file_get_contents(__DIR__.'/../api/migrations/025_website_chat_outbound.sql');
 foreach(explode(';',$extra) as $sql)if(trim($sql)!=='')$db->exec($sql);
+// P3 upgraded RC6 schema needs marketing-approved tour metadata before P2 sends.
+$db->exec("CREATE TABLE tour_library_programs (
+ id BIGINT UNSIGNED PRIMARY KEY,
+ company_id BIGINT UNSIGNED NOT NULL,
+ status ENUM('DRAFT','ACTIVE','ARCHIVED') NOT NULL DEFAULT 'DRAFT',
+ title VARCHAR(190) NOT NULL,
+ destination VARCHAR(190) NOT NULL,
+ language VARCHAR(16) NOT NULL DEFAULT 'en',
+ tags_json JSON NOT NULL,
+ days_json JSON NOT NULL,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_lib_tenant(company_id,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$upgrade=file_get_contents(__DIR__.'/../api/migrations/037_marketing_tour_advisor_p3.sql');
+foreach(explode(';',$upgrade) as $statement)if(trim($statement)!=='')$db->exec($statement);
+
 $db->exec('INSERT INTO companies(id) VALUES(1),(2)');
 $db->exec('INSERT INTO campaigns(id,company_id) VALUES(1,1),(2,2)');
 $db->exec('INSERT INTO users(id,company_id) VALUES(1,1),(2,2)');
