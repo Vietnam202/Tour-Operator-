@@ -4,14 +4,14 @@ require_once __DIR__.'/../api/lib/QuoteOptions.php';
 require_once __DIR__.'/../api/lib/PriceMatrix.php';
 function checkGroup(bool $b,string $text):void{if(!$b)throw new RuntimeException('FAIL '.$text);echo 'PASS '.$text.PHP_EOL;}
 $db=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
-$db->exec('CREATE TABLE quote_price_matrix_cells (id INTEGER PRIMARY KEY,matrix_id INTEGER,generation INTEGER,status TEXT,selling_per_pax TEXT,net_per_pax TEXT,policy_snapshot_json TEXT,result_json TEXT,context_hash TEXT)');
+$db->exec('CREATE TABLE quote_price_matrix_cells (id INTEGER PRIMARY KEY,matrix_id INTEGER,generation INTEGER,channel TEXT,min_pax INTEGER,variant_id INTEGER,status TEXT,selling_per_pax TEXT,net_per_pax TEXT,policy_snapshot_json TEXT,result_json TEXT,context_hash TEXT)');
 $policy=CommercialPolicy::validate([
  'policy_key'=>'AGENT','name'=>'Test B2B 20%','channel'=>'B2B_AGENT','policy_mode'=>'B2B_MARKUP',
  'pricing_value'=>'20','minimum_margin_pct'=>'10','warning_margin_pct'=>'15','commission_pct'=>'0',
  'deposit_pct'=>'30','rounding_step'=>'0','selling_currency'=>'USD','validity_days'=>14,
  'payment_terms'=>'','cancellation_policy'=>''
 ]);
-$cost='5100000.00';
+$cost='30600000.00';
 $result=['scenarios'=>[['pax'=>6,'cost'=>['cost_total_vnd'=>$cost],'pricing'=>[]]],'failures'=>[]];
 $hash=str_repeat('a',64);
 $db->prepare('INSERT INTO quote_price_matrix_cells(id,matrix_id,generation,status,selling_per_pax,net_per_pax,policy_snapshot_json,result_json,context_hash) VALUES(1,1,1,?,?,?,?,?,?)')
