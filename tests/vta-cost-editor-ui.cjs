@@ -21,18 +21,22 @@ async function harness({locked=false,cost=true}={}){
     schedule:[],requirements:[
       {id:10,category:'HOTEL',service_name:'Hanoi Hotel',requirement_state:'REQUIRED',service_units:2,default_quantity_source:'HOTEL_PAX',scope:{destination:'Hanoi'},metadata:{}},
       {id:11,category:'TRANSPORT',service_name:'Airport Transfer',requirement_state:'REQUIRED',service_units:2,default_quantity_source:'CUSTOM_QTY',scope:{destination:'Hanoi'},metadata:{}},
-      {id:12,category:'CRUISE',service_name:'Halong Overnight',requirement_state:'REQUIRED',service_units:1,default_quantity_source:'CRUISE_PAX',scope:{destination:'Halong'},metadata:{}}
+      {id:12,category:'CRUISE',service_name:'Halong Overnight',requirement_state:'REQUIRED',service_units:1,default_quantity_source:'CRUISE_PAX',scope:{destination:'Halong'},metadata:{}},
+      {id:13,category:'HOTEL',service_name:'Sapa Hotel',requirement_state:'REQUIRED',service_units:1,default_quantity_source:'HOTEL_PAX',scope:{destination:'Sapa'},metadata:{}}
     ]};
   const d={items:[3,4,5].map(star=>({variant_id:star,variant_key:'private-'+star+'-'+star,
     costing_mode:'PRIVATE',hotel_level:star+'*',cruise_level:star,pricing:{cost_total_vnd:String(star*9000000)},
-    lines:[fixture(star,'HOTEL',10),fixture(star,'TRANSPORT',11),fixture(star,'CRUISE',12)]})),
+    lines:[fixture(star,'HOTEL',10),fixture(star,'TRANSPORT',11),fixture(star,'CRUISE',12),
+      {...fixture(star,'HOTEL',13),unit_rate_vnd:String(star*120000)}]})),
     supplier_choices:[{id:1,name:'Supplier A'}]};
   const api={request:async(route,opts={})=>{
     calls.push({route,...opts});
     if(route.endsWith('/options'))return structuredClone(d);
     if(route.endsWith('/smart-costing/context')&&(!opts.method||opts.method==='GET'))return structuredClone(ctx);
     if(route.endsWith('/smart-costing/validation'))return {valid:false,errors:[{code:'RATE_REVIEW_REQUIRED'}],warnings:[]};
-    if(opts.method){ctx.costing_revision++;
+    if(opts.method){
+      if(opts.body?.line?.unit_amount_original==='999999')throw Error('Supplier unavailable');
+      ctx.costing_revision++;
       const b=opts.body||{};
       if(route.endsWith('/smart-costing/context')){
         if(b.hotel_pax!==undefined)ctx.profile.hotel_pax=b.hotel_pax;
@@ -57,11 +61,19 @@ async function harness({locked=false,cost=true}={}){
 }
 (async()=>{
   let h=await harness(),{root,w,calls}=h;
-  assert.equal(root.querySelectorAll('[data-vta-row]').length,3);
-  assert.equal(root.querySelectorAll('.vta-stay-line').length,2);
+  assert.equal(root.querySelectorAll('[data-vta-row]').length,4);
+  assert.equal(root.querySelectorAll('.vta-stay-line').length,3);
   assert.equal(root.querySelectorAll('[data-vta-summary]').length,3);
   assert.equal(root.querySelector('[data-vta-row="10"] [data-name]').value,'Hanoi Hotel');
-  console.log('PASS responsive service rows and independent per-destination Hotel/Cruise rates');
+  assert.equal(root.querySelector('[data-vta-row="13"] [data-destination]').value,'Sapa');
+  assert.equal(root.querySelector('[data-vta-row="10"] [data-destination]').value,'Hanoi');
+  const sapaRate=root.querySelector('[data-vta-row="13"] [data-rate="2"]');
+  sapaRate.value='735000';sapaRate.dispatchEvent(new w.Event('change'));await settle();
+  const sapaSave=calls.filter(c=>c.body?.requirement_id===13&&c.body?.lines).at(-1);
+  assert.deepEqual(Array.from(sapaSave.body.variant_ids),[5]);
+  assert.equal(sapaSave.body.lines[5].unit_amount_original,'735000');
+  assert.equal(root.querySelector('[data-vta-row="10"] [data-name]').value,'Hanoi Hotel');
+  console.log('PASS separate Hanoi and Sapa hotel rows with independent rates for each option');
   const hotel=root.querySelector('[data-vta-row="10"]');
   hotel.querySelector('[data-name]').value='Hanoi New Hotel';
   hotel.querySelector('[data-name]').dispatchEvent(new w.Event('change',{bubbles:true}));await settle();
@@ -73,9 +85,18 @@ async function harness({locked=false,cost=true}={}){
   assert.equal(saved.body.line.manual_reason,'Supplier rate contract');
   assert.equal(saved.body.variant_ids.length,3);
   console.log('PASS inline shared cost update writes supplier evidence and server-calculates totals');
-  const pax=root.querySelector('[data-guest="hotel_pax"]');pax.value='7';pax.dispatchEvent(new w.Event('change'));await settle();
-  assert(calls.some(c=>c.route.endsWith('/smart-costing/context')&&c.method==='PUT'&&c.body.hotel_pax===7));
+  const pax=root.querySelector('[data-guest="hotel_pax"]');pax.value='5';pax.dispatchEvent(new w.Event('change'));await settle();
+  assert(calls.some(c=>c.route.endsWith('/smart-costing/context')&&c.method==='PUT'&&c.body.hotel_pax===5));
+  const previousCalls=calls.length;pax.value='7';pax.dispatchEvent(new w.Event('change'));await settle();
+  assert.equal(calls.length,previousCalls);assert.equal(pax.value,'5');
+  const firstDate=root.querySelector('[data-vta-row="10"] [data-service-date]');
+  firstDate.value='2027-01-02';firstDate.dispatchEvent(new w.Event('change'));await settle();
+  assert(calls.some(c=>c.body?.requirement?.id===10&&c.body.requirement.scope.dates?.join(',')==='2027-01-02,2027-01-03'));
   console.log('PASS guest populations edit directly with quote revision');
+  let duplicate=root.querySelector('[data-mix-hotel="0"]');duplicate.value='4';
+  duplicate.dispatchEvent(new w.Event('change'));await settle();
+  assert.equal(root.querySelector('[data-vta-summary="0"] [data-mix-hotel]').value,'3');
+  assert(root.querySelector('[data-vta-status]').textContent.includes('already selected'));
   let mix=root.querySelector('[data-mix-cruise="0"]');mix.value='5';mix.dispatchEvent(new w.Event('change'));await settle();
   assert(calls.some(c=>c.body?.action==='mix'&&c.body.hotel_level===3&&c.body.cruise_level===5));
   assert(root.textContent.includes('Hotel 3★ / Cruise 5★'));
@@ -85,6 +106,18 @@ async function harness({locked=false,cost=true}={}){
   root.querySelector('[data-add]').click();await settle();
   assert(calls.some(c=>c.body?.requirement?.category==='TOUR'&&c.body.requirement.service_name==='Group Tour / SIC'));
   console.log('PASS + Add service category without editor popup');
+  const hotelReview=root.querySelector('[data-vta-row="10"]');
+  const proof=hotelReview.querySelector('[data-proof="0"]');
+  proof.querySelector('[data-review-note]').value='Contract and nights reviewed';
+  // Explicit review command remains separate from entry of a rate.
+  const reviewButton=proof.querySelector('[data-review-action="0"]');
+  reviewButton.hidden=false;reviewButton.click();await settle();
+  assert(calls.some(c=>c.body?.action==='review'&&c.body.requirement_id===10&&
+    c.body.review_reason==='Contract and nights reviewed'&&c.body.variant_ids.length===1));
+  const unsaved=root.querySelector('[data-vta-row="11"] [data-rate="0"]');
+  unsaved.value='999999';unsaved.dispatchEvent(new w.Event('change'));await settle();
+  assert(root.querySelector('[data-vta-status]').textContent.includes('Save failed'));
+  console.log('PASS explicit supplier review and failed autosave warning');
   const del=root.querySelector('[data-vta-row="11"]');
   del.querySelector('[data-remove]').click();
   assert.equal(del.querySelector('.vta-remove-confirm').hidden,false);
