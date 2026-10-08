@@ -10,7 +10,9 @@ async function harness({permission=true,status='DRAFT',generated=false}={}){
  const data={costing_revision:5,matrix:generated?{status:'DRAFT'}:null,cells:generated?[{id:1,variant_id:34,
    band_key:'2-2',min_pax:2,max_pax:2,channel:'B2B_AGENT',selling_currency:'USD',
    selling_per_pax:null,status:'SCENARIO_REVIEW_REQUIRED',result:{mode:'PRIVATE',hotel_level:'3*',cruise_level:4,
-   label:'Hotel 3 / Cruise 4',scenarios:[]}}]:[],config:generated?{vehicle_bands:[{min:2,max:2,vehicle:'Sedan / 7-seater',reason:'Approved supplier contract'}]}:{}};
+   label:'Hotel 3 / Cruise 4',scenarios:[]}},{id:2,variant_id:34,band_key:'3-4',min_pax:3,max_pax:4,
+   channel:'B2B_AGENT',selling_currency:'USD',selling_per_pax:'270.00',status:'VALID',
+   result:{mode:'PRIVATE',hotel_level:'3*',cruise_level:4,label:'Hotel 3 / Cruise 4',scenarios:[]}}]:[],config:generated?{vehicle_bands:[{min:2,max:2,vehicle:'Sedan / 7-seater',reason:'Approved supplier contract'}]}:{}};
  const api={request:async(url,opt={})=>{
   calls.push({url,...opt});
   if(url.endsWith('/price-matrix'))return data;
@@ -53,6 +55,15 @@ async function harness({permission=true,status='DRAFT',generated=false}={}){
  assert(h.root.querySelector('[data-group-table]').textContent.includes('Need Rate / Review'));
  assert(!h.root.querySelector('[data-group-table]').textContent.includes('USD 0.00'));
  console.log('PASS unresolved supplier rates display Need Rate, never a fake zero price');
+ const edit=h.root.querySelector('[data-price-save="2"]');
+ assert(edit,'Valid selling cell allows direct price editing');
+ h.root.querySelector('[data-price-value="2"]').value='265.00';
+ h.root.querySelector('[data-price-reason="2"]').value='Approved agent negotiation';
+ edit.click();await new Promise(resolve=>setImmediate(resolve));
+ const manual=h.calls.find(c=>c.url.endsWith('/manual-price'));
+ assert.equal(manual.body.cell_id,2);assert.equal(manual.body.selling_per_pax,'265.00');
+ assert.equal(manual.body.reason,'Approved agent negotiation');assert.equal(manual.body.expected_revision,5);
+ console.log('PASS direct per-group selling override carries reason and revision for backend margin validation');
  h.dom.window.close();h=await harness({permission:false});
  assert(!h.calls.some(c=>c.url.endsWith('/options')||c.url.endsWith('/transport-options')));
  assert(!h.root.querySelector('[data-vehicles]'));
