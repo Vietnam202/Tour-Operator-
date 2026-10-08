@@ -25,6 +25,13 @@ $cfg['integrations']['meta_inbox']['accounts']['vta_instagram']+= [
  'permissions'=>['instagram_manage_messages'],
  'messaging_enabled'=>true,'messaging_permission_approved'=>true,'message_task_confirmed'=>true
 ];
+$status=MetaReplies::connectionStatus($cfg,1);
+p8check(count($status)===1&&$status[0]['platform']==='FACEBOOK_MESSENGER','connection panel restricts status to own tenant');
+p8check($status[0]['outbound_configured']===true&&$status[0]['live_api_verified']===false,'permission readiness not misrepresented as live OAuth verification');
+p8check(!str_contains(json_encode($status),str_repeat('T',60)),'readiness API never leaks private Meta access token');
+$otherStatus=MetaReplies::connectionStatus($cfg,2);
+p8check(count($otherStatus)===1&&$otherStatus[0]['outbound_mode']==='DRAFT_ONLY','Instagram status accurately remains draft only');
+
 $before=MetaReplies::thread($db,$cfg,1,$cid);
 p8check(!$before['can_send']&&$before['reason']==='OUTSIDE_24H_WINDOW','old webhook event cannot authorize Messenger reply');
 $igId=$db->query("SELECT id FROM social_conversations WHERE company_id=2 AND source_code LIKE 'meta_ig_%'")->fetchColumn();
