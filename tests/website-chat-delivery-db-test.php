@@ -48,6 +48,7 @@ $db->exec("CREATE TABLE tour_library_programs (
  language VARCHAR(16) NOT NULL DEFAULT 'en',
  tags_json JSON NOT NULL,
  days_json JSON NOT NULL,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uq_lib_tenant(company_id,id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 $upgrade=file_get_contents(__DIR__.'/../api/migrations/037_marketing_tour_advisor_p3.sql');
