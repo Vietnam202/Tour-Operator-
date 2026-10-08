@@ -11,6 +11,8 @@ on:
       - 'index.html'
       - 'service-worker.js'
       - 'tests/vta-cost-editor-ui.cjs'
+      - 'tests/rc6-smart-cost-native.php'
+      - 'docs/RC6_SMART_COST_UAT_VI.md'
       - '.github/workflows/cost-editor.yml'
   workflow_dispatch:
 permissions:
