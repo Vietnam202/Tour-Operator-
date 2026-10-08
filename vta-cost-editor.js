@@ -191,6 +191,11 @@
         '<span>' + escapeHTML(guest.paying_pax) + ' paying · ' + escapeHTML(guest.total_guests) + ' guests</span>' +
         '<span>' + escapeHTML(profile.hotel_pax ?? '—') + ' hotel pax · ' + escapeHTML(profile.cruise_pax ?? '—') + ' cruise pax</span>' +
         '<span class="vta-save-state" role="status" data-vta-status>' + (locked?'Read-only':'Saved') + '</span></div>' +
+        '<div class="vta-guest-controls">' +
+        '<label>Paying Pax' + input('type="number" min="1" max="10000" data-guest="paying_pax" inputmode="numeric"',guest.paying_pax,'vta-guest-input') + '</label>' +
+        '<label>Hotel Pax' + input('type="number" min="0" max="10000" data-guest="hotel_pax" inputmode="numeric"',profile.hotel_pax ?? '','vta-guest-input','placeholder="Review"') + '</label>' +
+        '<label>Cruise Pax' + input('type="number" min="0" max="10000" data-guest="cruise_pax" inputmode="numeric"',profile.cruise_pax ?? '','vta-guest-input','placeholder="Review"') +
+        '</label><small>Guest composition is managed in Info. FOC costs stay included; cost/pax uses Paying Pax.</small></div>' +
         card('A. Common Services',common,false) + card('B. Hotel & Cruise · Each destination has its own rate',stays,true) +
         '<div class="vta-add-bar">' +
         (edit?selectHTML(options,'HOTEL','data-new-service aria-label="Service to add"') +
@@ -298,6 +303,15 @@
         send({variant_ids:ids(),action:'mix',mode,hotel_level:hotel,cruise_level:cruise})
           .then(result=>{if(result?.variant_id){selectVariant(result.variant_id);
             status('Combination saved · supplier rates require review');}});
+      });
+      host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
+        if(!edit)return;
+        const raw=input.value.trim(),key=input.dataset.guest;
+        if(!/^\\d+$/.test(raw) || Number(raw)>10000 || (key==='paying_pax'&&Number(raw)<1)){
+          status('Invalid guest count');return;
+        }
+        send({[key]:Number(raw),review_reason:'Service population edited in Cost'},
+          '/smart-costing/context','PUT',true);
       });
       host.querySelectorAll('[data-vta-row]').forEach(bindRow);
       host.querySelector('[data-add]')?.addEventListener('click',()=>{
