@@ -4,6 +4,9 @@ require_once __DIR__.'/../api/lib/MarketingTourShare.php';
 require __DIR__.'/marketing-tour-advisor-db-test.php';
 
 echo PHP_EOL."VTA P4 Tour Share integration tests".PHP_EOL;
+$sql=file_get_contents(__DIR__.'/../api/migrations/038_marketing_tour_share_p4.sql');
+foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$db->exec($statement);
+
 $cid=(int)$first['conversation_id'];
 $db->prepare("UPDATE social_conversations SET status='NEW' WHERE company_id=1 AND id=?")->execute([$cid]);
 $manager=['company_id'=>1,'id'=>1];
