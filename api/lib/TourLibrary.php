@@ -237,6 +237,62 @@ final class TourLibrary {
             $out['import_token']=self::stage($db,$config,$u,$path,$name,$ext,$type,$url);$out['has_source']=true;return $out;
         }finally {if($type==='GOOGLE_DRIVE'&&is_file($path))unlink($path);}
     }
+    /**
+     * Preview a ZIP of existing B2B Word programs; each DOCX is staged with its
+     * original binary, reviewed individually and then saved via the normal V5 API.
+     * No prices are approved or published by this importer.
+     */
+    public static function previewZip(PDO $db,array $cfg,array $u,array $file):array {
+        if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_uploaded_file($file['tmp_name']??''))
+            throw new InvalidArgumentException('Upload a ZIP file from your PC');
+        if(($file['size']??0)>209715200||($file['size']??0)<20)
+            throw new InvalidArgumentException('ZIP must be under 200 MB');
+        if(!class_exists('ZipArchive'))throw new RuntimeException('ZIP import requires PHP ZipArchive');
+        $zip=new ZipArchive();
+        if($zip->open($file['tmp_name'])!==true)throw new InvalidArgumentException('Invalid ZIP archive');
+        $items=[];$seen=[];$total=0;$count=0;
+        try{
+            if($zip->numFiles>250)throw new InvalidArgumentException('ZIP has too many archive entries');
+            for($i=0;$i<$zip->numFiles;$i++){
+                $stat=$zip->statIndex($i);if(!$stat)continue;
+                $path=(string)($stat['name']??'');
+                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
+                if(str_contains($path,"\0")||str_contains($path,'\\')||str_contains($path,'../')||str_starts_with($path,'/'))
+                    throw new InvalidArgumentException('Unsafe ZIP entry name');
+                $name=self::filename(basename($path));$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
+                if(!in_array($ext,['docx','pdf','txt'],true))continue;
+                if(++$count>50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
+                if(isset($seen[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
+                $seen[strtolower($name)]=true;
+                $size=(int)($stat['size']??0);$packed=(int)($stat['comp_size']??0);$total+=$size;
+                if($size<1||$size>self::MAX_FILE_BYTES||$total>209715200||$size/max(1,$packed)>150)
+                    throw new InvalidArgumentException('ZIP file limit or unsafe compression ratio: '.$name);
+                $temp=tempnam(sys_get_temp_dir(),'vta-b2b-');
+                if($temp===false)throw new RuntimeException('Cannot create temporary import file');
+                try {
+                    $stream=$zip->getStream($path);if(!$stream)throw new InvalidArgumentException('Cannot read ZIP member');
+                    $output=fopen($temp,'wb');
+                    if(!$output){fclose($stream);throw new RuntimeException('Cannot open import temp file');}
+                    $copied=stream_copy_to_stream($stream,$output,self::MAX_FILE_BYTES+1);fclose($stream);fclose($output);
+                    if($copied!==$size)throw new InvalidArgumentException('ZIP member decompression did not match expected size');
+                    self::validateFile($temp,$ext);
+                    $r=DocumentParser::extract($temp,$ext);
+                    if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Document too long');
+                    $item=self::previewText($r['text'],$name,'PC','');
+                    $item['warnings'][]=$r['note'];
+                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original Word source is retained.';
+                    $item['extraction_quality']=$r['quality'];
+                    $item['import_token']=self::stage($db,$cfg,$u,$temp,$name,$ext,'PC','');
+                    $item['has_source']=true;
+                    $items[]=['name'=>$name,'status'=>'READY','preview'=>$item];
+                }catch(Throwable $e){
+                    $items[]=['name'=>$name,'status'=>'ERROR','message'=>$e->getMessage()];
+                }finally{if(is_file($temp))unlink($temp);}
+            }
+        }finally{$zip->close();}
+        if($count===0)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
+        return ['items'=>$items,'total'=>$count,'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
+    }
     private static function program(PDO $db,int $company,int $id,bool $lock=false): array {
         $r=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND id=?'.($lock?' FOR UPDATE':''),[$company,$id])->fetch(PDO::FETCH_ASSOC);
         if(!$r)throw new OutOfBoundsException('Tour program not found');return $r;
@@ -318,6 +374,7 @@ final class TourLibrary {
     public static function handle(string $route,string $method,PDO $db,array $config,array $u): void {
         if($route!=='tour-library'&&!str_starts_with($route,'tour-library/'))return;
         try {
+            if($route==='tour-library/preview-zip'&&$method==='POST'){self::permission($db,$u,true);Http::json(['ok'=>true]+self::previewZip($db,$config,$u,$_FILES['file']??[]));}
             if($route==='tour-library/preview'&&$method==='POST'){self::permission($db,$u,true);$b=isset($_FILES['file'])?$_POST:Http::body();Http::json(['ok'=>true]+self::preview($db,$config,$u,$b,$_FILES['file']??null));}
             if($route==='tour-library'&&$method==='GET') {
                 self::permission($db,$u);$limit=filter_var($_GET['limit']??100,FILTER_VALIDATE_INT);$offset=filter_var($_GET['offset']??0,FILTER_VALIDATE_INT);
