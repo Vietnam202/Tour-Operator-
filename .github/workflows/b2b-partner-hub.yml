@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'api/lib/PartnerHub.php'
+      - 'api/lib/TourLibrary.php'
+      - 'tour-library.js'
       - 'api/index.php'
       - 'api/bootstrap.php'
       - 'api/migrations/037_b2b_partner_hub.sql'
@@ -26,10 +28,15 @@ jobs:
       - name: PHP syntax checks
         run: |
           php -l api/lib/PartnerHub.php
+          php -l api/lib/TourLibrary.php
           php -l api/bootstrap.php
           php -l api/index.php
           php -l tests/b2b-partner-hub-unit.php
       - name: JavaScript syntax check
-        run: node --check partner-hub.js
+        run: |
+          node --check partner-hub.js
+          node --check tour-library.js
       - name: B2B domain tests
-        run: php tests/b2b-partner-hub-unit.php
+        run: |
+          php tests/b2b-partner-hub-unit.php
+          php tests/tour-library.php
