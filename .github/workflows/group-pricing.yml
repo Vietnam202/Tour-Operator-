@@ -11,6 +11,7 @@ on:
       - 'api/lib/PaxScenario.php'
       - 'tests/rc6-group-pricing-ui.cjs'
       - 'tests/rc6-group-pricing-unit.php'
+      - 'tests/rc6-group-pricing-manual-unit.php'
       - 'tests/rc6-group-pricing-native.php'
       - '.github/workflows/group-pricing.yml'
   workflow_dispatch:
@@ -45,6 +46,9 @@ jobs:
       - name: Unit and interface regression
         run: |
           php tests/rc6-group-pricing-unit.php
+          php -m | grep -qi pdo_sqlite || (sudo apt-get update -qq && sudo apt-get install -y php-sqlite3)
+          php -l tests/rc6-group-pricing-manual-unit.php
+          php tests/rc6-group-pricing-manual-unit.php
           node tests/rc6-group-pricing-ui.cjs
           node tests/vs23-ui.cjs
           node tests/vta-cost-editor-ui.cjs
