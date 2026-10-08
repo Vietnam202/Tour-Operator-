@@ -1,0 +1,55 @@
+name: Marketing Tour Share P4
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MarketingTourShare.php'
+      - 'api/migrations/038_marketing_tour_share_p4.sql'
+      - 'api/index.php'
+      - 'api/bootstrap.php'
+      - 'index.html'
+      - 'social-inbox.js'
+      - 'tour-share-inbox.js'
+      - 'tour-share-inbox.css'
+      - 'tests/marketing-tour-share-db-test.php'
+      - '.github/workflows/marketing-tour-share-p4.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/MarketingTourShare.php
+          php -l api/lib/MarketingTourAdvisor.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/marketing-tour-share-db-test.php
+      - name: JavaScript syntax
+        run: |
+          node --check social-inbox.js
+          node --check tour-share-inbox.js
+          node --check tour-advisor-inbox.js
+      - name: MariaDB tour share integration
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-tour-share-db-test.php
