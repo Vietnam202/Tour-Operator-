@@ -39,7 +39,8 @@ window.VTATourProposalStudio={
    container.classList.add('vtps-host');
    container.querySelector('[data-pricing-warnings]').textContent=validatePrices(current.proposal.private_prices).join(' ');
    container.classList.toggle('vtps-preview',preview);
-   if(!canEdit){container.querySelectorAll('input,textarea,select,button[data-action="save"],button[data-action="add-day"],button[data-action="add-private"],button[data-action="add-hotel"],button[data-day-action],button[data-remove-private],button[data-remove-hotel]').forEach(el=>{el.disabled=true;if(el.tagName==='BUTTON')el.hidden=true;});container.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));container.querySelector('[data-vtps-state]').textContent='Chỉ xem · Không có quyền sửa';}
+   if(!canEdit||preview){container.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);container.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));}
+   if(!canEdit){container.querySelectorAll('button[data-action="save"],button[data-action="add-day"],button[data-action="add-private"],button[data-action="add-hotel"],button[data-day-action],button[data-remove-private],button[data-remove-hotel]').forEach(el=>{el.disabled=true;el.hidden=true;});container.querySelector('[data-vtps-state]').textContent='Chỉ xem · Không có quyền sửa';}
   }
   function read(){
    const one=s=>container.querySelector(s);
@@ -54,7 +55,7 @@ window.VTATourProposalStudio={
    ['children','payment','cancellation','notes'].forEach(k=>p.policies[k]=one('[data-proposal="'+k+'"]').value);
    current.days=[...container.querySelectorAll('[data-day-index]')].map((node,i)=>{
      const d=current.days[Number(node.dataset.dayIndex)]||{};
-     const val=k=>{const el=node.querySelector('[data-day-field="'+k+'"]');return el?.isContentEditable?el.innerText:el?.value||'';};
+     const val=k=>{const el=node.querySelector('[data-day-field="'+k+'"]');return el?.hasAttribute('contenteditable')?(el.innerText??el.textContent??''):el?.value||'';};
      return {...d,day:i+1,...Object.fromEntries(['date','title','description','meals','overnight','notes'].map(k=>[k,val(k)]))};
    });
    current.proposal=p;
@@ -87,7 +88,7 @@ window.VTATourProposalStudio={
   container.addEventListener('click',async e=>{
    const scroll=e.target.closest('[data-scroll]');if(scroll){container.querySelector('#'+scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});return;}
    const b=e.target.closest('button');if(!b||!container.contains(b)||b.disabled)return;
-   if(!canEdit&&!['back','preview'].includes(b.dataset.action||''))return;
+   if((!canEdit||preview)&&!['back','preview'].includes(b.dataset.action||''))return;
    if(b.dataset.action==='save'){await save();return;}
    if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');await onBack();return;}
    if(b.dataset.action==='preview'){read();preview=!preview;screen();return;}
