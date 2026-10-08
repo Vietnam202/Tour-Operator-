@@ -79,8 +79,10 @@ final class SocialPublishing {
         return $v;
     }
     private static function hash(array $c):string {
-        // P5-compatible: id/status/channel/format/asset URL/body.
-        return hash('sha256',json_encode([$c['id'],$c['status'],$c['channel'],$c['content_format'],$c['asset_url'],$c['body']],JSON_THROW_ON_ERROR));
+        // Preserve P5 Facebook fingerprints. Instagram additionally fingerprints media rights.
+        $fields=[$c['id'],$c['status'],$c['channel'],$c['content_format'],$c['asset_url'],$c['body']];
+        if($c['channel']==='Instagram')$fields[]=$c['rights_note'];
+        return hash('sha256',json_encode($fields,JSON_THROW_ON_ERROR));
     }
     public static function create(PDO $db,array $config,array $user,array $input):array {
         $company=(int)$user['company_id'];
