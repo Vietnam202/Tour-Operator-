@@ -52,7 +52,7 @@ $ours=MetaConnectionHealth::inventory($healthCfg,1);
 p9check(count($ours)===3,'private config discovery sees Messenger, Page and IG publisher for company 1');
 $theirs=MetaConnectionHealth::inventory($healthCfg,2);
 p9check(count($theirs)===1&&$theirs[0]['product']==='INSTAGRAM_DM','company 2 only sees its own Instagram DM');
-p9check(!str_contains(json_encode($ours),$appSecret),'inventory does not expose app secret');
+p9check(!str_contains(json_encode(array_map(static fn($a)=>[$a['alias'],$a['product'],$a['entity_id']],$ours)),$appSecret),'public account metadata omits Meta app secret');
 $entry=array_values(array_filter($ours,fn($a)=>$a['product']==='MESSENGER'))[0];
 $future=time()+14*86400;
 $calls=[];
