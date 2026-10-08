@@ -18,6 +18,12 @@ function state(string $root,array $paths,string $commit): array {
 try {
     foreach (['.env','.env.production','api/config.php','uploads/customer.pdf','storage/customer.pdf','runtime/a.php','logs/a.log','cache/a.php','backup/a.php','vta_private/config.php','secret.key','deploy/staging-release.php','docs/test.md'] as $path) check(!StagingRelease::managed($path),'exclude '.$path);
     foreach (['../app.js','api/../../config.php','/etc/passwd','api//lib/a.php','api/a.php;id','api/./a.php','api\a.php'] as $path) reject(fn()=>StagingRelease::managed($path),'UNSAFE_PATH','reject path '.$path);
+    $meta='100644 blob '.str_repeat('a',40); $historic=['verification/RC6.2/synthetic.log'=>$meta];
+    check(StagingRelease::permittedTracked('verification/RC6.2/synthetic.log',$meta,$historic),'allow byte-identical historical test log outside release');
+    check(!StagingRelease::managed('verification/RC6.2/synthetic.log'),'historical test log is excluded from deploy');
+    check(!StagingRelease::permittedTracked('verification/RC6.2/synthetic.log','100644 blob '.str_repeat('b',40),$historic),'reject changed historical log');
+    check(!StagingRelease::permittedTracked('verification/RC6.2/new.log',$meta,$historic),'reject newly tracked log');
+    check(!StagingRelease::permittedTracked('logs/customer.log',$meta,$historic),'reject server log outside historical verification');
     StagingRelease::atomic($root.'/.htaccess',"original access\n");
     StagingRelease::atomic($root.'/app.js',"old app\n");
     StagingRelease::atomic($root.'/removed.js',"old unused module\n");

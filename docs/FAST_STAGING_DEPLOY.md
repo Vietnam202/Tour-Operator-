@@ -114,6 +114,7 @@ step is required by this PHP/vanilla JavaScript application.
 - `.env`, private configuration, uploads, storage/runtime, logs, cache, backups,
   generated documents, keys and local database files are excluded. Tracked server
   data, symlinks, path escapes, unknown file collisions and hosting edits stop deploy.
+- Existing committed verification logs are preserved unchanged and excluded from the release manifest. Only logs with the exact baseline Git blob are allowed; newly tracked or modified logs are rejected. They are historical test evidence, not hosting runtime logs.
 - Source removals are limited to files previously recorded as managed source; data
   directories and untracked files are never recursively deleted.
 - Every release saves and verifies private copies of affected source, `.htaccess`,

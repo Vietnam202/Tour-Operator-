@@ -20,6 +20,10 @@ final class StagingRelease {
         return (bool)preg_match('~(?:^|/)(?:\.git|\.env(?:\.[^/]*)?|vta_private|private|uploads|storage|runtime|logs|cache|backups?|generated|node_modules)(?:/|$)|\.(?:pem|key|sqlite3?|db|log)$~i', $path)
             || in_array($path, ['api/config.php', 'api/config.example.php'], true);
     }
+    public static function permittedTracked(string $path, string $metadata, array $historicalLogs): bool {
+        return !self::protectedPath($path) || $path === 'api/config.example.php'
+            || (str_starts_with($path,'verification/') && str_ends_with($path,'.log') && ($historicalLogs[$path]??null) === $metadata);
+    }
     public static function managed(string $path): bool {
         self::path($path);
         if (self::protectedPath($path)) return false;
@@ -72,13 +76,20 @@ final class StagingRelease {
         $sha = trim(self::command(['git','-C',$directory,'rev-parse','HEAD']));
         self::need($sha === trim(self::command(['git','-C',$directory,'rev-parse','refs/remotes/origin/'.self::BRANCH])), 'HEAD_NOT_TESTING');
         self::need((bool)preg_match('/^[0-9a-f]{40}$/D', $sha), 'INVALID_COMMIT');
+        // Preserve existing committed test evidence, but never release it or permit new logs.
+        $historicalLogs = [];
+        foreach (explode("\0", self::command(['git','-C',$directory,'ls-tree','-rz',self::BASELINE,'--','verification'])) as $entry) {
+            if ($entry === '') continue;
+            [$metadata,$path] = explode("\t",$entry,2);
+            if (str_ends_with($path,'.log')) $historicalLogs[$path] = $metadata;
+        }
         $files = [];
         foreach (explode("\0", self::command(['git','-C',$directory,'ls-tree','-rz','HEAD'])) as $entry) {
             if ($entry === '') continue;
             [$metadata, $path] = explode("\t", $entry, 2);
             self::path($path);
             // Example config is documentation; actual private config/data must never be tracked.
-            self::need(!self::protectedPath($path) || $path === 'api/config.example.php', 'TRACKED_SERVER_DATA: '.$path);
+            self::need(self::permittedTracked($path,$metadata,$historicalLogs), 'TRACKED_SERVER_DATA: '.$path);
             if (!self::managed($path)) continue;
             self::need((bool)preg_match('/^100(?:644|755) blob [0-9a-f]{40}$/D', $metadata), 'NON_REGULAR_SOURCE: '.$path);
             $file = self::safeTarget($directory, $path);
