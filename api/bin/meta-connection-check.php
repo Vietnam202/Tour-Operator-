@@ -40,5 +40,5 @@ $db=Database::connect($config['db']);
 $report=MetaConnectionHealth::probe($config,$matching[0]);
 MetaConnectionHealth::store($db,$company,$matching[0],$report);
 echo "Meta connection read-only verification: ".$report['status'].
-    " (".$report['error_code']??'') .")\n";
+    " (".($report['error_code']??'OK').")\n";
 if($report['status']!=='VERIFIED')exit(4);
