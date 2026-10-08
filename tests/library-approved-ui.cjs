@@ -6,6 +6,9 @@ const { JSDOM } = require('jsdom');
 const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const css = read('vta-approved-library.css');
 const js = read('tour-library.js');
+const workspaceCss = read('vta-approved-workspaces.css');
+assert(workspaceCss.includes('@media screen {') && !workspaceCss.includes('@media print'), 'workspace polish never affects printed documents');
+for (const scope of ['.vtps .vtps-paper', '.vtps .vtps-top', '.vta-direct-cost .vta-cost-section', '.vta-direct-cost .vta-cost-summary']) assert(workspaceCss.includes(scope), 'missing approved workspace selector '+scope);
 assert(css.includes('@media screen {'), 'approved library CSS is screen-only');
 assert(!css.includes('@media print'), 'never change print/export');
 for (const value of ['.tl-cover--bay', '.tl-cover--island', '.tl-card-more', '.tl-grid', 'max-width: 650px', 'focus-visible']) {
@@ -16,10 +19,13 @@ for (const p of ['index.html', 'preview.html']) {
   assert.equal((page.match(/vta-approved-library\.css\?v=RC62-LIB3/g)||[]).length, 1, p + ': one approved stylesheet');
   assert(page.indexOf('vta-approved-library.css') > page.indexOf('vta-ui-refresh.css'), p + ': latest screen layer loads last');
   assert(page.includes('tour-library.js?v=RC62-LIB3'), p + ': new library JS cache-busted');
+  assert(page.includes('vta-approved-workspaces.css?v=RC62-WS1'), p + ': approved workspaces layer installed');
+  assert(page.indexOf('vta-approved-workspaces.css') > page.indexOf('vta-approved-library.css'), p + ': workspaces polish loads last');
 }
 const sw = read('service-worker.js');
-assert(sw.includes("const CACHE='vta-RC62-LIB3'"), 'new PWA cache');
+assert(sw.includes("const CACHE='vta-RC62-WS1'"), 'new PWA cache');
 assert(sw.includes("'./vta-approved-library.css?v=RC62-LIB3'"), 'approved CSS precached');
+assert(sw.includes("'./vta-approved-workspaces.css?v=RC62-WS1'"), 'approved workspace CSS precached');
 assert(sw.includes("'./tour-library.js?v=RC62-LIB3'"), 'gallery JS precached');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const rows = [
