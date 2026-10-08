@@ -56,3 +56,16 @@
 @media(max-width:1100px){.vtps-main{grid-template-columns:160px minmax(0,1fr)}.vtps-paper{padding:30px 25px}.vtps .vtps-meta{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:800px){.vtps-main{display:block}.vtps-sidebar{position:static;display:flex;flex-wrap:wrap;max-height:none}.vtps-sidebar p,.vtps-sidebar [data-day-outline]{display:none}.vtps-sidebar button{width:auto}.vtps-top{align-items:flex-start;flex-direction:column}.vtps-paper{padding:25px 16px}.vtps-day-meta{grid-template-columns:1fr}.vtps table{font-size:10px}}
 @media print{body{background:white!important}.vtps-host{width:100%!important;padding:0!important}.vtps-top,.vtps-sidebar,.vtps-subaction,.vtps-day-actions,.vtps button,.vtps details{display:none!important}.vtps-main{display:block!important}.vtps-paper{border:0!important;box-shadow:none!important;width:100%!important;max-width:none!important;padding:0!important}.vtps input,.vtps textarea,.vtps select{border:0!important;padding:0!important;resize:none;overflow:visible;background:transparent!important;color:#0a2854!important}.vtps th{background:#0a2854!important;color:white!important;print-color-adjust:exact}.vtps .vtps-meta{border:0}.vtps-day{break-inside:avoid}.vtps table tr{break-inside:avoid}@page{size:A4;margin:15mm}}
+
+
+/* VTA approved V5 document controls: scoped, responsive, reversible preview */
+.vtps .vtps-modes{display:flex;flex-wrap:wrap;gap:5px;margin:14px 0 18px}
+.vtps .vtps-modes button{border:1px solid #dbe7f2;background:#f8fbfe;color:#416381;font-size:11px;font-weight:700;padding:8px 11px}
+.vtps .vtps-modes button.selected{background:#0a2854;border-color:#0a2854;color:#fff}
+.vtps .vtps-modes button:focus-visible{outline:2px solid #1768b0;outline-offset:2px}
+.vtps-quick-preview #vtps-itinerary{display:none}
+.vtps-preview [data-action="save"],.vtps-preview [data-action="save-template"],.vtps-preview [data-action="paste"],.vtps-preview [data-action="import"]{display:none}
+.vtps-preview .vtps-paper input:disabled,.vtps-preview .vtps-paper select:disabled,.vtps-preview .vtps-paper textarea:disabled{color:#0a2854;opacity:1;background:#fff}
+.vtps .vtps-paper{min-width:0}
+.vtps .vtps-paper table{max-width:100%}
+@media(max-width:720px){.vtps .vtps-top-actions{width:100%}.vtps .vtps-top-actions button{flex:1 1 auto}.vtps .vtps-paper{overflow-x:auto;max-width:100%}.vtps .vtps-paper table{min-width:480px}.vtps .vtps-modes{gap:6px}.vtps .vtps-modes button{flex:1 1 auto}}
