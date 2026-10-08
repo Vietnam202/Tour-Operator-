@@ -121,10 +121,29 @@ final class MetaReplies {
         return self::q($db,'SELECT id,message_text,status,created_at,sent_at,status_detail FROM marketing_meta_outbound WHERE company_id=? AND conversation_id=? ORDER BY id DESC LIMIT 100',[
             $cid,$conversation])->fetchAll(PDO::FETCH_ASSOC);
     }
+    public static function connectionStatus(array $cfg,int $company):array {
+        $out=[];
+        foreach(MetaInbox::accounts($cfg) as $entry) {
+            if($entry['company_id']!==$company)continue;
+            $sender=self::source($cfg,$company,$entry['source_code']);
+            $out[]=[
+                'source_code'=>$entry['source_code'],
+                'platform'=>$entry['platform'],
+                'inbound_configured'=>true,
+                'outbound_configured'=>$sender!==null&&$sender['ready'],
+                'live_api_verified'=>false,
+                'outbound_mode'=>$entry['platform']==='FACEBOOK_MESSENGER'?'MANUAL_RESPONSE':'DRAFT_ONLY'
+            ];
+        }
+        return $out;
+    }
     public static function adminHandle(string $route,string $method,PDO $db,array $cfg,array $user):void{
         if(!str_starts_with($route,'marketing/meta-replies/'))return;
         Auth::requirePermission($db,$user,$method==='GET'?'lead.view':'lead.manage');
         try{
+            if($route==='marketing/meta-replies/accounts'&&$method==='GET'){
+                Http::json(['ok'=>true,'accounts'=>self::connectionStatus($cfg,(int)$user['company_id'])]);
+            }
             if($route==='marketing/meta-replies/status'&&$method==='GET'){
                 Http::json(['ok'=>true]+self::thread($db,$cfg,(int)$user['company_id'],self::id($_GET['conversation_id']??null)));
             }
