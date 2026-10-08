@@ -165,8 +165,7 @@ final class PartnerHub {
         foreach(['children'=>'Children Policy','payment'=>'Payment Terms','cancellation'=>'Cancellation Policy','notes'=>'Notes'] as $key=>$heading)if(!empty($data['policies'][$key])){$blocks[]=['type'=>'heading','text'=>$heading];$blocks[]=['type'=>'text','text'=>$data['policies'][$key]];}
         $blocks[]=['type'=>'text','text'=>'Contact: '.$agency['email'].' · '.$agency['whatsapp']];
         return ['tour_name'=>$data['title'],'quote_ref'=>'B2B-'.$work['id'],
-            'presentation'=>['settings'=>['template'=>'VTA_B2B_WHITE_LABEL','brand_name'=>$agency['brand_name'],'brand_color'=>$agency['brand_color']],'blocks'=>$blocks],
-            'quote'=>$q];
+            'presentation'=>['settings'=>['template'=>'VTA_B2B_WHITE_LABEL','brand_name'=>$agency['brand_name'],'brand_color'=>$agency['brand_color']],'blocks'=>$blocks]];
     }
     public static function handle(string $route,string $method,PDO $db,array $cfg,array $u):void {
         if($route!=='b2b'&&!str_starts_with($route,'b2b/'))return;
