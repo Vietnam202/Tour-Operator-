@@ -22,7 +22,7 @@ final class ScheduleImport {
    'cancellation'=>'Cancellation Policy|Cancellation Terms|Điều kiện hủy|Chính sách hủy',
    'terms'=>'Terms|Terms and Conditions|Terms & Conditions|General Terms|Điều khoản|Điều kiện và điều khoản', 'notes'=>'Important Notes|Notes|Lưu ý'
   ];
-  $out=['status'=>'PREVIEW','title'=>'','days'=>[],'sections'=>[],'candidates'=>[],'source_schedule'=>[],'source_numbers'=>[],'warnings'=>$extracted['warnings']??[],'images'=>$extracted['images']??[],'image_positions'=>[],'extraction_quality'=>$extracted['quality']??'HIGH','source_text'=>$text];$active='briefing';$current=null;
+  $out=['status'=>'PREVIEW','title'=>'','days'=>[],'sections'=>[],'candidates'=>[],'source_schedule'=>[],'source_numbers'=>[],'warnings'=>$extracted['warnings']??[],'images'=>$extracted['images']??[],'image_positions'=>[],'extraction_quality'=>$extracted['quality']??'HIGH','note'=>$extracted['note']??'','source_text'=>$text];$active='briefing';$current=null;
   foreach($blocks as $b){
    if($b['type']==='image_candidate'){$out['image_positions'][]=['image_index'=>$b['image_index'],'day_index'=>$current];continue;}
    $plain=isset($b['runs'])?implode('',array_column($b['runs'],'text')):($b['type']==='list'?implode('',array_column($b['items'][0]??[],'text')):implode(" | ",array_map(fn($r)=>implode('',array_column($r,'text')),$b['rows'][0]??[])));
