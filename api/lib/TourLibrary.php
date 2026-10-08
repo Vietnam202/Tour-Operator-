@@ -11,6 +11,67 @@ final class TourLibrary {
         if(!is_string($v)||strlen($v)>$max||!preg_match('//u',$v)||str_contains($v,"\0"))throw new InvalidArgumentException('Invalid '.$name);
         return trim($v);
     }
+    /**
+     * Customer-facing proposal fields only. No supplier costs, margins or commission values.
+     * Strict allow-list prevents accidentally persisting confidential costing input.
+     */
+    private static function normalizeProposal($raw): array {
+        if(!is_array($raw))throw new InvalidArgumentException('Invalid proposal data');
+        $v=fn($name,$max=10000)=>self::text($raw[$name]??'', $max, 'proposal '.$name);
+        $highlights=$raw['highlights']??[];
+        if(!is_array($highlights)||!array_is_list($highlights)||count($highlights)>20)throw new InvalidArgumentException('Invalid tour highlights');
+        $highlights=array_map(fn($x)=>self::text($x,500,'highlight'),$highlights);
+        $group=$raw['group_prices']??[];
+        if(!is_array($group)||!array_is_list($group)||count($group)>3)throw new InvalidArgumentException('Invalid group pricing');
+        $money=function($v): string {
+            $x=self::text($v??'',30,'selling price');
+            if($x!==''&&!preg_match('/^\\d{1,7}(?:\\.\\d{1,2})?$/D',$x))throw new InvalidArgumentException('Prices must be nonnegative decimal USD amounts or blank');
+            return $x;
+        };
+        $groups=[];
+        foreach($group as $g) {
+            if(!is_array($g)||!in_array((string)($g['hotel']??''),['3','4','5'],true))throw new InvalidArgumentException('Invalid hotel category');
+            $groups[]=['hotel'=>(string)$g['hotel'],'price'=>$money($g['price']??''),'single'=>$money($g['single']??'')];
+        }
+        $private=$raw['private_prices']??[];
+        if(!is_array($private)||!array_is_list($private)||count($private)>30)throw new InvalidArgumentException('Maximum 30 private price rows');
+        $bands=[];
+        foreach($private as $row) {
+            if(!is_array($row))throw new InvalidArgumentException('Invalid private price row');
+            $min=filter_var($row['min']??null,FILTER_VALIDATE_INT);
+            $max=filter_var($row['max']??null,FILTER_VALIDATE_INT);
+            if($min===false||$max===false||$min<1||$max<$min||$max>1000)throw new InvalidArgumentException('Invalid passenger range');
+            $bands[]=['min'=>$min,'max'=>$max,'three'=>$money($row['three']??''),'four'=>$money($row['four']??''),'five'=>$money($row['five']??'')];
+        }
+        usort($bands,fn($a,$b)=>$a['min']<=>$b['min']);
+        for($i=1;$i<count($bands);$i++)if($bands[$i]['min']<=$bands[$i-1]['max'])throw new InvalidArgumentException('Overlapping private passenger ranges');
+        $hotels=$raw['hotels']??[];
+        if(!is_array($hotels)||!array_is_list($hotels)||count($hotels)>60)throw new InvalidArgumentException('Maximum 60 hotel rows');
+        $hotelRows=[];
+        foreach($hotels as $hotel) {
+            if(!is_array($hotel))throw new InvalidArgumentException('Invalid hotel row');
+            $r=[];foreach(['destination','three','four','five'] as $key)$r[$key]=self::text($hotel[$key]??'',400,'hotel '.$key);
+            $hotelRows[]=$r;
+        }
+        $policies=$raw['policies']??[];
+        if(!is_array($policies))throw new InvalidArgumentException('Invalid policies');
+        $policy=[];
+        foreach(['children','payment','cancellation','notes'] as $key)$policy[$key]=self::text($policies[$key]??'',30000,'policy '.$key);
+        $type=$v('tour_type',20);
+        if($type!==''&&!in_array($type,['PRIVATE','SIC','BOTH'],true))throw new InvalidArgumentException('Invalid tour type');
+        return [
+            'schema'=>'VTA_LIBRARY_PROPOSAL_V1',
+            'tour_code'=>$v('tour_code',50),
+            'tour_type'=>$type?:'PRIVATE',
+            'overview'=>$v('overview',30000),
+            'highlights'=>$highlights,
+            'group_prices'=>$groups,
+            'private_prices'=>$bands,
+            'hotels'=>$hotelRows,
+            'policies'=>$policy
+        ];
+    }
+
     public static function normalize(array $b): array {
         $out=['title'=>self::text($b['title']??'',190,'program title'),'destination'=>self::text($b['destination']??'',190,'destination'),'language'=>self::text($b['language']??'en',16,'language')];
         if($out['title']==='')throw new InvalidArgumentException('Program title is required');
@@ -21,6 +82,7 @@ final class TourLibrary {
         $out['tags']=[];foreach($tags as $tag){$t=self::text($tag,64,'tag');if($t!=='')$out['tags'][]=$t;}$out['tags']=array_values(array_unique($out['tags']));
         $out['days']=ScheduleImport::normalize($b['days']??[]);
         foreach(['included_text','excluded_text','terms_text'] as $k)$out[$k]=self::text($b[$k]??'',100000,$k);
+        if(array_key_exists('proposal',$b))$out['proposal']=self::normalizeProposal($b['proposal']);
         $out['source_text']=self::text($b['source_text']??'',self::MAX_TEXT_BYTES,'source text');
         $out['source_name']=self::filename(self::text($b['source_name']??'',255,'source name'));
         $out['source_type']=self::text($b['source_type']??'MANUAL',20,'source type');
@@ -183,7 +245,7 @@ final class TourLibrary {
         $days=json_decode($r['days_json']??'[]',true,512,JSON_THROW_ON_ERROR);$tags=json_decode($r['tags_json']??'[]',true,512,JSON_THROW_ON_ERROR);
         $out=[];foreach(['title','destination','language','source_name','source_type','source_url','status','updated_at'] as $k)$out[$k]=$r[$k]??'';
         $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=count($days);$out['has_source']=!empty($r['source_storage_path']);
-        if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';}
+        if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';$out['proposal']=json_decode($r['proposal_json']??'null',true)?:[];}
         return $out;
     }
     public static function save(PDO $db,array $u,array $b,int $id=0): array {
@@ -195,6 +257,7 @@ final class TourLibrary {
             if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
             $before=$id?self::program($db,$company,$id,true):null;
             if($before&&$before['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');
+            if(!array_key_exists('proposal',$data))$data['proposal']=$before?json_decode($before['proposal_json']??'null',true):[];
             $original=null;
             if($token!=='') {
                 $original=self::q($db,'SELECT * FROM tour_library_imports WHERE company_id=? AND user_id=? AND token_hash=? FOR UPDATE',[$company,$user,hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
@@ -205,8 +268,8 @@ final class TourLibrary {
                 // Editing content must not make the preserved binary claim a different origin.
                 foreach(['source_name','source_type','source_url'] as $k)$data[$k]=$before[$k];
             }
-            $columns=['title','destination','language','tags_json','days_json','included_text','excluded_text','terms_text','source_text','source_name','source_type','source_url','status'];
-            $values=[];foreach($columns as $k)$values[]=$k==='tags_json'?self::json($data['tags']):($k==='days_json'?self::json($data['days']):$data[$k]);
+            $columns=['title','destination','language','tags_json','days_json','included_text','excluded_text','terms_text','proposal_json','source_text','source_name','source_type','source_url','status'];
+            $values=[];foreach($columns as $k)$values[]=$k==='tags_json'?self::json($data['tags']):($k==='days_json'?self::json($data['days']):($k==='proposal_json'?self::json($data['proposal']):$data[$k]));
             if(!$id&&$key!==''){$columns[]='creation_key';$values[]=$key;$columns[]='creation_hash';$values[]=$digest;}
             if($original){foreach(['source_storage_path'=>'storage_path','source_mime'=>'mime_type','source_sha256'=>'source_sha256','source_size'=>'source_size'] as $k=>$from){$columns[]=$k;$values[]=$original[$from];}}
             if($id)self::q($db,'UPDATE tour_library_programs SET '.implode(',',array_map(fn($k)=>$k.'=?',$columns)).',updated_by=? WHERE company_id=? AND id=?',[...$values,$user,$company,$id]);
