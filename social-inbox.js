@@ -4,7 +4,7 @@ window.VTAWebsiteInbox=function(host,opt){
  const {api,esc,toast,can,t,preview}=opt;
  if(!host||!host.isConnected)return;
  if(preview){
-  host.innerHTML='<section class="mk-panel"><h2>'+t('Website Unified Inbox','Hộp thư Website')+'</h2><p class="mk-note">'+t('Preview contains no real customer messages.','Chế độ xem thử không có tin nhắn khách thật.')+'</p></section>';
+  host.innerHTML='<section class="mk-panel"><h2>'+t('Unified Inbox','Hộp thư chung')+'</h2><p class="mk-note">'+t('Preview contains no real customer messages.','Chế độ xem thử không có tin nhắn khách thật.')+'</p></section>';
   return;
  }
  let items=[],selected=null,detail=null,busy=false,pendingReply='',pendingReplyKey=null,pendingTourDraft=null,metaAccounts=[];
@@ -14,7 +14,7 @@ window.VTAWebsiteInbox=function(host,opt){
  const isMeta=x=>/^meta_(fb|ig)_/.test(String(x?.source_code||''));
  const channel=x=>String(x?.source_code||'').startsWith('meta_fb_')?'Messenger':String(x?.source_code||'').startsWith('meta_ig_')?'Instagram':'Website';
  const inbound=m=>'<article class="vta-inbox-message"><p>'+safe(m.body)+'</p><small>'+safe(m.received_at)+'</small></article>';
- const row=x=>'<button type="button" class="vta-inbox-contact '+(selected===Number(x.id)?'selected':'')+'" data-vta-conv="'+Number(x.id)+'"><strong>'+safe(x.contact_name||t('Website visitor','Khách website'))+'</strong><small>'+safe(channel(x))+' · '+safe(label(x.status))+'</small><span>'+safe(short(x.last_message))+'</span></button>';
+ const row=x=>'<button type="button" class="vta-inbox-contact '+(selected===Number(x.id)?'selected':'')+'" data-vta-conv="'+Number(x.id)+'"><strong>'+safe(isMeta(x)&&x.contact_name==='Website visitor'?channel(x)+' visitor':(x.contact_name||t('Website visitor','Khách website')))+'</strong><small>'+safe(channel(x))+' · '+safe(label(x.status))+'</small><span>'+safe(short(x.last_message))+'</span></button>';
  function draw(){
   if(!host.isConnected)return;
   const c=detail?.conversation||null, msgs=detail?.messages||[],outs=detail?.outbound||[],allowed=can('lead.manage'),meta=isMeta(c);
@@ -22,7 +22,7 @@ window.VTAWebsiteInbox=function(host,opt){
   const lead=c&&c.lead_request_id?'<p class="mk-note">Lead Hub #'+Number(c.lead_request_id)+'</p>':'';
   host.innerHTML='<section class="mk-panel"><div class="mk-section-head"><div><h2>'+t('Unified Inbox · Website & Meta','Hộp thư chung · Website & Meta')+'</h2><p class="mk-note">'+t('Website supports two-way chat. Meta supports inbound text, internal drafts and Lead Hub only.','Website chat hai chiều. Meta mới nhận tin chữ, lưu nháp và chuyển Lead Hub.')+'</p></div><span class="mk-badge">'+items.length+' '+t('conversations','hội thoại')+'</span></div>'+
    '<p class="mk-note">'+t('Meta sources configured, not live verified: ','Nguồn Meta đã cấu hình, chưa xác minh live: ')+metaAccounts.map(a=>safe(a.platform)).join(', ')+'</p>'+ '<div class="vta-inbox-layout"><aside class="vta-inbox-list"><label>'+t('Find conversation','Tìm hội thoại')+'<input type="search" class="vta-inbox-search" placeholder="'+t('Guest / message…','Tên khách / nội dung…')+'"></label><div class="vta-inbox-contacts">'+(items.map(row).join('')||'<p class="mk-note">'+t('No verified messages yet.','Chưa có tin nhắn đã xác thực.')+'</p>')+'</div></aside>'+
-   '<div class="vta-inbox-thread"><h3>'+safe(c?.contact_name||t('Select a conversation','Chọn hội thoại'))+'</h3><div class="vta-inbox-history">'+(msgs.map(inbound).join('')||'<p class="mk-note">'+t('No messages','Chưa có tin nhắn')+'</p>')+(outs.length?'<h4>'+t('Staff replies','Phản hồi nhân viên')+'</h4>'+outs.map(outbound).join(''):'')+'</div>'+
+   '<div class="vta-inbox-thread"><h3>'+safe(c&&isMeta(c)&&c.contact_name==='Website visitor'?channel(c)+' visitor':(c?.contact_name||t('Select a conversation','Chọn hội thoại')))+'</h3><div class="vta-inbox-history">'+(msgs.map(inbound).join('')||'<p class="mk-note">'+t('No messages','Chưa có tin nhắn')+'</p>')+(outs.length?'<h4>'+t('Staff replies','Phản hồi nhân viên')+'</h4>'+outs.map(outbound).join(''):'')+'</div>'+
   (!meta&&c?'<div id="vtaTourAdvisorPanel"></div>':'')+
   (!meta&&c?'<div id="vtaTourSharePanel"></div>':'')+
   (!meta&&allowed&&c&&c.status!=='CLOSED'?'<form data-vta-form="send" class="mk-form vta-inbox-send"><label>'+t('Send to visitor via website relay','Gửi đến khách qua website')+'<textarea name="body" required rows="3" maxlength="8000">'+safe(pendingReply)+'</textarea></label><button type="submit" class="btn primary" '+(busy?'disabled':'')+'>'+t('Queue reply','Xếp hàng gửi')+'</button><p class="mk-note">'+t('Queued means not yet delivered. Relay confirmation does not prove visitor read.','Đưa vào hàng chờ chưa có nghĩa đã gửi. Website đã nhận cũng chưa có nghĩa khách đã đọc.')+'</p></form>':'')+'</div>'+
