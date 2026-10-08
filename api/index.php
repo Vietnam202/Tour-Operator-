@@ -142,6 +142,7 @@ try {
     QuoteOptions::handle($route,$method,$db,$user);
     ScheduleImport::handle($route,$method,$db,$user);
     TourLibrary::handle($route,$method,$db,$config,$user);
+    PartnerHub::handle($route,$method,$db,$config,$user);
     QuoteReuse::handle($route,$method,$db,$user);
     QuoteCostItems::handle($route,$method,$db,$user);
     Procurement::handle($route,$method,$db,$user);
