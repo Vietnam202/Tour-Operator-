@@ -40,6 +40,7 @@ require_once __DIR__ . '/lib/Customer360.php';
 require_once __DIR__ . '/lib/CampaignPilot.php';
 require_once __DIR__ . '/lib/MarketingStudio.php';
 require_once __DIR__ . '/lib/WebhookCenter.php';
+require_once __DIR__ . '/lib/WebsiteInbox.php';
 require_once __DIR__ . '/lib/LandingPages.php';
 require_once __DIR__ . '/lib/AiChat.php';
 require_once __DIR__ . '/lib/TourInventory.php';

@@ -80,9 +80,15 @@ final class WebhookCenter {
    $check->execute([$cid,$spec['form_token']]);if(!$check->fetchColumn())continue;
    $sources[]=['source_code'=>$code,'ready'=>is_string($spec['secret']??null)&&strlen($spec['secret'])>=32,'kind'=>'WEBSITE_LEAD'];
   }
-  $q=$db->prepare('SELECT source_code,event_type,status,lead_request_id,created_at FROM marketing_webhook_events WHERE company_id=? ORDER BY id DESC LIMIT 30');
-  $q->execute([$cid]);$events=$q->fetchAll(PDO::FETCH_ASSOC);
-  $q=$db->prepare('SELECT COUNT(*) FROM marketing_webhook_events WHERE company_id=?');$q->execute([$cid]);
+  $q=$db->prepare("SELECT source_code,event_type,status,lead_request_id,NULL AS conversation_id,created_at
+    FROM marketing_webhook_events WHERE company_id=?
+    UNION ALL
+    SELECT source_code,'conversation.message' AS event_type,'ACCEPTED' AS status,NULL AS lead_request_id,conversation_id,created_at
+    FROM social_webhook_events WHERE company_id=?
+    ORDER BY created_at DESC LIMIT 30");
+  $q->execute([$cid,$cid]);$events=$q->fetchAll(PDO::FETCH_ASSOC);
+  $q=$db->prepare('SELECT (SELECT COUNT(*) FROM marketing_webhook_events WHERE company_id=?) + (SELECT COUNT(*) FROM social_webhook_events WHERE company_id=?)');
+  $q->execute([$cid,$cid]);
   Http::json(['ok'=>true,'sources'=>$sources,'events'=>$events,'total_events'=>(int)$q->fetchColumn(),'social_connections_enabled'=>false]);
  }
 }
