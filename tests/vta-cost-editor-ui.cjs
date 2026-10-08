@@ -91,7 +91,7 @@ async function harness({locked=false,cost=true}={}){
   assert.equal(calls.length,previousCalls);assert.equal(pax.value,'5');
   const firstDate=root.querySelector('[data-vta-row="10"] [data-service-date]');
   firstDate.value='2027-01-02';firstDate.dispatchEvent(new w.Event('change'));await settle();
-  assert(calls.some(c=>c.body?.requirement?.id===10&&c.body.requirement.scope.dates?.join(',')==='2027-01-02,2027-01-03'));
+  assert(calls.some(c=>c.body?.requirement?.id===10&&c.body.requirement.scope?.dates?.join(',')==='2027-01-02,2027-01-03'));
   console.log('PASS guest populations edit directly with quote revision');
   let duplicate=root.querySelector('[data-mix-hotel="0"]');duplicate.value='4';
   duplicate.dispatchEvent(new w.Event('change'));await settle();
