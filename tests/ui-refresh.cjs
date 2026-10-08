@@ -8,14 +8,14 @@ const css=read('vta-ui-refresh.css');
 const pages=['index.html','preview.html'];
 for(const page of pages){
   const html=read(page);
-  const references=[...html.matchAll(/vta-ui-refresh\.css\?v=RC62-UI1/g)];
+  const references=[...html.matchAll(/vta-ui-refresh\.css\?v=RC62-UI2/g)];
   assert.equal(references.length,1,page+' loads UI layer exactly once');
   assert(html.lastIndexOf('vta-ui-refresh.css')<html.indexOf('</head>'),page+' loads UI layer in head');
   assert(html.lastIndexOf('vta-ui-refresh.css')>html.indexOf('document-editor.css'),page+' loads UI layer after legacy styles');
 }
 const sw=read('service-worker.js');
-assert(sw.includes("'./vta-ui-refresh.css?v=RC62-UI1'"),'PWA includes versioned CSS offline');
-assert(sw.includes("const CACHE='vta-RC62-UI1'"),'PWA installs fresh cache');
+assert(sw.includes("'./vta-ui-refresh.css?v=RC62-UI2'"),'PWA includes versioned CSS offline');
+assert(sw.includes("const CACHE='vta-RC62-UI2'"),'PWA installs fresh cache');
 assert(css.includes('@media screen {'),'screen-specific UI overrides');
 assert(!css.includes('@media print'),'leave existing exported/printed document layout alone');
 for(const selector of ['.vtps .vtps-paper','.wd-page','.vta-direct-cost .vta-cost-line','.tour-library .tl-card','.app-shell .sidebar']){
