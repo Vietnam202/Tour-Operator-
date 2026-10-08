@@ -4,7 +4,7 @@ window.VTATourSharePanel={
  mount(host,{api,esc,toast,t,can,conversationId,onUse}){
   if(!host||!Number.isSafeInteger(Number(conversationId))||!conversationId)return;
   const writable=can('lead.manage');
-  let shares=[],created=null,busy=false;
+  let shares=[],approvedTours=[],selectedTour='',created=null,busy=false;
   const safe=x=>esc(String(x??''));
   const state=x=>x.revoked_at?t('Revoked','Đã thu hồi'):Date.parse(String(x.expires_at).replace(' ','T'))<Date.now()?t('Expired','Hết hạn'):t('Active until','Hiệu lực đến')+' '+String(x.expires_at||'');
   function render(){
@@ -12,9 +12,9 @@ window.VTATourSharePanel={
    host.innerHTML='<section class="vta-tour-share"><h3>'+t('Tour Share Center','Trung tâm chia sẻ chương trình')+'</h3>'+
     '<p class="mk-note">'+t('Public outline links only: title, destination and day headings. No private pricing or documents.','Chỉ chia sẻ bản tóm tắt công khai: tên tour, điểm đến và các ngày. Không có giá nội bộ hoặc tài liệu gốc.')+'</p>'+
     (writable?'<form class="vta-share-create" data-share-form="create">'+
-    '<label>'+t('Approved tour ID','Mã tour đã duyệt')+'<input type="number" min="1" step="1" name="program_id" required></label>'+
+    '<label>'+t('Approved tour','Chương trình được duyệt')+'<select name="program_id" required>'+approvedTours.map(p=>'<option value="'+Number(p.id)+'"'+(String(p.id)===selectedTour?' selected':'')+'>'+safe(p.title)+' · '+Number(p.day_count)+' '+t('days','ngày')+'</option>').join('')+'</select></label>'+
     '<label>'+t('Expires after','Hết hạn sau')+'<select name="expires_in_days"><option value="1">1 '+t('day','ngày')+'</option><option value="3">3 '+t('days','ngày')+'</option><option value="7" selected>7 '+t('days','ngày')+'</option><option value="14">14 '+t('days','ngày')+'</option></select></label>'+
-    '<button type="submit" class="btn" '+(busy?'disabled':'')+'>'+t('Create private share link','Tạo liên kết chia sẻ')+'</button></form>':'')+
+    '<button type="submit" class="btn" '+(busy||!approvedTours.length?'disabled':'')+'>'+t('Create private share link','Tạo liên kết chia sẻ')+'</button></form>':'')+
     (created?'<div class="vta-share-created"><strong>'+t('New link — visible once','Liên kết mới — chỉ hiển thị một lần')+'</strong>'+
      '<input type="text" readonly aria-label="Tour share link" value="'+safe(created.url)+'">'+
      '<div class="vta-share-actions"><button type="button" data-share-action="copy" class="btn">'+t('Copy link','Sao chép')+'</button>'+
@@ -26,8 +26,12 @@ window.VTATourSharePanel={
   }
   async function load(){
    try{
-    const r=await api.request('marketing/tour-share/list?conversation_id='+Number(conversationId));
-    shares=r.items||[];
+    const [r,tours]=await Promise.all([
+      api.request('marketing/tour-share/list?conversation_id='+Number(conversationId)),
+      api.request('marketing/tour-advisor/programs?conversation_id='+Number(conversationId))
+    ]);
+    shares=r.items||[];approvedTours=(tours.items||[]).filter(p=>p.approved);
+    if(!approvedTours.some(p=>String(p.id)===selectedTour))selectedTour=approvedTours.length?String(approvedTours[0].id):'';
    }catch(e){toast(e.message,true);}
    render();
   }
@@ -36,6 +40,8 @@ window.VTATourSharePanel={
    if(!form||busy||!writable)return;
    e.preventDefault();busy=true;
    const data=Object.fromEntries(new FormData(form));
+   selectedTour=String(data.program_id||'');
+   if(!approvedTours.some(p=>String(p.id)===selectedTour)){busy=false;toast(t('Select an approved tour','Chọn tour đã được duyệt'),true);render();return;}
    render();
    try{
     const r=await api.request('marketing/tour-share/create',{
