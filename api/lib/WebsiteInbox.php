@@ -147,11 +147,13 @@ final class WebsiteInbox {
                 'phone'=>$body['phone']??$conv['phone'],
                 'message'=>$last?:'Website chat request',
             ],json_decode($conv['attribution_json']??'{}',true)?:[]));
-            $attrib=$normalized['attribution']+['source_type'=>'SIGNED_WEBSITE_CHAT','source_code'=>$conv['source_code'],'conversation_id'=>(int)$id];
+            $social=str_starts_with((string)$conv['source_code'],'meta_fb_')||str_starts_with((string)$conv['source_code'],'meta_ig_');
+            $source=$social?'SOCIAL_DM':'WEB_CHAT';
+            $attrib=$normalized['attribution']+['source_type'=>$social?'VERIFIED_META_DM':'SIGNED_WEBSITE_CHAT','source_code'=>$conv['source_code'],'conversation_id'=>(int)$id];
             $key='website-chat-'.$id;
             $hash=hash('sha256',json_encode($normalized,JSON_THROW_ON_ERROR));
             self::q($db,'INSERT INTO lead_requests(company_id,campaign_id,source,submission_key,payload_hash,contact_name,email,phone,travel_date,total_guests,paying_pax,foc,destination,hotel_level,message,attribution_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[
-                $company,$conv['campaign_id'],'WEB_CHAT',$key,$hash,
+                $company,$conv['campaign_id'],$source,$key,$hash,
                 $normalized['contact_name'],$normalized['email']?:null,$normalized['phone']?:null,
                 $normalized['travel_date']?:null,$normalized['total_guests'],$normalized['paying_pax'],$normalized['foc'],
                 $normalized['destination'],$normalized['hotel_level'],$normalized['message'],json_encode($attrib,JSON_THROW_ON_ERROR)]);
