@@ -120,4 +120,17 @@ $j=SocialPublishing::claim($db,$config);vtaAssert($j['id']===$uncertain['id'],'r
 SocialPublishing::complete($db,$uncertain['id'],null,'provider delivery unknown');
 vtaAssert($db->query("SELECT status FROM marketing_publish_jobs WHERE id=".$uncertain['id'])->fetchColumn()==='UNCERTAIN','unknown provider result is not retried automatically');
 vtaAssert(SocialPublishing::claim($db,$config)===null,'unknown outcome cannot be dispatched twice');
+$pending=SocialPublishing::create($db,$config,$user,array_replace($create,['request_key'=>'social_draft_request_00008']));
+SocialPublishing::approve($db,$config,$reviewer,$pending['id']);
+$db->exec("UPDATE marketing_content SET body='Changed after approval' WHERE id=100");
+$block=SocialPublishing::claim($db,$config);
+vtaAssert(!empty($block['blocked'])&&$block['id']===$pending['id'],'worker blocks altered copy immediately before provider call');
+$state=$db->query("SELECT status FROM marketing_publish_jobs WHERE id=".$pending['id'])->fetchColumn();
+vtaAssert($state==='BLOCKED','changed-content job is marked BLOCKED, never published');
+$db->exec("UPDATE marketing_content SET body='Discover Vietnam with our local team.' WHERE id=100");
+$unready=SocialPublishing::create($db,$config,$user,array_replace($create,['account_alias'=>'no-permission','request_key'=>'social_draft_request_00009']));
+$denied=false;
+try{SocialPublishing::approve($db,$config,$reviewer,$unready['id']);}
+catch(DomainException $e){$denied=true;}
+vtaAssert($denied,'account missing pages_manage_posts cannot be approved for live publishing');
 echo "P5 Social Publishing MariaDB checks completed.\n";
