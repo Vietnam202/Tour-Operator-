@@ -62,8 +62,19 @@ final class MetaInbox {
     }
     public static function extract(string $raw,array $accounts):array{
         if($raw===''||strlen($raw)>self::MAX_BYTES)throw new InvalidArgumentException('Invalid request length');
+        // Decode once as native objects to distinguish JSON [] from JSON {}.
+        // Associative json_decode cannot distinguish an empty object from an empty list.
+        $native=json_decode($raw,false,256);
+        if(!($native instanceof stdClass))throw new InvalidArgumentException('Invalid JSON object');
+        if(isset($native->entry)&&!is_array($native->entry))
+            throw new InvalidArgumentException('Webhook entry must be a JSON array');
+        foreach(($native->entry??[]) as $entryObj){
+            if(!($entryObj instanceof stdClass))continue;
+            if(isset($entryObj->messaging)&&!is_array($entryObj->messaging))
+                throw new InvalidArgumentException('Messaging must be a JSON array');
+        }
         $data=json_decode($raw,true,256);
-        if(!is_array($data)||array_is_list($data))throw new InvalidArgumentException('Invalid JSON object');
+        if(!is_array($data))throw new InvalidArgumentException('Invalid JSON object');
         $object=$data['object']??null;
         if(!in_array($object,['page','instagram'],true))return [];
         $entries=$data['entry']??null;
