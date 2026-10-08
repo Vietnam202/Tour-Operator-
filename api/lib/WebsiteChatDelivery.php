@@ -132,19 +132,28 @@ final class WebsiteChatDelivery {
          catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'INVALID_PAYLOAD'],422);}
          catch(Throwable $e){error_log('VTA website relay: '.get_class($e));Http::json(['ok'=>false,'error'=>'RELAY_FAILED'],503);}
     }
-    public static function adminHandle(string $route,string $method,PDO $db,array $user):void {
+    public static function adminHandle(string $route,string $method,PDO $db,array $config,array $user):void {
         if(!str_starts_with($route,'marketing/website-chat/'))return;
         $company=(int)$user['company_id'];
         if($route==='marketing/website-chat/send'&&$method==='POST') {
             Auth::requirePermission($db,$user,'lead.manage');
-            try{Http::json(['ok'=>true]+self::send($db,$user,Http::body()),201);}
+            try{
+                $input=Http::body();
+                $conversationId=self::positive($input['conversation_id']??null,'conversation_id');
+                $conv=self::q($db,'SELECT source_code FROM social_conversations WHERE company_id=? AND id=?',[$company,$conversationId])->fetch();
+                if(!$conv)throw new OutOfBoundsException('Conversation not found');
+                $site=self::sourceForm($db,$config,(string)$conv['source_code']);
+                if((int)$site['company_id']!==$company)throw new OutOfBoundsException('Source is not ready for this company');
+                Http::json(['ok'=>true]+self::send($db,$user,$input),201);
+            }
             catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'VALIDATION'],422);}
             catch(OutOfBoundsException $e){Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);}
             catch(DomainException $e){Http::json(['ok'=>false,'error'=>'CONFLICT','message'=>$e->getMessage()],409);}
         }
         if($route==='marketing/website-chat/outbound'&&$method==='GET') {
             Auth::requirePermission($db,$user,'lead.view');
-            $id=self::positive($_GET['conversation_id']??null,'conversation_id');
+            try{$id=self::positive($_GET['conversation_id']??null,'conversation_id');}
+            catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'VALIDATION'],422);}
             $exists=self::q($db,'SELECT id FROM social_conversations WHERE company_id=? AND id=?',[$company,$id])->fetchColumn();
             if(!$exists)Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);
             $messages=self::q($db,'SELECT id,body,status,created_at,relayed_at FROM website_chat_outbound WHERE company_id=? AND conversation_id=? ORDER BY id DESC LIMIT 100',[$company,$id])->fetchAll(PDO::FETCH_ASSOC);
