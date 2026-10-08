@@ -38,7 +38,9 @@ final class GroupVehiclePricing {
             foreach($selection as $key=>$id){
                 if(!in_array((string)$key,$keys,true))throw new InvalidArgumentException('Rate must belong to current vehicle band');
                 if($id===null||$id==='')continue;
-                $rateId=QuoteVs2Domain::count($id);if($rateId<1)throw new InvalidArgumentException('Selected approved vehicle rate required');
+                if((!is_int($id)&&!is_string($id))||!preg_match('/^[1-9][0-9]{0,15}$/D',(string)$id))
+                    throw new InvalidArgumentException('Selected approved vehicle rate required');
+                $rateId=(int)$id;if($rateId<1)throw new InvalidArgumentException('Invalid rate reference');
                 $clean[(string)$lineId][(string)$key]=$rateId;
             }
         }
