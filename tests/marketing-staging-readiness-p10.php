@@ -12,6 +12,7 @@ $ids=array_column($checks,'id');
 qa(!$all['safe_to_release'],'unsafe candidate is BLOCKED, never auto-deployed');
 qa(in_array('STAGING_DEPLOY_MIGRATIONS',$ids,true),'new migrations require deploy controller review');
 qa(in_array('STAGING_BRANCH_PIN',$ids,true),'pinned testing branch cannot accept stacked PR automatically');
+qa(in_array('STAGING_ACCEPTANCE_NOT_SIGNED',$ids,true),'source-only CI cannot impersonate human staging signoff');
 qa(in_array('VS21_MIGRATION_GUARD',$ids,true),'migration 025 compatibility guard is detected');
 qa(!in_array('MISSING_SOURCE',$ids,true),'all source files for P0–P9 present');
 qa(!in_array('MIGRATION_ORDER',$ids,true)&&!in_array('MIGRATION_SEQUENCE',$ids,true),
