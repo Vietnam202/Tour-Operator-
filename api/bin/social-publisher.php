@@ -5,6 +5,8 @@ require_once dirname(__DIR__).'/lib/RuntimeGuard.php';
 require_once dirname(__DIR__).'/lib/Database.php';
 require_once dirname(__DIR__).'/lib/SocialPublishing.php';
 require_once dirname(__DIR__).'/lib/FacebookPagePoster.php';
+require_once dirname(__DIR__).'/lib/MetaGraphTransport.php';
+require_once dirname(__DIR__).'/lib/InstagramImagePoster.php';
 $configPath=getenv('VTA_CONFIG_FILE')?:dirname(__DIR__,3).'/vta_private/config.php';
 if(!is_file($configPath)){fwrite(STDERR,"Missing private config\n");exit(2);}
 $config=require $configPath;
@@ -30,7 +32,16 @@ for($i=0;$i<5;$i++){
     if(!empty($job['blocked'])){echo "Blocked job #".$job['id']."\n";continue;}
     $count++;
     try {
-        $postId=FacebookPagePoster::publish($job['account'],$job['message']);
+        if($job['provider']==='FACEBOOK_PAGE'){
+            $postId=FacebookPagePoster::publish($job['account'],$job['message']);
+        }elseif($job['provider']==='INSTAGRAM_BUSINESS'){
+            $postId=InstagramImagePoster::publish(
+                $job['account'],$job['message'],(string)$job['media_url'],
+                static function(string $containerId)use($db,$job):void{
+                    SocialPublishing::rememberContainer($db,$job['id'],$containerId);
+                }
+            );
+        }else throw new DomainException('Unsupported dispatch provider');
         SocialPublishing::complete($db,$job['id'],$postId);
         echo "Provider confirmed job #".$job['id']."\n";
     } catch(Throwable $e) {
