@@ -1,0 +1,56 @@
+name: Marketing Meta Inbox P7
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MetaInbox.php'
+      - 'api/lib/WebsiteInbox.php'
+      - 'api/bin/meta-inbox-worker.php'
+      - 'api/migrations/041_meta_unified_inbox.sql'
+      - 'api/bootstrap.php'
+      - 'api/index.php'
+      - 'social-inbox.js'
+      - 'tests/marketing-meta-inbox-p7-db-test.php'
+      - '.github/workflows/marketing-meta-inbox-p7.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_pw
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/MetaInbox.php
+          php -l api/lib/WebsiteInbox.php
+          php -l api/bin/meta-inbox-worker.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/marketing-meta-inbox-p7-db-test.php
+      - name: JavaScript syntax
+        run: node --check social-inbox.js
+      - name: MariaDB signed webhook and CRM tests
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-meta-inbox-p7-db-test.php
+      - name: Verify worker defaults to NOOP
+        run: |
+          grep -q 'NOOP' api/bin/meta-inbox-worker.php
+          grep -q 'I_APPROVE_STAGING_META_INBOX' api/bin/meta-inbox-worker.php
