@@ -25,6 +25,9 @@ function validatePrices(rows){
 window.VTATourProposalStudio={
  mount:function(container,options){
   const {program,api,onBack,onSaved,toast,canEdit=true}=options;
+  if(container.__vtpsAbort)container.__vtpsAbort.abort();
+  const controller=new AbortController();
+  container.__vtpsAbort=controller;
   let current=copy(program),pending=false,preview=false;
   const base=initial(), p={...base,...(current.proposal||{}),policies:{...base.policies,...(current.proposal?.policies||{})}};
   current.proposal=p;
@@ -73,17 +76,18 @@ window.VTATourProposalStudio={
     if(!r.id)throw Error('Không có xác nhận lưu từ API.');
     current.id=r.id;container.querySelector('[data-vtps-state]').textContent='Đã lưu vào Tour Program Library';
     toast('Đã lưu chương trình.');
+    controller.abort();container.classList.remove('vtps-host');
     if(onSaved)await onSaved(r);
    }catch(e){toast(e?.message||'Không lưu được chương trình.',true);button.disabled=false;}
    finally{pending=false;}
   }
   screen();
-  container.addEventListener('input',e=>{if(container.querySelector('[data-vtps-state]'))container.querySelector('[data-vtps-state]').textContent='Chưa lưu thay đổi';});
+  container.addEventListener('input',e=>{if(container.querySelector('[data-vtps-state]'))container.querySelector('[data-vtps-state]').textContent='Chưa lưu thay đổi';},{signal:controller.signal});
   container.addEventListener('click',async e=>{
    const scroll=e.target.closest('[data-scroll]');if(scroll){container.querySelector('#'+scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});return;}
    const b=e.target.closest('button');if(!b||!container.contains(b))return;
    if(b.dataset.action==='save'){await save();return;}
-   if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;container.classList.remove('vtps-host');await onBack();return;}
+   if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');await onBack();return;}
    if(b.dataset.action==='preview'){read();preview=!preview;screen();return;}
    if(b.dataset.action==='add-day'){read();addDay();return;}
    if(b.dataset.action==='add-private'){read();p.private_prices.push({min:21,max:30,three:'',four:'',five:''});screen();return;}
@@ -97,7 +101,7 @@ window.VTATourProposalStudio={
     if(action==='down'&&i<current.days.length-1)[current.days[i+1],current.days[i]]=[current.days[i],current.days[i+1]];
     current.days.forEach((d,j)=>d.day=j+1);screen();
    }
-  });
+  },{signal:controller.signal});
  }
 };
 })();
