@@ -1,0 +1,200 @@
+/*
+ * VTA RC6 — Approved Tour Program Library gallery.
+ * Screen-only additive theme. No import, saving, permission, API, or print behaviour.
+ */
+@media screen {
+  .tour-library {
+    --tl-navy: #112f42;
+    --tl-teal: #0d8677;
+    --tl-teal-soft: #e1f4ee;
+    --tl-line: #dfe7ec;
+    --tl-muted: #627789;
+    max-width: 1480px;
+    color: #19364d;
+    padding-bottom: 22px;
+  }
+  .tour-library .tl-heading {
+    margin-bottom: 9px;
+    border-bottom: 0;
+    padding: 6px 1px 13px;
+    align-items: center;
+    gap: 10px;
+  }
+  .tour-library .tl-kicker {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.25px;
+    color: var(--tl-teal);
+  }
+  .tour-library .tl-heading h1 { font-size: clamp(22px,2.6vw,29px); color: #142f44; letter-spacing: -.045em; }
+  .tour-library .tl-heading p { font-size: 12px; }
+  .tour-library .btn.primary { background: var(--tl-teal); border-color: var(--tl-teal); color: white; }
+  .tour-library .btn.primary:hover:not(:disabled) { background: #08685f; border-color: #08685f; }
+  .tour-library .tl-head-actions { align-items: center; }
+  .tour-library .tl-head-more { position: relative; z-index: 8; }
+  .tour-library .tl-head-more > summary {
+    list-style: none; cursor: pointer; display: block; user-select: none; font-size: 12px;
+  }
+  .tour-library .tl-head-more > summary::-webkit-details-marker { display: none; }
+  .tour-library .tl-head-menu {
+    position: absolute; right: 0; top: calc(100% + 5px); min-width: 210px;
+    border: 1px solid var(--tl-line); background: #fff; padding: 8px;
+    border-radius: 10px; box-shadow: 0 12px 30px #132e4327;
+    display: grid; gap: 6px;
+  }
+  .tour-library .tl-head-menu .btn { text-align: left; white-space: normal; }
+  .tour-library .tl-tabs { border-bottom: 1px solid var(--tl-line); gap: 7px; margin-bottom: 14px; padding-bottom: 8px; }
+  .tour-library .tl-tabs .btn {
+    border-radius: 30px; min-height: 36px; padding: 8px 13px; font-size: 12px; font-weight: 680;
+  }
+  .tour-library .tl-tabs .btn.primary { color: #0c6d63; background: var(--tl-teal-soft); border-color: var(--tl-teal-soft); }
+  .tour-library .tl-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin: 10px 0 17px; }
+  .tour-library .tl-metric {
+    min-height: 66px; border: 1px solid var(--tl-line); padding: 10px 15px;
+    border-radius: 10px; background: #fff; display: flex;
+    flex-direction: column; justify-content: center; gap: 2px; box-shadow: none;
+  }
+  .tour-library .tl-metric strong { font-size: 21px; line-height: 1.2; color: #15384c; }
+  .tour-library .tl-metric span { font-size: 11px; font-weight: 600; color: var(--tl-muted); }
+  .tour-library .tl-filters {
+    display: grid; grid-template-columns: minmax(220px, 2fr) repeat(2,minmax(120px,1fr)) auto;
+    align-items: end; gap: 9px; margin: 13px 0 18px;
+  }
+  .tour-library .tl-filters label { min-width: 0; font-size: 11px; gap: 5px; }
+  .tour-library .tl-filters label:first-child { min-width: 0; }
+  .tour-library .tl-filters select { min-width: 0; }
+  .tour-library input,.tour-library select,.tour-library textarea { border-radius: 8px; border-color: var(--tl-line); }
+  .tour-library input:focus-visible,.tour-library select:focus-visible,.tour-library textarea:focus-visible,.tour-library button:focus-visible,.tour-library summary:focus-visible {
+    outline: 2px solid #119b8b; outline-offset: 2px;
+  }
+  .tour-library .tl-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px;
+  }
+  .tour-library .tl-card {
+    padding: 0; gap: 0; overflow: visible;
+    background: #fff; border: 1px solid var(--tl-line);
+    border-radius: 11px; box-shadow: 0 3px 14px #142e4510;
+  }
+  .tour-library .tl-card:hover,.tour-library .tl-card:focus-within {
+    border-color: #88c6b9; box-shadow: 0 7px 22px #173f391f;
+  }
+  .tour-library .tl-card-open { width: 100%; gap: 0; text-align: left; }
+  .tour-library .tl-card-open .tl-cover {
+    position: relative; width: 100%; height: 124px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px 10px 0 0; overflow: hidden;
+    color: #fff;
+  }
+  .tour-library .tl-cover::before {
+    content: ''; pointer-events: none; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 145%,#ffffff33,transparent 65%),
+                linear-gradient(20deg,#092d3822,transparent 70%);
+  }
+  .tour-library .tl-cover--bay { background: linear-gradient(120deg,#9cd7d3,#5497ae 53%,#245b7c); }
+  .tour-library .tl-cover--city { background: linear-gradient(120deg,#b1d2c9,#709ea1 48%,#3b698c); }
+  .tour-library .tl-cover--heritage { background: linear-gradient(120deg,#d8e4d3,#d5b27d 52%,#aa795e); }
+  .tour-library .tl-cover--mountain { background: linear-gradient(120deg,#cedfda,#7da7a0 50%,#426b70); }
+  .tour-library .tl-cover--island { background: linear-gradient(120deg,#f3d3a7,#81c7bf 58%,#3a9eaf); }
+  .tour-library .tl-cover--river { background: linear-gradient(120deg,#dce6bc,#93b889 50%,#5b867c); }
+  .tour-library .tl-cover--vietnam { background: linear-gradient(120deg,#c9dce4,#729eae 55%,#416579); }
+  .tour-library .tl-cover-icon { position: relative; font-size: 44px; line-height: 1.1; filter: drop-shadow(0 4px 7px #143b4436); }
+  .tour-library .tl-cover-duration,.tour-library .tl-cover-status {
+    position: absolute; top: 10px; border-radius: 5px; padding: 4px 7px;
+    font-size: 10px; font-weight: 800; line-height: 1.4;
+  }
+  .tour-library .tl-cover-duration { left: 10px; background: #13364ac9; color: white; }
+  .tour-library .tl-cover-status { right: 10px; background: #fff; color: #08776a; }
+  .tour-library .tl-cover-status--draft { color: #926a24; }
+  .tour-library .tl-cover-status--archived { color: #637384; }
+  .tour-library .tl-card-open .tl-card-body {
+    display: flex; flex-direction: column; gap: 6px;
+    width: 100%; padding: 12px 13px 5px; min-height: 89px;
+  }
+  .tour-library .tl-card .tl-card-body strong {
+    color: #17384f; font-size: 14px; font-weight: 790;
+    line-height: 1.35; overflow-wrap: anywhere;
+  }
+  .tour-library .tl-card-open .tl-card-destination {
+    color: var(--tl-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere;
+  }
+  .tour-library .tl-card-open .tl-card-language {
+    font-size: 10px; font-weight: 750; color: #148174; letter-spacing: .3px;
+  }
+  .tour-library .tl-source { margin: 4px 13px 8px; color: #8794a1; font-size: 10px; }
+  .tour-library .tl-tags { gap: 5px; margin: 0 13px 12px; min-height: 23px; }
+  .tour-library .tl-tags span {
+    background: #f3f6f9; border: 1px solid #e7edf1; border-radius: 5px;
+    color: #63788b; font-size: 10px; padding: 3px 7px;
+  }
+  .tour-library .tl-card-actions {
+    margin-top: auto; padding: 10px 13px 12px;
+    border-top: 1px solid #e8eef1; min-height: 54px;
+    justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .tour-library .tl-card-actions:empty { display: none; }
+  .tour-library .tl-card-actions .tl-open-editor {
+    font-size: 11px; font-weight: 750; padding: 7px 11px;
+    background: #e8f5f1; color: #0a7165; border-color: #d9eee8;
+  }
+  .tour-library .tl-card-more { position: relative; z-index: 2; margin-left: auto; }
+  .tour-library .tl-card-more > summary {
+    list-style: none; cursor: pointer; padding: 6px;
+    font-size: 11px; font-weight: 700; border-radius: 6px; color: #516b7d;
+  }
+  .tour-library .tl-card-more > summary::-webkit-details-marker { display: none; }
+  .tour-library .tl-card-more-items {
+    position: absolute; right: 0; bottom: calc(100% + 5px);
+    z-index: 10; width: 172px; padding: 7px;
+    background: #fff; border: 1px solid var(--tl-line);
+    box-shadow: 0 9px 22px #102c4328; border-radius: 9px; display: grid; gap: 5px;
+  }
+  .tour-library .tl-card-more-items .btn { font-size: 11px; text-align: left; }
+  .tour-library .tl-panel,.tour-library .tl-import-item {
+    border-radius: 11px; border: 1px solid var(--tl-line);
+    box-shadow: 0 3px 12px #152e4607;
+  }
+  .tour-library .tl-day { border-color: var(--tl-line); background: #fff; }
+  .tour-library .tl-day legend { color: #117e71; }
+  .tour-library .tl-editor,.tour-library .tl-import-item { max-width: 1320px; }
+  .tour-library .tl-note { background: #e8f5f1; color: #247267; }
+  .tour-library .tl-card[hidden] { display: none; }
+}
+@media screen and (max-width: 1050px) {
+  .tour-library .tl-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .tour-library .tl-filters { grid-template-columns: minmax(160px,2fr) minmax(100px,1fr) minmax(100px,1fr); }
+  .tour-library .tl-filters .tl-check { grid-column: 1/-1; min-height: 30px; }
+}
+@media screen and (max-width: 650px) {
+  .tour-library .tl-heading { flex-direction: column; align-items: flex-start; }
+  .tour-library .tl-head-actions { width: 100%; gap: 6px; }
+  .tour-library .tl-head-actions > .btn { flex: 1; }
+  .tour-library .tl-head-more { margin-left: auto; }
+  .tour-library .tl-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+  .tour-library .tl-metric { min-height: 58px; padding: 8px 11px; }
+  .tour-library .tl-metric strong { font-size: 18px; }
+  .tour-library .tl-filters { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+  .tour-library .tl-filters label:first-child,.tour-library .tl-filters .tl-check { grid-column: 1/-1; }
+  .tour-library .tl-filters label { min-width: 0; }
+  .tour-library .tl-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .tour-library .tl-cover { height: 89px !important; }
+  .tour-library .tl-cover-icon { font-size: 35px; }
+  .tour-library .tl-card-open .tl-card-body { padding: 10px 9px 3px; min-height: 100px; }
+  .tour-library .tl-card .tl-card-body strong { font-size: 12px; }
+  .tour-library .tl-card-open .tl-card-destination { font-size: 10px; }
+  .tour-library .tl-tags { margin: 0 9px 8px; }
+  .tour-library .tl-source { margin: 4px 9px 8px; }
+  .tour-library .tl-card-actions { padding: 8px 9px 10px; }
+  .tour-library .tl-card-actions .tl-open-editor { font-size: 10px; }
+  .tour-library .tl-cover-duration,.tour-library .tl-cover-status { top: 6px; padding: 3px 5px; font-size: 9px; }
+  .tour-library .tl-cover-duration { left: 6px; }
+  .tour-library .tl-cover-status { right: 6px; }
+}
+@media screen and (max-width: 345px) {
+  .tour-library .tl-grid { grid-template-columns: 1fr; }
+  .tour-library .tl-cover { height: 118px !important; }
+}
+@media screen and (prefers-reduced-motion: reduce) {
+  .tour-library .tl-card { transition: none; }
+}
