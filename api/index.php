@@ -136,6 +136,7 @@ try {
     WebhookCenter::adminHandle($route,$method,$db,$config,$user);
     WebsiteInbox::adminHandle($route,$method,$db,$user);
     MetaInbox::adminHandle($route,$method,$db,$config,$user);
+    MetaReplies::adminHandle($route,$method,$db,$config,$user);
     WebsiteChatDelivery::adminHandle($route,$method,$db,$config,$user);
     MarketingTourAdvisor::adminHandle($route,$method,$db,$user);
     MarketingTourShare::adminHandle($route,$method,$db,$user);

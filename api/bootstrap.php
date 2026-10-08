@@ -42,6 +42,7 @@ require_once __DIR__ . '/lib/MarketingStudio.php';
 require_once __DIR__ . '/lib/WebhookCenter.php';
 require_once __DIR__ . '/lib/WebsiteInbox.php';
 require_once __DIR__ . '/lib/MetaInbox.php';
+require_once __DIR__ . '/lib/MetaReplies.php';
 require_once __DIR__ . '/lib/WebsiteChatDelivery.php';
 require_once __DIR__ . '/lib/MarketingTourAdvisor.php';
 require_once __DIR__ . '/lib/MarketingTourShare.php';

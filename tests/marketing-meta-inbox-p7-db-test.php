@@ -9,6 +9,8 @@ function metaCheck(bool $ok,string $description):void{
 }
 $schema=file_get_contents(__DIR__.'/../api/migrations/041_meta_unified_inbox.sql');
 foreach(explode(';',$schema) as $statement)if(trim($statement)!=='')$db->exec($statement);
+$upgrade=file_get_contents(__DIR__.'/../api/migrations/042_meta_messenger_replies.sql');
+foreach(explode(';',$upgrade) as $statement)if(trim($statement)!=='')$db->exec($statement);
 
 $secret=str_repeat('a',32);$verify=str_repeat('v',48);
 $config=['integrations'=>['meta_inbox'=>[

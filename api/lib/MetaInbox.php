@@ -99,6 +99,10 @@ final class MetaInbox {
                 if(!is_string($sender)||!preg_match('/^[0-9]{8,40}$/D',$sender)||$sender===$entity
                    ||!is_string($recipient)||!hash_equals($entity,$recipient))continue;
                 $mid=$message['mid']??null;$text=$message['text']??null;
+                $ts=$m['timestamp']??null;
+                // Trust only a signed provider timestamp. Never infer an outbound
+                // 24h response window from webhook delivery/queue processing time.
+                $timestampMs=(is_int($ts)&&$ts>=1577836800000&&$ts<=4102444800000)?$ts:null;
                 if(!is_string($mid)||strlen($mid)>128||!preg_match('/^[A-Za-z0-9._:-]{8,128}$/D',$mid)
                    ||!is_string($text)||trim($text)===''||strlen($text)>8000
                    ||!preg_match('//u',$text))continue;
@@ -109,8 +113,8 @@ final class MetaInbox {
                     'company_id'=>$a['company_id'],'campaign_id'=>$a['campaign_id'],
                     'source_code'=>$source,'platform'=>$a['platform'],
                     'event_key'=>$event,'sender_id'=>$sender,'message_id'=>$msg,
-                    'message_text'=>trim($text),
-                    'payload_hash'=>hash('sha256',json_encode([$sender,$recipient,$mid,trim($text)],JSON_THROW_ON_ERROR))
+                    'message_text'=>trim($text),'provider_timestamp_ms'=>$timestampMs,
+                    'payload_hash'=>hash('sha256',json_encode([$sender,$recipient,$mid,trim($text),$timestampMs],JSON_THROW_ON_ERROR))
                 ];
                 if(count($out)>500)throw new InvalidArgumentException('Too many text messages');
             }
@@ -127,10 +131,10 @@ final class MetaInbox {
                     $v['company_id'],$v['campaign_id']])->fetchColumn();
                 if(!$active)throw new DomainException('Mapped Meta campaign is inactive');
                 $result=self::q($db,"INSERT IGNORE INTO social_meta_inbound_jobs(
-                    company_id,campaign_id,source_code,platform,event_key,payload_hash,sender_id,message_id,message_text
-                    ) VALUES(?,?,?,?,?,?,?,?,?)",[
+                    company_id,campaign_id,source_code,platform,event_key,payload_hash,sender_id,message_id,message_text,provider_timestamp_ms
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?)",[
                     $v['company_id'],$v['campaign_id'],$v['source_code'],$v['platform'],
-                    $v['event_key'],$v['payload_hash'],$v['sender_id'],$v['message_id'],$v['message_text']]);
+                    $v['event_key'],$v['payload_hash'],$v['sender_id'],$v['message_id'],$v['message_text'],$v['provider_timestamp_ms']??null]);
                 if($result->rowCount()>0){$inserted++;continue;}
                 $old=self::q($db,"SELECT payload_hash FROM social_meta_inbound_jobs WHERE company_id=? AND source_code=? AND event_key=?",[
                     $v['company_id'],$v['source_code'],$v['event_key']])->fetchColumn();
@@ -161,6 +165,19 @@ final class MetaInbox {
             ];
             $hash=hash('sha256',json_encode($event,JSON_THROW_ON_ERROR));
             $result=WebsiteInbox::ingest($db,(int)$job['company_id'],(int)$job['campaign_id'],(string)$job['source_code'],$event,$hash);
+            $milliseconds=$job['provider_timestamp_ms']??null;
+            if($job['platform']==='FACEBOOK_MESSENGER'&&$milliseconds!==null) {
+                $seconds=intdiv((int)$milliseconds,1000);
+                // Old or implausibly future-dated events may be archived
+                // but cannot extend the permitted response window.
+                if($seconds>1577836800&&$seconds<=time()+60){
+                    $at=gmdate('Y-m-d H:i:s',$seconds);
+                    self::q($db,"UPDATE social_conversations SET last_meta_inbound_at=
+                        IF(last_meta_inbound_at IS NULL OR last_meta_inbound_at<? , ?,last_meta_inbound_at)
+                        WHERE company_id=? AND id=?",[
+                            $at,$at,(int)$job['company_id'],(int)$result['conversation_id']]);
+                }
+            }
             self::q($db,"UPDATE social_meta_inbound_jobs SET status='DONE',processed_at=UTC_TIMESTAMP(),conversation_id=?,last_error=NULL WHERE id=? AND status='PROCESSING'",[
                 (int)$result['conversation_id'],$id]);
             return ['id'=>$id,'status'=>'DONE','conversation_id'=>(int)$result['conversation_id']];

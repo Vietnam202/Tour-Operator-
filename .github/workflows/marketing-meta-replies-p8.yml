@@ -1,0 +1,60 @@
+name: Marketing Messenger Replies P8
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MetaInbox.php'
+      - 'api/lib/MetaReplies.php'
+      - 'api/lib/MessengerSender.php'
+      - 'api/bin/meta-reply-worker.php'
+      - 'api/migrations/042_meta_messenger_replies.sql'
+      - 'api/bootstrap.php'
+      - 'api/index.php'
+      - 'social-inbox.js'
+      - 'tests/marketing-meta-inbox-p7-db-test.php'
+      - 'tests/marketing-meta-replies-p8-db-test.php'
+      - '.github/workflows/marketing-meta-replies-p8.yml'
+  workflow_dispatch:
+jobs:
+  php-js-mariadb:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_pw
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/MetaInbox.php
+          php -l api/lib/MetaReplies.php
+          php -l api/lib/MessengerSender.php
+          php -l api/bin/meta-reply-worker.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/marketing-meta-replies-p8-db-test.php
+      - name: JavaScript syntax
+        run: node --check social-inbox.js
+      - name: MariaDB P7 regression and Messenger response tests
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-meta-replies-p8-db-test.php
+      - name: Strictly opted-in CLI worker
+        run: |
+          grep -q 'NOOP' api/bin/meta-reply-worker.php
+          grep -q 'I_APPROVE_REAL_MESSENGER_RESPONSES' api/bin/meta-reply-worker.php
+          grep -q 'RuntimeGuard::config' api/bin/meta-reply-worker.php
