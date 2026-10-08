@@ -8,17 +8,6 @@ function programDays(string $city):string {
     return json_encode([['title'=>'Arrival '.$city],['title'=>'City tour '.$city],['title'=>'Departure '.$city]],JSON_THROW_ON_ERROR);
 }
 // Existing P2 test fixture builds disposable companies, users, campaign and chat tables.
-$db->exec("CREATE TABLE tour_library_programs (
- id BIGINT UNSIGNED PRIMARY KEY,
- company_id BIGINT UNSIGNED NOT NULL,
- status ENUM('DRAFT','ACTIVE','ARCHIVED') NOT NULL DEFAULT 'DRAFT',
- title VARCHAR(190) NOT NULL,
- destination VARCHAR(190) NOT NULL,
- language VARCHAR(16) NOT NULL DEFAULT 'en',
- tags_json JSON NOT NULL,
- days_json JSON NOT NULL,
- UNIQUE KEY uq_lib_tenant(company_id,id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 $programs=[
  [100,1,'ACTIVE','Hanoi – Ha Long – Ninh Binh','Hanoi, Ha Long, Ninh Binh','en',programDays('Hanoi')],
  [101,1,'ACTIVE','Da Nang – Hoi An','Da Nang, Hoi An','en',programDays('Da Nang')],
@@ -27,8 +16,6 @@ $programs=[
 ];
 $st=$db->prepare('INSERT INTO tour_library_programs(id,company_id,status,title,destination,language,tags_json,days_json) VALUES(?,?,?,?,?,?,?,?)');
 foreach($programs as $p)$st->execute([$p[0],$p[1],$p[2],$p[3],$p[4],$p[5],'[]',$p[6]]);
-$sql=file_get_contents(__DIR__.'/../api/migrations/037_marketing_tour_advisor_p3.sql');
-foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$db->exec($statement);
 
 $conv=(int)$first['conversation_id'];
 $team=['company_id'=>1,'id'=>1];
