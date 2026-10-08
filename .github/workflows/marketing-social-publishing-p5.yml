@@ -1,0 +1,61 @@
+name: Marketing Social Publishing P5
+on:
+  pull_request:
+    paths:
+      - 'api/lib/SocialPublishing.php'
+      - 'api/lib/FacebookPagePoster.php'
+      - 'api/bin/social-publisher.php'
+      - 'api/migrations/039_social_publishing_core.sql'
+      - 'api/bootstrap.php'
+      - 'api/index.php'
+      - 'index.html'
+      - 'marketing-studio.js'
+      - 'social-publishing.js'
+      - 'social-publishing.css'
+      - 'tests/marketing-social-publishing-db-test.php'
+      - '.github/workflows/marketing-social-publishing-p5.yml'
+  workflow_dispatch:
+jobs:
+  php-js-mariadb:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/SocialPublishing.php
+          php -l api/lib/FacebookPagePoster.php
+          php -l api/bin/social-publisher.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/marketing-social-publishing-db-test.php
+      - name: JavaScript syntax
+        run: |
+          node --check social-publishing.js
+          node --check marketing-studio.js
+      - name: MariaDB scheduling, approval, idempotency and dispatch
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-social-publishing-db-test.php
+      - name: Default worker is no-op
+        run: |
+          grep -q "DRY/NOOP" api/bin/social-publisher.php
+          grep -q "I_ACKNOWLEDGE_REAL_POSTS" api/bin/social-publisher.php
