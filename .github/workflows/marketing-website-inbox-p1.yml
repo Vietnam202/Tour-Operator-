@@ -1,0 +1,32 @@
+name: Marketing Website Inbox P1
+on:
+  pull_request:
+    paths:
+      - 'api/lib/WebsiteInbox.php'
+      - 'api/lib/WebhookCenter.php'
+      - 'api/migrations/024_website_unified_inbox.sql'
+      - 'social-inbox.js'
+      - 'social-inbox.css'
+      - 'marketing-studio.js'
+      - 'index.html'
+      - 'tests/website-inbox-test.php'
+      - '.github/workflows/marketing-website-inbox-p1.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/WebsiteInbox.php
+          php -l api/lib/WebhookCenter.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/website-inbox-test.php
+      - name: JavaScript syntax
+        run: |
+          node --check social-inbox.js
+          node --check marketing-studio.js
+      - name: Signed website message parsing and validation
+        run: php tests/website-inbox-test.php
