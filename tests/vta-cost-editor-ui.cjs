@@ -60,7 +60,7 @@ async function harness({locked=false,cost=true}={}){
   assert.equal(root.querySelectorAll('[data-vta-row]').length,3);
   assert.equal(root.querySelectorAll('.vta-stay-line').length,2);
   assert.equal(root.querySelectorAll('[data-vta-summary]').length,3);
-  assert(root.textContent.includes('Hanoi Hotel'));
+  assert.equal(root.querySelector('[data-vta-row="10"] [data-name]').value,'Hanoi Hotel');
   console.log('PASS responsive service rows and independent per-destination Hotel/Cruise rates');
   const hotel=root.querySelector('[data-vta-row="10"]');
   hotel.querySelector('[data-name]').value='Hanoi New Hotel';
