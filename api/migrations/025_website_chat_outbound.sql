@@ -1,4 +1,4 @@
--- 025: native website chat outbound transport; additive and tenant scoped.
+-- 025: native website chat outbound transport (additive and tenant scoped).
 -- RELAYED means the website backend acknowledged collection, NOT visitor read.
 CREATE TABLE IF NOT EXISTS website_chat_outbound (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
