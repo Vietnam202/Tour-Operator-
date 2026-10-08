@@ -1,0 +1,46 @@
+name: RC6.2 Minimal UI Refresh checks
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc6-smart-cost-direct-edit-v1'
+    paths:
+      - 'vta-ui-refresh.css'
+      - 'index.html'
+      - 'preview.html'
+      - 'service-worker.js'
+      - 'tests/ui-refresh.cjs'
+      - 'tests/v5-template-gallery-ui.cjs'
+      - 'tour-proposal-studio.js'
+      - '.github/workflows/ui-refresh.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  existing-features-and-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install current isolated UI testing dependencies
+        run: npm ci --prefix tests
+      - name: Verify presentation-only wiring
+        run: |
+          node --check tests/ui-refresh.cjs
+          node tests/ui-refresh.cjs
+          node --check tests/v5-template-gallery-ui.cjs
+          node tests/v5-template-gallery-ui.cjs
+      - name: Preserve existing Proposal Studio V5 and Cost editor
+        run: |
+          node tests/tour-proposal-studio.cjs
+          node tests/vta-cost-editor-ui.cjs
+          node tests/document-days-ui.cjs
+          node tests/document-cost-ui.cjs
+          node tests/tour-library-ui.cjs
+      - name: Check existing client JavaScript syntax
+        run: |
+          node --check app.js
+          node --check tour-proposal-studio.js
+          node --check vta-cost-editor.js
+          node --check document-editor.js
