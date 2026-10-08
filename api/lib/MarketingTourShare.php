@@ -92,8 +92,8 @@ final class MarketingTourShare {
     }
     public static function view(PDO $db,string $token):array {
         if(preg_match('/^[a-f0-9]{64}$/D',$token)!==1)throw new OutOfBoundsException('Not found');
-        $row=self::q($db,"SELECT s.id,s.company_id,s.program_id,s.snapshot_json,s.program_snapshot_hash,s.revoked_at,s.expires_at,
-              p.id program_found,p.title,p.destination,p.language,p.status,p.tags_json,p.days_json,p.marketing_share_approved_hash
+        $row=self::q($db,"SELECT s.id AS share_id,s.company_id,s.program_id,s.snapshot_json,s.program_snapshot_hash,s.revoked_at,s.expires_at,
+              p.id,p.title,p.destination,p.language,p.status,p.tags_json,p.days_json,p.marketing_share_approved_hash
               FROM marketing_tour_shares s JOIN tour_library_programs p
               ON p.company_id=s.company_id AND p.id=s.program_id
               WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>NOW()
@@ -111,7 +111,7 @@ final class MarketingTourShare {
            ||!is_array($saved['day_titles']??null)||!array_is_list($saved['day_titles']))
             throw new OutOfBoundsException('Invalid share snapshot');
         self::q($db,'UPDATE marketing_tour_shares SET view_count=LEAST(view_count+1,4294967295),last_opened_at=NOW() WHERE id=? AND company_id=?',[
-            $row['id'],$row['company_id']]);
+            $row['share_id'],$row['company_id']]);
         return $saved;
     }
     public static function html(array $snapshot):string {
