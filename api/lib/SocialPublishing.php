@@ -118,7 +118,7 @@ final class SocialPublishing {
             $company=(int)$job['company_id'];
             $a=self::account($config,$company,$job['account_alias']);
             try{$c=self::content($db,$company,(int)$job['content_id'],true);}
-            catch(Throwable $e){$c=null;}
+            catch(DomainException|OutOfBoundsException $e){$c=null;}
             if(!$a||!$a['ready']||!$c||!hash_equals((string)$job['content_hash'],self::hash($c))) {
                 self::q($db,"UPDATE marketing_publish_jobs SET status='BLOCKED',status_detail='Account or approved content changed',updated_at=UTC_TIMESTAMP() WHERE id=?",[$job['id']]);
                 $db->commit();return ['blocked'=>true,'id'=>(int)$job['id']];
