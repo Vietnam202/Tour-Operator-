@@ -41,12 +41,13 @@ final class WebsiteChatDelivery {
             $conv=self::q($db,"SELECT id,status FROM social_conversations WHERE company_id=? AND id=? FOR UPDATE",[$company,$id])->fetch();
             if(!$conv)throw new OutOfBoundsException('Conversation not found');
             if($conv['status']==='CLOSED')throw new DomainException('Closed conversation cannot receive replies');
+            $draftId=null;
             if(array_key_exists('tour_advisor_draft_id',$input)&&$input['tour_advisor_draft_id']!==null) {
                 $draftId=self::positive($input['tour_advisor_draft_id'],'tour_advisor_draft_id');
                 MarketingTourAdvisor::validateDraftForSend($db,$company,$id,$draftId,$body);
             }
-            self::q($db,"INSERT INTO website_chat_outbound(company_id,conversation_id,request_key,payload_hash,body,created_by) VALUES(?,?,?,?,?,?)",[
-                $company,$id,$key,$hash,$body,(int)$user['id']]);
+            self::q($db,"INSERT INTO website_chat_outbound(company_id,conversation_id,request_key,payload_hash,body,created_by,tour_advisor_draft_id) VALUES(?,?,?,?,?,?,?)",[
+                $company,$id,$key,$hash,$body,(int)$user['id'],$draftId]);
             $outId=(int)$db->lastInsertId();
             Audit::log($db,$company,(int)$user['id'],'WEBSITE_CHAT_REPLY_QUEUED','website_chat_outbound',$outId,null,['conversation_id'=>$id]);
             $db->commit();
@@ -97,9 +98,22 @@ final class WebsiteChatDelivery {
         if(!$conv)return ['ok'=>true,'messages'=>[],'last_id'=>$req['after_id']];
         $id=(int)$conv['id'];
         if($req['action']==='pull'){
-            $rows=self::q($db,'SELECT id,body,created_at FROM website_chat_outbound WHERE company_id=? AND conversation_id=? AND id>? ORDER BY id ASC LIMIT 50',[
+            $rows=self::q($db,"SELECT id,body,created_at,status,tour_advisor_draft_id FROM website_chat_outbound
+                WHERE company_id=? AND conversation_id=? AND id>? AND status<>'BLOCKED' ORDER BY id ASC LIMIT 50",[
                 $company,$id,$req['after_id']])->fetchAll(PDO::FETCH_ASSOC);
-            $msgs=array_map(fn($m)=>['id'=>(int)$m['id'],'text'=>$m['body'],'created_at'=>$m['created_at']],$rows);
+            $msgs=[];
+            foreach($rows as $message) {
+                if($message['tour_advisor_draft_id']!==null && $message['status']==='QUEUED') {
+                    try {
+                        MarketingTourAdvisor::validateDraftForSend($db,$company,$id,(int)$message['tour_advisor_draft_id'],(string)$message['body']);
+                    }catch(DomainException $e) {
+                        self::q($db,"UPDATE website_chat_outbound SET status='BLOCKED' WHERE company_id=? AND conversation_id=? AND id=? AND status='QUEUED'",[
+                            $company,$id,(int)$message['id']]);
+                        continue;
+                    }
+                }
+                $msgs[]=['id'=>(int)$message['id'],'text'=>$message['body'],'created_at'=>$message['created_at']];
+            }
             return ['ok'=>true,'messages'=>$msgs,'last_id'=>$msgs?(int)end($msgs)['id']:$req['after_id']];
         }
         if($req['action']==='ack'){
