@@ -9,6 +9,8 @@ on:
       - 'preview.html'
       - 'service-worker.js'
       - 'tests/ui-refresh.cjs'
+      - 'tests/v5-template-gallery-ui.cjs'
+      - 'tour-proposal-studio.js'
       - '.github/workflows/ui-refresh.yml'
   workflow_dispatch:
 permissions:
@@ -27,6 +29,8 @@ jobs:
         run: |
           node --check tests/ui-refresh.cjs
           node tests/ui-refresh.cjs
+          node --check tests/v5-template-gallery-ui.cjs
+          node tests/v5-template-gallery-ui.cjs
       - name: Preserve existing Proposal Studio V5 and Cost editor
         run: |
           node tests/tour-proposal-studio.cjs
