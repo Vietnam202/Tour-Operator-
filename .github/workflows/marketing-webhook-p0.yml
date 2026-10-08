@@ -1,0 +1,30 @@
+name: Marketing Webhook P0
+on:
+  pull_request:
+    paths:
+      - 'api/lib/WebhookCenter.php'
+      - 'api/migrations/023_marketing_webhook_core.sql'
+      - 'marketing-studio.js'
+      - 'tests/webhook-center-test.php'
+      - '.github/workflows/marketing-webhook-p0.yml'
+  workflow_dispatch:
+
+jobs:
+  php-and-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify runtime
+        run: |
+          php -v
+          node --version
+      - name: PHP syntax
+        run: |
+          php -l api/lib/WebhookCenter.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/webhook-center-test.php
+      - name: JS syntax
+        run: node --check marketing-studio.js
+      - name: Webhook HMAC and schema checks
+        run: php tests/webhook-center-test.php
