@@ -77,4 +77,12 @@ catch(DomainException $e){$draftDenied=true;}
 checked($draftDenied,'no new drafts from stale ACTIVE tours');
 $notApproved=MarketingTourAdvisor::programs($db,$team,$conv,'Ha Long',false);
 checked(count($notApproved)===0,'stale tour removed from customer-facing search');
+$afterQueued=WebsiteChatDelivery::relay($db,1,'site-main',[
+ 'action'=>'pull','timestamp'=>time(),'external_conversation_id'=>'visitor_site_000001',
+ 'after_id'=>(int)$sent['id'],'message_ids'=>[]
+]);
+checked(count($afterQueued['messages'])===0,'stale approved tour is not delivered by website relay');
+$status=$db->prepare('SELECT status FROM website_chat_outbound WHERE company_id=1 AND id=?');
+$status->execute([$queued['id']]);
+checked($status->fetchColumn()==='BLOCKED','stale queued reply moves to BLOCKED state');
 echo "P3 Tour Advisor MariaDB integration tests completed.".PHP_EOL;
