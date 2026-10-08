@@ -37,6 +37,29 @@ async function run(){
  root.querySelector('[data-action="preview"]').click();await settle();
  assert.equal(calls.length,1);
  console.log('PASS view-only permissions and preview');
+ // Approved demo parity: pasted days are editable and reusable templates remain separate.
+ w.prompt=()=> 'Day 2: Ha Long Bay\nCruise itinerary\nDay 3: Ninh Binh\nScenic boat journey';
+ w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:true,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
+ root.querySelector('[data-action="paste"]').click();
+ assert.equal(root.querySelectorAll('[data-day-index]').length,3);
+ assert.equal(root.querySelector('[data-day-index="1"] [data-day-field="title"]').textContent,'Ha Long Bay');
+ root.querySelector('[data-action="save-template"]').click();await settle();await settle();
+ const last=calls.at(-1);
+ assert.equal(last.route,'tour-library');
+ assert.equal(last.opt.method,'POST');
+ assert(last.opt.body.tags.includes('VTA_TEMPLATE'));
+ assert.equal(last.opt.body.status,'DRAFT');
+ assert.equal(last.opt.body.days.length,3);
+ assert.equal(last.opt.body.source_type,'MANUAL');
+ assert.equal(last.opt.body.id,undefined);
+ assert.equal(program().title,'Hanoi – Halong 2D1N');
+ console.log('PASS Studio paste/Save as Template creates independent draft');
+ root.querySelector('[data-mode="QUICK"]').click();
+ root.querySelector('[data-action="preview"]').click();
+ assert.equal(root.classList.contains('vtps-quick-preview'),true);
+ root.querySelector('[data-action="preview"]').click();
+ assert.equal(root.classList.contains('vtps-quick-preview'),false);
+ console.log('PASS Quick preview is reversible without overwriting program');
  w.close();
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
