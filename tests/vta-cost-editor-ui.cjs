@@ -44,7 +44,7 @@ async function harness({locked=false,cost=true}={}){
         return {costing_revision:ctx.costing_revision,variant_id:99};
       }
       if(b.action==='remove')ctx.requirements.find(x=>x.id===b.requirement_id).requirement_state='NOT_APPLICABLE';
-      if(b.requirement&&b.requirement.requirement_state==='REQUIRED')ctx.requirements.find(x=>x.id===b.requirement.id).requirement_state='REQUIRED';
+      if(b.requirement?.id&&b.requirement.requirement_state==='REQUIRED')ctx.requirements.find(x=>x.id===b.requirement.id).requirement_state='REQUIRED';
       return {costing_revision:ctx.costing_revision};
     }
     throw Error('Unexpected URL '+route);
