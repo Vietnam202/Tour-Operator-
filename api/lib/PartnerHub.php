@@ -134,11 +134,16 @@ final class PartnerHub {
             'valid_until'=>$expires,'publication_version'=>(int)$pub['version_no']];
     }
     private static function output(array $work,array $agency,array $pub,array $params,string $audience):array {
-        $data=self::parse($work['content_json']);$q=self::quote($work,$pub,$params);
+        $data=self::parse($work['content_json']);$q=$audience==='itinerary'?['status'=>'ITINERARY_ONLY']:self::quote($work,$pub,$params);
         if($audience!=='itinerary'&&$q['status']!=='QUOTABLE')throw new DomainException('No approved NET price for this configuration; export itinerary only');
         $blocks=[['type'=>'brand','text'=>$agency['brand_name']],['type'=>'title','text'=>$data['title']],
             ['type'=>'text','text'=>trim($data['destination'].' · '.$data['tour_code'])],
             ['type'=>'heading','text'=>'Tour Overview'],['type'=>'text','text'=>$data['overview']]];
+        if(!empty($agency['logo_path'])&&is_file($agency['logo_path'])) {
+            $dimensions=@getimagesize($agency['logo_path']);
+            if($dimensions&&hash_equals((string)$agency['logo_sha256'],hash_file('sha256',$agency['logo_path'])))
+                array_splice($blocks,1,0,[['type'=>'image','asset_id'=>1,'caption'=>'','width'=>$dimensions[0],'height'=>$dimensions[1],'width_pct'=>25]]);
+        }
         if($data['highlights']){$blocks[]=['type'=>'heading','text'=>'Highlights'];foreach($data['highlights'] as $h)$blocks[]=['type'=>'text','text'=>'• '.$h];}
         $blocks[]=['type'=>'heading','text'=>'Detailed Itinerary'];
         foreach($data['days'] as $i=>$day){
@@ -172,6 +177,36 @@ final class PartnerHub {
                 $agencies=$admin?self::q($db,"SELECT * FROM b2b_agencies WHERE company_id=? AND status='ACTIVE' ORDER BY agency_name",[$company])->fetchAll(PDO::FETCH_ASSOC):
                 self::q($db,"SELECT a.* FROM b2b_agencies a JOIN b2b_agency_members m ON m.agency_id=a.id AND m.company_id=a.company_id WHERE a.company_id=? AND m.user_id=? AND a.status='ACTIVE' ORDER BY a.agency_name",[$company,$user])->fetchAll(PDO::FETCH_ASSOC);
                 Http::json(['ok'=>true,'admin'=>$admin,'agencies'=>array_map([self::class,'safeAgency'],$agencies)]);
+            }
+            if(preg_match('#^b2b/agencies/(\\d+)/logo$#D',$route,$lm)){
+                $agency=self::agency($db,$u,(int)$lm[1]);
+                if($method==='GET'){
+                    $file=(string)($agency['logo_path']??'');
+                    if(!$file||!is_file($file)||!hash_equals((string)$agency['logo_sha256'],hash_file('sha256',$file)))throw new OutOfBoundsException('Logo unavailable');
+                    header('Content-Type: image/png');header('Content-Disposition: inline; filename="agency-logo.png"');
+                    header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');readfile($file);exit;
+                }
+                if($method==='POST'){
+                    $file=$_FILES['file']??[];
+                    if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_uploaded_file($file['tmp_name']??'')||($file['size']??0)>2097152)throw new InvalidArgumentException('Upload PNG or JPEG up to 2 MB');
+                    $info=@getimagesize($file['tmp_name']);if(!$info||!in_array($info[2],[IMAGETYPE_JPEG,IMAGETYPE_PNG],true)||$info[0]>4000||$info[1]>4000||$info[0]<1||$info[1]<1)throw new InvalidArgumentException('Unsupported logo');
+                    if(!function_exists('imagecreatetruecolor'))throw new DomainException('Logo processing requires GD');
+                    $src=$info[2]===IMAGETYPE_PNG?@imagecreatefrompng($file['tmp_name']):@imagecreatefromjpeg($file['tmp_name']);
+                    if(!$src)throw new InvalidArgumentException('Invalid logo pixels');
+                    $scale=min(1,800/max($info[0],$info[1]));$width=max(1,(int)round($info[0]*$scale));$height=max(1,(int)round($info[1]*$scale));
+                    $dst=imagecreatetruecolor($width,$height);imagealphablending($dst,false);imagesavealpha($dst,true);
+                    imagecopyresampled($dst,$src,0,0,0,0,$width,$height,$info[0],$info[1]);imagedestroy($src);
+                    $base=rtrim((string)($cfg['storage']['local_path']??''),'/\\\\');if(!$base)throw new DomainException('Private storage unavailable');
+                    $dir=$base.'/b2b-agency-logos';if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new DomainException('Private logo directory unavailable');
+                    $temp=tempnam($dir,'logo-');if(!$temp){imagedestroy($dst);throw new DomainException('Cannot store agency logo');}
+                    $ok=imagepng($dst,$temp);imagedestroy($dst);
+                    if(!$ok){@unlink($temp);throw new DomainException('Cannot process agency logo');}
+                    $hash=hash_file('sha256',$temp);$path=$dir.'/agency-'.$agency['id'].'-'.$hash.'.png';
+                    if(!rename($temp,$path)){@unlink($temp);throw new DomainException('Cannot write logo');}
+                    @chmod($path,0640);
+                    self::q($db,'UPDATE b2b_agencies SET logo_path=?,logo_mime=?,logo_sha256=? WHERE company_id=? AND id=?',[$path,'image/png',$hash,$company,$agency['id']]);
+                    Audit::log($db,$company,$user,'B2B_LOGO_UPDATED','b2b_agency',(int)$agency['id']);Http::json(['ok'=>true,'sha256'=>$hash]);
+                }
             }
             if($route==='b2b/admin/agencies'){
                 self::requireAdmin($db,$u);
@@ -221,7 +256,7 @@ final class PartnerHub {
                 Audit::log($db,$company,$user,'B2B_PUBLICATION_REVOKED','b2b_publication',(int)$m[1]);Http::json(['ok'=>true]);
             }
             if($route==='b2b/tours'&&$method==='GET'){
-                $rows=self::q($db,"SELECT p.id,p.program_id,p.version_no,p.content_json,p.rate_json,p.created_at FROM b2b_publications p JOIN (SELECT program_id,MAX(version_no) version_no FROM b2b_publications WHERE company_id=? AND status='PUBLISHED' GROUP BY program_id) latest ON latest.program_id=p.program_id AND latest.version_no=p.version_no WHERE p.company_id=? AND p.status='PUBLISHED' ORDER BY p.created_at DESC LIMIT 200",[$company,$company])->fetchAll(PDO::FETCH_ASSOC);
+                $rows=self::q($db,"SELECT p.id,p.program_id,p.version_no,p.content_json,p.rate_json,p.created_at FROM b2b_publications p JOIN (SELECT program_id,MAX(version_no) version_no FROM b2b_publications WHERE company_id=? GROUP BY program_id) latest ON latest.program_id=p.program_id AND latest.version_no=p.version_no WHERE p.company_id=? AND p.status='PUBLISHED' ORDER BY p.created_at DESC LIMIT 200",[$company,$company])->fetchAll(PDO::FETCH_ASSOC);
                 $items=[];foreach($rows as $r){$d=self::parse($r['content_json']);$rates=self::parse($r['rate_json']);$items[]=['id'=>(int)$r['id'],'program_id'=>(int)$r['program_id'],'version'=>(int)$r['version_no'],'title'=>$d['title'],'destination'=>$d['destination'],'days'=>count($d['days']),'tour_type'=>$d['tour_type'],'has_approved_net'=>!empty($rates['cells'])&&($rates['valid_until']??'')>=date('Y-m-d')];}
                 Http::json(['ok'=>true,'items'=>$items]);
             }
@@ -264,13 +299,15 @@ final class PartnerHub {
                     if(!in_array($audience,['itinerary','agency','client'],true))throw new InvalidArgumentException('Invalid output mode');
                     $s=self::output($w,$agency,$pub,$_GET,$audience);
                     // Existing VTA serializer produces real editable OOXML and paginated Unicode PDF.
-                    ProposalOutput::respond($fm[1],$s,$cfg,fn($id)=>'',fn($id)=>'',false);
+                    ProposalOutput::respond($fm[1],$s,$cfg,
+                        fn($id)=>'index.php?route=b2b/agencies/'.$agency['id'].'/logo',
+                        fn($id)=>(int)$id===1&&(is_file((string)$agency['logo_path']))&&hash_equals((string)$agency['logo_sha256'],hash_file('sha256',$agency['logo_path']))?$agency['logo_path']:throw new OutOfBoundsException('Logo unavailable'),false);
                 }
                 if($action==='booking-request'&&$method==='POST'){
                     if($pub['status']!=='PUBLISHED')throw new DomainException('This tour is no longer published');
                     $b=Http::body();$date=self::field($b['departure_date']??'',10);
                     if(!preg_match('/^20\d\d-\d\d-\d\d$/D',$date)||!checkdate((int)substr($date,5,2),(int)substr($date,8,2),(int)substr($date,0,4))||$date<date('Y-m-d'))throw new InvalidArgumentException('Valid future departure date required');
-                    $q=self::quote($w,$pub,$b);if($q['status']!=='QUOTABLE')throw new DomainException('VTA must approve the NET price before a booking request');
+                    $q=self::quote($w,$pub,$b);if($q['status']!=='QUOTABLE')throw new DomainException('VTA must approve the NET price before a booking request');if($date>$q['valid_until'])throw new DomainException('Departure is outside the approved NET validity');
                     $name=self::field($b['guest_name']??'',190);$email=self::field($b['guest_email']??'',190);$notes=self::field($b['notes']??'',10000);
                     if($email!==''&&!filter_var($email,FILTER_VALIDATE_EMAIL))throw new InvalidArgumentException('Invalid guest email');
                     // Fixed immutable commercial snapshot for Operations review; not a confirmed booking.
