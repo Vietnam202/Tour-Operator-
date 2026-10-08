@@ -93,6 +93,7 @@ final class MarketingStagingGate {
                 $items[]=self::item('EMPTY_MIGRATION','BLOCK',$file.' contains no DDL');
         }
         $items[]=self::item('MIGRATION_HASH_MANIFEST','INFO','Source SQL hashes captured in independent manifest; existing applied migration checksums must remain unchanged');
+        $items[]=self::item('STAGING_ACCEPTANCE_NOT_SIGNED','BLOCK','No backup/restore drill, browser acceptance, or authorized release signoff can be proven from source-only inspection');
         $items[]=self::item('SCOPE','INFO','Preflight is read-only; no database access unless --db is explicitly supplied, and no real Meta/website messages are sent');
         return $items;
     }
