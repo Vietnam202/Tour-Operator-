@@ -252,7 +252,7 @@
         const matching=packages.filter(candidate=>
           (r.category === 'HOTEL'?parseInt(candidate.hotel_level,10):candidate.cruise_level)===tier);
         const variantIds=matching.map(candidate=>Number(candidate.variant_id));
-        return sheet({requirement_id:Number(r.id),shared:false,variant_ids,
+        return sheet({requirement_id:Number(r.id),shared:false,variant_ids:variantIds,
           lines:Object.fromEntries(variantIds.map(id=>[id,manual]))});
       }
       return sheet({requirement_id:Number(r.id),shared:true,line:manual});
