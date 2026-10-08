@@ -51,7 +51,7 @@ final class MetaReplies {
         $recipientOk=preg_match('/^[0-9]{8,40}$/D',$sender)===1&&$sender!==$account['page_id'];
         return ['conversation_id'=>$conversation,'provider'=>'FACEBOOK_MESSENGER',
             'can_send'=>$account['ready']&&$clockOk&&$open&&$recipientOk,
-            'reason'=>!$account['ready']?'ACCOUNT_NOT_AUTHORIZED':(!$clockOk?'OUTSIDE_24H_WINDOW':(!$open?'CLOSED':'INVALID_RECIPIENT')),
+            'reason'=>!$account['ready']?'ACCOUNT_NOT_AUTHORIZED':(!$clockOk?'OUTSIDE_24H_WINDOW':(!$open?'CLOSED':(!$recipientOk?'INVALID_RECIPIENT':null))),
             'last_inbound_at'=>$last,
             'source_code'=>$row['source_code']];
     }
