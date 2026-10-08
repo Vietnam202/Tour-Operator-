@@ -57,7 +57,7 @@ final class PartnerHub {
         return [
             'title'=>$p['title']??'','destination'=>$p['destination']??'',
             'language'=>$p['language']??'en',
-            'days'=>ScheduleImport::normalize($p['days']??[]),
+            'days'=>array_map(static function(array $day):array{$day['notes']='';return $day;},ScheduleImport::normalize($p['days']??[])),
             'included_text'=>$p['included_text']??'',
             'excluded_text'=>$p['excluded_text']??'',
             'terms_text'=>$p['terms_text']??'',
