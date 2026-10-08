@@ -1,3 +1,6 @@
+-- Existing campaign content uses a single-column primary key; add composite tenant index for safe FK.
+ALTER TABLE marketing_content ADD UNIQUE KEY uq_marketing_content_tenant(company_id,id);
+
 -- P5: first-party social publishing queue. Provider credentials are NEVER stored in this table.
 CREATE TABLE IF NOT EXISTS marketing_publish_jobs (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
