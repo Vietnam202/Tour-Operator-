@@ -1,0 +1,21 @@
+{
+  "name": "vta-document-engine",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild engine.js --bundle --minify --format=iife --target=es2020 --outfile=../assets/document-engine.js --legal-comments=eof && esbuild pdf.js --bundle --minify --format=iife --target=es2022 --outfile=../assets/document-pdf.js --legal-comments=eof && esbuild node_modules/pdfjs-dist/build/pdf.worker.mjs --bundle --minify --format=esm --target=es2022 --outfile=../assets/document-pdf-worker.js --legal-comments=eof"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
+    "@tiptap/extension-image": "3.31.3",
+    "@tiptap/extension-table": "3.31.3",
+    "@tiptap/extension-text-align": "3.31.3",
+    "@tiptap/extension-text-style": "3.31.3",
+    "pdfjs-dist": "5.6.205"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

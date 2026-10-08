@@ -11,6 +11,9 @@
     "test:vs21:native": "php vs21-edge.php && php vs21-coverage.php && php vs21-migrations.php",
     "test:vs21:browser": "node vs21-browser.cjs",
     "test:vs22:native": "php -d extension=gd vs22-native.php && php vs22-migrations.php",
-    "test:roadmap:native": "php booking-operations-native.php"
+    "test:roadmap:native": "php booking-operations-native.php",
+    "test:document:unit": "php document-freeform-unit.php",
+    "test:document:native": "php document-freeform-native.php",
+    "test:document:browser": "node document-freeform-browser.cjs"
   }
 }

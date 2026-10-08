@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/MediaLibrary.php';
+require_once __DIR__.'/FreeformDocument.php';
 
 /** Presentation only: configuration on the existing version, media links as children. */
 final class QuoteProposal {
@@ -26,6 +27,7 @@ final class QuoteProposal {
   $run=fn($r)=>implode('',array_column($r,'text'));$lines=[];foreach($blocks as $b){if(isset($b['runs']))$lines[]=$run($b['runs']);elseif($b['type']==='list')foreach($b['items'] as $i=>$r)$lines[]=($b['ordered']?($i+1).'. ':'• ').$run($r);elseif($b['type']==='table')foreach($b['rows'] as $row)$lines[]=implode("\t",array_map($run,$row));}return implode("\n",$lines);
  }
  public static function document($d):array {
+  if(is_array($d)&&($d['schema']??'')==='VTA_DOC_2')return FreeformDocument::validate($d);
   if(!is_array($d)||($d['schema']??'')!=='VTA_DOC_1')throw new InvalidArgumentException('Invalid document representation');
   $out=['schema'=>'VTA_DOC_1','title'=>MediaLibrary::text($d['title']??'',1000),'sections'=>[],'days'=>[],'image_sizes'=>[]];
   if(!is_array($d['sections']??[])||!is_array($d['days']??[])||count($d['days']??[])>90)throw new InvalidArgumentException('Invalid document sections');
@@ -37,7 +39,7 @@ final class QuoteProposal {
   if(strlen(MediaLibrary::json($out))>900000)throw new InvalidArgumentException('Proposal is too long');return $out;
  }
  public static function documentCheck(array $s,array $days):array {
-  $d=$s['document']??[];$warnings=[];$numbers=$d['review']['source_numbers']??[];
+  $d=$s['document']??[];if(($d['schema']??'')==='VTA_DOC_2')return [];$warnings=[];$numbers=$d['review']['source_numbers']??[];
   if($numbers&&count(array_unique($numbers))!==count($numbers))$warnings[]='Duplicate Day in imported source.';
   if($numbers&&$numbers!==range(1,count($numbers)))$warnings[]='Missing Day or numbering jump in imported source; review before using the draft sequence.';
   if(!empty($d['review']['duration_days'])&&$d['review']['duration_days']!==count($days))$warnings[]='Duration differs from detailed itinerary day count.';
@@ -86,7 +88,7 @@ final class QuoteProposal {
   return QuoteVs2Repository::atomic($db,function()use($db,$u,$id,$b){
    $v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$id,QuoteVs2Repository::expected($b));QuoteVs2Repository::mutable($db,$v);$settings=self::settings($b['settings']??self::config($v)??[]);
    if($settings['brand_mode']==='WHITE_LABEL'&&!Auth::can($db,(int)$u['id'],'proposal.white_label'))throw new DomainException('WHITE_LABEL_PERMISSION_REQUIRED');
-   $days=$b['days']??self::days($v);if(!is_array($days)||!array_is_list($days)||!$days||count($days)>90)throw new InvalidArgumentException('One to 90 days required');
+   $days=$b['days']??self::days($v);if(!is_array($days)||!array_is_list($days)||(!$days&&($settings['document']['schema']??'')!=='VTA_DOC_2')||count($days)>90)throw new InvalidArgumentException('One to 90 days required');
    $before=self::days($v);$prior=array_column($before,null,'day_key');
    foreach($days as &$d){if(!is_array($d))throw new InvalidArgumentException('Invalid day');if(!Auth::can($db,(int)$u['id'],'quote.view_cost'))foreach(['notes','internal_notes','special_requests'] as $key){unset($d[$key]);if(isset($prior[$d['day_key']??''][$key]))$d[$key]=$prior[$d['day_key']][$key];}}unset($d);
    $days=QuoteVs2Domain::schedule($days);$keys=array_column($days,'day_key');$links=$b['links']??[];
@@ -100,11 +102,14 @@ final class QuoteProposal {
     $bytes+=(int)$asset['byte_size'];if($bytes>25165824)throw new InvalidArgumentException('Optimized proposal images exceed 24 MB');
     $valid[]=['asset_id'=>(int)$asset['id'],'role'=>$role,'day_key'=>$key,'reference_key'=>$ref,'caption'=>MediaLibrary::text($l['caption']??'',500),'sort_order'=>$i];
    }
+   if(($settings['document']['schema']??'')==='VTA_DOC_2'&&array_diff(FreeformDocument::imageIds($settings['document']),array_column($valid,'asset_id')))throw new InvalidArgumentException('Document images must be assigned to this proposal');
    self::q($db,'DELETE FROM media_assignments WHERE quote_version_id=?',[$id]);foreach($valid as $l)self::q($db,'INSERT INTO media_assignments(quote_version_id,asset_id,role,day_key,reference_key,caption,sort_order) VALUES(?,?,?,?,?,?,?)',[$id,...array_values($l)]);
    self::q($db,'UPDATE quote_versions SET proposal_json=? WHERE id=?',[MediaLibrary::json($settings),$id]);
    if(QuoteVs2Repository::engine($v)==='VS2_1'&&MediaLibrary::json($days)!==MediaLibrary::json($before))QuoteSmartCosting::context($db,$u,$id,['expected_revision'=>(int)$v['costing_revision'],'schedule'=>$days]);
    else {
-    self::q($db,"UPDATE quote_versions SET schedule_json=?,costing_revision=costing_revision+1,version_status='DRAFT',approved_by=NULL,approved_at=NULL WHERE id=?",[MediaLibrary::json($days),$id]);
+    if(($settings['document']['schema']??'')==='VTA_DOC_2'&&!array_key_exists('days',$b))
+     self::q($db,"UPDATE quote_versions SET costing_revision=costing_revision+1,version_status='DRAFT',approved_by=NULL,approved_at=NULL WHERE id=?",[$id]);
+    else self::q($db,"UPDATE quote_versions SET schedule_json=?,costing_revision=costing_revision+1,version_status='DRAFT',approved_by=NULL,approved_at=NULL WHERE id=?",[MediaLibrary::json($days),$id]);
     self::q($db,'DELETE FROM quote_bundle_approvals WHERE quote_version_id=?',[$id]);self::q($db,"UPDATE quotes SET status='DRAFT',updated_by=? WHERE id=?",[$u['id'],$v['quote_id']]);
    }
    Audit::log($db,(int)$u['company_id'],(int)$u['id'],'PROPOSAL_SAVED','quote_version',$id,null,['template'=>$settings['template'],'days'=>count($days),'media'=>count($valid)]);return self::context($db,$u,QuoteOptions::version($db,(int)$u['company_id'],$id));
@@ -164,6 +169,10 @@ final class QuoteProposal {
   if(!preg_match('#^quote-versions/(\d+)/proposal(?:/(.*))?$#',$route,$m))return;$id=(int)$m[1];$action=$m[2]??'';
   try {
    $v=QuoteOptions::version($db,(int)$u['company_id'],$id);Auth::requireQuoteRead($db,$u,$v);
+   if($method==='POST'&&$action==='document-import'){
+    Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');QuoteVs2Repository::mutable($db,$v);
+    Http::json(['ok'=>true]+FreeformDocument::upload($_FILES['file']??[]));
+   }
    if($method==='POST'&&$action==='import-preview'){
     Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');QuoteVs2Repository::mutable($db,$v);
     $b=isset($_FILES['file'])?$_POST:Http::body();if(isset($_FILES['file']))$out=ScheduleImport::documentUpload($_FILES['file']);elseif(array_key_exists('html',$b))$out=ScheduleImport::documentHtmlPreview((string)$b['html']);else $out=ScheduleImport::documentPreview((string)($b['text']??''));Http::json(['ok'=>true]+$out);
