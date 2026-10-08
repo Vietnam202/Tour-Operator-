@@ -11,12 +11,12 @@ final class QuoteProposal {
  /** Typed public blocks, never executable HTML or commercial inputs. */
  public static function runs($runs):array {
   if(!is_array($runs)||!array_is_list($runs)||count($runs)>500)throw new InvalidArgumentException('Invalid document text runs');$out=[];
-  foreach($runs as $r){if(!is_array($r))throw new InvalidArgumentException('Invalid document run');MediaLibrary::text($r['text']??'',20000);$text=$r['text']??'';if($text!=='')$out[]=['text'=>$text,'bold'=>!empty($r['bold']),'italic'=>!empty($r['italic'])];}return $out;
+  foreach($runs as $r){if(!is_array($r))throw new InvalidArgumentException('Invalid document run');$text=MediaLibrary::text($r['text']??'',20000);if($text==='')continue;$run=['text'=>$text,'bold'=>!empty($r['bold']),'italic'=>!empty($r['italic'])];if(!empty($r['underline']))$run['underline']=true;if(array_key_exists('font_size',$r)&&$r['font_size']!==null&&$r['font_size']!==''){$size=filter_var($r['font_size'],FILTER_VALIDATE_INT);if($size===false||!in_array($size,[10,11,12,14,16,18,20,24,28,32],true))throw new InvalidArgumentException('Invalid document font size');$run['font_size']=$size;}$out[]=$run;}return $out;
  }
  public static function richBlocks($blocks):array {
   if(!is_array($blocks)||!array_is_list($blocks)||count($blocks)>1000)throw new InvalidArgumentException('Invalid document blocks');$out=[];
   foreach($blocks as $b){if(!is_array($b))throw new InvalidArgumentException('Invalid document block');$type=$b['type']??'';
-   if(in_array($type,['paragraph','heading'],true)){$r=['type'=>$type,'runs'=>self::runs($b['runs']??[])];if($type==='heading'){$level=(int)($b['level']??2);if($level<1||$level>6)throw new InvalidArgumentException('Heading level 1–6 required');$r['level']=$level;}}
+   if(in_array($type,['paragraph','heading'],true)){$r=['type'=>$type,'runs'=>self::runs($b['runs']??[])];if($type==='heading'){$level=(int)($b['level']??2);if($level<1||$level>6)throw new InvalidArgumentException('Heading level 1-6 required');$r['level']=$level;}$alignment=$b['alignment']??'';if($alignment!==''&&!in_array($alignment,['left','center','right','justify'],true))throw new InvalidArgumentException('Invalid paragraph alignment');if($alignment!=='')$r['alignment']=$alignment;}
    elseif($type==='list'){$items=$b['items']??[];if(!is_array($items)||!array_is_list($items)||count($items)>200)throw new InvalidArgumentException('Invalid list');$r=['type'=>'list','ordered'=>!empty($b['ordered']),'items'=>array_map([self::class,'runs'],$items)];}
    elseif($type==='table'){$rows=$b['rows']??[];if(!is_array($rows)||!array_is_list($rows)||!$rows||count($rows)>150)throw new InvalidArgumentException('Invalid table');$clean=[];$width=null;foreach($rows as $row){if(!is_array($row)||!array_is_list($row)||!$row||count($row)>12||($width!==null&&count($row)!==$width))throw new InvalidArgumentException('Malformed document table; review cells');$width=count($row);$clean[]=array_map([self::class,'runs'],$row);}$r=['type'=>'table','rows'=>$clean];}
    else throw new InvalidArgumentException('Unsupported document block');$out[]=$r;
@@ -27,10 +27,11 @@ final class QuoteProposal {
  }
  public static function document($d):array {
   if(!is_array($d)||($d['schema']??'')!=='VTA_DOC_1')throw new InvalidArgumentException('Invalid document representation');
-  $out=['schema'=>'VTA_DOC_1','title'=>MediaLibrary::text($d['title']??'',1000),'sections'=>[],'days'=>[]];
+  $out=['schema'=>'VTA_DOC_1','title'=>MediaLibrary::text($d['title']??'',1000),'sections'=>[],'days'=>[],'image_sizes'=>[]];
   if(!is_array($d['sections']??[])||!is_array($d['days']??[])||count($d['days']??[])>90)throw new InvalidArgumentException('Invalid document sections');
   foreach($d['sections']??[] as $key=>$blocks){if(!in_array($key,self::DOCUMENT_SECTIONS,true))throw new InvalidArgumentException('Unsupported document section');$out['sections'][$key]=self::richBlocks($blocks);}
   foreach($d['days']??[] as $key=>$blocks){$key=MediaLibrary::text((string)$key,80);$out['days'][$key]=self::richBlocks($blocks);}
+  $sizes=$d['image_sizes']??[];if(!is_array($sizes)||count($sizes)>80)throw new InvalidArgumentException('Invalid document image sizes');foreach($sizes as $key=>$width){$key=MediaLibrary::text((string)$key,180);$width=filter_var($width,FILTER_VALIDATE_INT);if($key===''||$width===false||!in_array($width,[25,50,75,100],true))throw new InvalidArgumentException('Image width must be 25, 50, 75 or 100 percent');$out['image_sizes'][$key]=$width;}
   $review=$d['review']??[];$numbers=$review['source_numbers']??[];if(!is_array($numbers)||!array_is_list($numbers)||count($numbers)>90)throw new InvalidArgumentException('Invalid source day numbers');foreach($numbers as $n)if(!is_int($n)||$n<1||$n>999)throw new InvalidArgumentException('Invalid source day number');
   $out['review']=['source_numbers'=>$numbers,'duration_days'=>(int)($review['duration_days']??0),'acknowledged'=>!empty($review['acknowledged'])];if($out['review']['duration_days']<0||$out['review']['duration_days']>999)throw new InvalidArgumentException('Invalid source duration');
   if(strlen(MediaLibrary::json($out))>900000)throw new InvalidArgumentException('Proposal is too long');return $out;
@@ -165,7 +166,7 @@ final class QuoteProposal {
    $v=QuoteOptions::version($db,(int)$u['company_id'],$id);Auth::requireQuoteRead($db,$u,$v);
    if($method==='POST'&&$action==='import-preview'){
     Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');QuoteVs2Repository::mutable($db,$v);
-    $b=isset($_FILES['file'])?$_POST:Http::body();$out=isset($_FILES['file'])?ScheduleImport::documentUpload($_FILES['file']):ScheduleImport::documentPreview((string)($b['text']??''));Http::json(['ok'=>true]+$out);
+    $b=isset($_FILES['file'])?$_POST:Http::body();if(isset($_FILES['file']))$out=ScheduleImport::documentUpload($_FILES['file']);elseif(array_key_exists('html',$b))$out=ScheduleImport::documentHtmlPreview((string)$b['html']);else $out=ScheduleImport::documentPreview((string)($b['text']??''));Http::json(['ok'=>true]+$out);
    }
    if($method==='GET'&&$action==='')Http::json(['ok'=>true]+self::context($db,$u,$v));
    if($method==='PUT'&&$action===''){Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');Auth::requirePermission($db,$u,'media.view');Http::json(['ok'=>true]+self::save($db,$u,$id,Http::body()));}

@@ -59,6 +59,10 @@ final class ScheduleImport {
   if(($out['extraction_quality']??'')==='LOW'||$text==='')$out['warnings'][]='Needs Review: PDF may be scanned or extraction unavailable. Paste searchable text; no content was invented.';
   if(count($out['days'])>90)throw new InvalidArgumentException('Maximum 90 itinerary days');$out['warnings']=array_values(array_unique($out['warnings']));return $out;
  }
+ public static function documentHtmlPreview(string $html):array {
+  $parsed=DocumentParser::richHtmlBlocks($html);$text=implode("\n",array_map(fn($block)=>QuoteProposal::blockText([$block]),$parsed['blocks']));
+  return self::documentPreview($text,['blocks'=>$parsed['blocks'],'warnings'=>$parsed['warnings'],'quality'=>'HIGH','note'=>'Pasted formatting was converted to editable text, headings, lists, tables and inline styles. Review the result before replacing the current draft.']);
+ }
  public static function documentUpload(array $file):array {
   if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_uploaded_file($file['tmp_name']??'')||($file['size']??0)>10485760)throw new InvalidArgumentException('Upload DOCX/PDF/TXT under 10 MB');
   $ext=strtolower(pathinfo($file['name']??'',PATHINFO_EXTENSION));if(!in_array($ext,['docx','pdf','txt'],true))throw new InvalidArgumentException('Use DOCX, PDF or TXT');$r=DocumentParser::proposal($file['tmp_name'],$ext);$out=self::documentPreview($r['text'],$r);$out['warnings'][]=$r['note'];return $out;
