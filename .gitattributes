@@ -1,0 +1,3 @@
+# Preserve executable controller bytes across Windows editing and Linux deployment.
+deploy/*.sh text eol=lf
+deploy/*.php text eol=lf

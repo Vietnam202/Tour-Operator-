@@ -10,3 +10,14 @@ tests/node_modules/
 *.sqlite3
 *.db
 *.log
+
+# Server-owned data and local deployment artifacts are never release source.
+vta_private/
+uploads/
+logs/
+cache/
+backup/
+backups/
+generated/
+*.pem
+*.key
