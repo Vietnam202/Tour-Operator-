@@ -1,3 +1,10 @@
+-- Public-share opt-in is separate from ACTIVE (ACTIVE means usable internally).
+-- Revalidation hashes metadata and day titles before draft or send.
+ALTER TABLE tour_library_programs
+ ADD COLUMN marketing_share_approved_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+ ADD COLUMN marketing_share_approved_at DATETIME NULL,
+ ADD COLUMN marketing_share_approved_by BIGINT UNSIGNED NULL;
+
 -- 037: VTA Marketing Tour Advisor — human-review draft tracking only.
 -- Depends on migrations 021 (Tour Library), 024 (Website Inbox), 025 (outbound).
 CREATE TABLE IF NOT EXISTS marketing_tour_advisor_drafts (
