@@ -120,6 +120,7 @@ try {
     }
 
     QuoteProposal::publicHandle($route,$method,$db,$config);
+    WebhookCenter::publicHandle($route,$method,$db,$config);
 
     $user=Auth::requireUser($db);
     $companyId=(int)$user['company_id'];
@@ -128,6 +129,7 @@ try {
 
     // VTA v2.4 complete core routes (Sales → Booking → Operations → Finance → TODAY)
     LeadHub::handle($route,$method,$db,$user);
+    WebhookCenter::adminHandle($route,$method,$db,$config,$user);
     LandingPages::handle($route,$method,$db,$user);
     MarketingStudio::handle($route,$method,$db,$user);
     CampaignPilot::handle($route,$method,$db,$user);
