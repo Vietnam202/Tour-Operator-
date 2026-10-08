@@ -26,3 +26,10 @@ CREATE TABLE IF NOT EXISTS marketing_tour_advisor_drafts (
  FOREIGN KEY (company_id,program_id) REFERENCES tour_library_programs(company_id,id),
  FOREIGN KEY (generated_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Prevent queued tour drafts that have become stale from being relayed.
+ALTER TABLE website_chat_outbound
+ ADD COLUMN tour_advisor_draft_id BIGINT UNSIGNED NULL,
+ ADD CONSTRAINT fk_website_chat_tour_draft FOREIGN KEY(company_id,tour_advisor_draft_id) REFERENCES marketing_tour_advisor_drafts(company_id,id);
+ALTER TABLE website_chat_outbound
+ MODIFY COLUMN status ENUM('QUEUED','RELAYED','BLOCKED') NOT NULL DEFAULT 'QUEUED';
