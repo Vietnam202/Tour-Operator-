@@ -33,10 +33,18 @@
      const agent=matches.find(c=>Number(c.variant_id)===Number(id)&&c.channel==='B2B_AGENT');
      const retail=matches.find(c=>Number(c.variant_id)===Number(id)&&c.channel==='B2C_DIRECT');
      const price=c=>!c?'—':c.status==='SCENARIO_REVIEW_REQUIRED'?'Need Rate / Review':money(c.selling_per_pax,c.selling_currency);
+     const priceEditor=c=>{
+       const label=esc(price(c));
+       if(!c||!editable||!draft||c.status==='SCENARIO_REVIEW_REQUIRED')return label;
+       return '<details class="vta-inline-price"><summary>'+label+' · Edit</summary>'+
+         '<label>Selling / Pax<input type="number" data-price-value="'+c.id+'" min="0.01" step="0.01" value="'+esc(c.selling_per_pax||'')+'"></label>'+
+         '<label>Reason<input data-price-reason="'+c.id+'" placeholder="Approved discount or negotiated price"></label>'+
+         '<button type="button" class="btn" data-price-save="'+c.id+'">Apply Price</button></details>';
+     };
      const status=[agent,retail].filter(Boolean).map(c=>c.status).filter(v=>v!=='VALID');
      rows.push('<tr><th>'+esc(key.replace('-', '–'))+'</th><td>'+esc(vehicle)+'</td>'+
        '<td>'+esc(example.result.label)+'<small>Hotel '+esc(example.result.hotel_level)+' / Cruise '+esc(example.result.cruise_level||'—')+'</small></td>'+
-       '<td>'+esc(price(agent))+'</td><td>'+esc(price(retail))+'</td><td>'+esc(status.join(' · ')||'Ready')+'</td></tr>');
+       '<td>'+priceEditor(agent)+'</td><td>'+priceEditor(retail)+'</td><td>'+esc(status.join(' · ')||'Ready')+'</td></tr>');
     }
    }
    find('[data-group-table]').innerHTML='<div class="vta-price-heading"><h3>PRICE PER PERSON · PRIVATE TOUR</h3>'+
@@ -44,6 +52,13 @@
     '<div class="matrix-scroll"><table class="vta-price-compact"><thead><tr><th>Paying Pax</th><th>Vehicle (planned)</th><th>Hotel / Cruise</th>'+
     '<th>B2B / Pax</th><th>B2C / Pax</th><th>Review</th></tr></thead><tbody>'+
     (rows.join('')||'<tr><td colspan="6">Generate the reviewed price matrix to show prices.</td></tr>')+'</tbody></table></div>';
+   host.querySelectorAll('[data-price-save]').forEach(button=>button.onclick=()=>{
+     const id=Number(button.dataset.priceSave);
+     const price=host.querySelector('[data-price-value="'+id+'"]')?.value;
+     const reason=host.querySelector('[data-price-reason="'+id+'"]')?.value.trim();
+     if(!reason||!price||Number(price)<=0){toast('Enter a positive selling price and a reason',true);return;}
+     run(()=>request('manual-price',{cell_id:id,selling_per_pax:price,reason}));
+   });
   }
   function draw(){const shown=cells.filter(c=>mode==='COMPARE'||c.result.mode===mode);const bands=[...new Set(shown.map(c=>c.band_key))];find('[data-matrix]').innerHTML=cost?'<table><thead><tr><th>Pax</th><th>Options · Hotel / Cruise · Channel</th></tr></thead><tbody>'+bands.map(b=>'<tr><th>'+esc(b)+'</th><td><div class="matrix-grid">'+shown.filter(c=>c.band_key===b).map(c=>{const s=c.result.scenarios[0],p=s?.pricing;return '<article class="matrix-card '+(c.status==='SCENARIO_REVIEW_REQUIRED'||(c.status==='MARGIN_BELOW_POLICY'&&!c.override_approved)?'invalid':'')+'"><strong>'+esc(c.result.label)+' · '+esc(c.channel)+'</strong><p>'+esc(c.result.mode)+' · Hotel '+esc(c.result.hotel_level)+' / Cruise '+esc(c.result.cruise_level||'N/A')+'</p><p>Selling/pax: '+esc(money(c.selling_per_pax,c.selling_currency))+'</p><p>'+esc(c.status)+(c.override_approved?' · Override approved':'')+'</p>'+(p?'<p>Cost/pax: '+esc(money(p.cost_per_paying_pax_vnd,'VND'))+(profit?' · Profit: '+esc(money(p.profit_vnd,'VND')):'')+'</p>'+(profit?'<p>Margin '+esc(p.margin_pct)+'% · Markup '+esc(p.markup_pct)+'%</p>':''):'')+(editable&&draft?'<label class="check"><input type="checkbox" data-select="'+c.id+'"'+(Number(c.is_selected)?' checked':'')+'>Select for proposal</label><label class="check"><input type="checkbox" data-recommend="'+c.id+'"'+(Number(c.is_recommended)?' checked':'')+'>Recommended</label>':'')+(can('commercial.margin_override')&&!frozen&&c.status==='MARGIN_BELOW_POLICY'&&!c.override_approved?'<button class="btn" data-override="'+c.id+'">Request / approve override</button>':'')+'<button class="btn" data-trace="'+c.id+'">Scenarios and trace</button></article>';}).join('')+'</div></td></tr>').join('')+'</tbody></table>':(data.selling||[]).map(m=>'<h3>'+esc(m.channel)+'</h3>'+m.cells.map(c=>'<p>'+esc(c.label)+' · '+c.pax_min+'–'+c.pax_max+' pax · '+esc(money(c.selling_per_pax,c.currency))+'</p>').join('')).join('');
    for(const attr of ['select','recommend'])host.querySelectorAll('[data-'+attr+']').forEach(el=>el.onchange=()=>{const c=cells.find(c=>Number(c.id)===Number(el.dataset[attr]));run(()=>request('select',{cell_id:Number(c.id),is_selected:attr==='select'?el.checked:!!Number(c.is_selected),is_recommended:attr==='recommend'?el.checked:!!Number(c.is_recommended)}));});
