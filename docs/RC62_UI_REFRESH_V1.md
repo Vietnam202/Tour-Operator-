@@ -27,3 +27,12 @@ The implementation intentionally retains the existing navigation and editor mark
 6. Revisit app after service worker update; verify CSS served online/offline with no stale UI. Check browser console for errors.
 
 **Status:** source changes do not prove visual browser acceptance, CI success, merge, server deployment, or booking/price approval. These require separate evidence. Do not merge or deploy to production without owner confirmation.
+
+## V5 Itinerary Template Gallery (UI-preview increment)
+- Added **Chọn mẫu** in the existing Proposal Studio V5 header.
+- Four visual-only layout previews: Professional Detailed, Photo-rich Brochure (typography emphasis; no new image engine), Quick Itinerary and B2B Tour Proposal.
+- Selection updates CSS presentation without rerendering or replacing editable fields. It survives V5 preview toggle in the current mount, and does not mutate itinerary, price or supplier records.
+- Gallery is responsive; existing library actions, blank Word editor and Smart Cost remain intact.
+- **Explicit limitations:** template selection is session-only, not stored in Tour Library; "My Templates" is labeled unavailable; no new full DOCX/PDF export engine or image-import fidelity is implied.
+- Regression: `tests/v5-template-gallery-ui.cjs` checks selection, unsaved day text, overview, rates, read-only behaviour and no extra server writes.
+- Manual visual checks: all four gallery thumbnails at 1440/1024/390 widths, expanding/collapsing gallery, preview toggle, existing day operations and focus order; verify no output/PDF/print changes.
