@@ -82,6 +82,18 @@ $blocked=SocialPublishing::claim($db,$config);
 vtaAssert(!empty($blocked['blocked'])&&$blocked['id']===$changed['id'],'changed IG image rejected immediately before publish');
 $db->exec("UPDATE marketing_content SET asset_url='https://media.vietnamtraveladvisor.com.vn/photos/danang.jpg' WHERE id=104");
 
+$licenseJob=SocialPublishing::create($db,$config,$user,[
+ 'content_id'=>104,'account_alias'=>'vta-ig-main','scheduled_at'=>gmdate('Y-m-d\TH:i:s\Z',time()-20),
+ 'request_key'=>'ig_post_license_00000001'
+]);
+SocialPublishing::approve($db,$config,$reviewer,(int)$licenseJob['id']);
+$db->exec("UPDATE marketing_content SET rights_note='Rights under review - do not post' WHERE id=104");
+$licenseBlocked=SocialPublishing::claim($db,$config);
+vtaAssert(!empty($licenseBlocked['blocked'])&&$licenseBlocked['id']===$licenseJob['id'],
+    'changed Instagram licensing note invalidates prior publishing approval');
+$db->exec("UPDATE marketing_content SET rights_note='Licensed VTA photography' WHERE id=104");
+
+
 $config['integrations']['social_publishing']['accounts']['vta-ig-main']['permissions']=['instagram_basic'];
 vtaAssert(SocialPublishing::account($config,1,'vta-ig-main')['ready']===false,'missing instagram_content_publish blocks account readiness');
 $config['integrations']['social_publishing']['accounts']['vta-ig-main']['permissions']=['instagram_basic','instagram_content_publish','pages_read_engagement'];
