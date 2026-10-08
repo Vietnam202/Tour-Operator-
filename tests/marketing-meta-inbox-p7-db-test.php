@@ -64,6 +64,18 @@ metaCheck($none===null,'no duplicate processing after completed job');
 $stored=$db->query("SELECT c.company_id,c.source_code,c.external_conversation_id,m.body FROM social_messages m JOIN social_conversations c ON c.id=m.conversation_id WHERE c.source_code LIKE 'meta_fb_%'")->fetchAll();
 metaCheck(count($stored)===1&&$stored[0]['company_id']==1&&$stored[0]['body']==='Hi! Need Hanoi family tour.','original customer text stored once and tenant-scoped');
 
+$db->exec("UPDATE social_conversations SET contact_name='Verified family contact' WHERE company_id=1 AND source_code='meta_fb_vta_page'");
+$followup=$fb;
+$followup['entry'][0]['messaging']=[[
+ 'sender'=>['id'=>'66554433221100'],'recipient'=>['id'=>'11223344556677'],
+ 'message'=>['mid'=>'m_secondmsg_00000001','text'=>'Two adults, two kids.']
+]];
+MetaInbox::enqueue($db,MetaInbox::extract(json_encode($followup,JSON_THROW_ON_ERROR),$map));
+MetaInbox::processOne($db);
+$name=$db->query("SELECT contact_name FROM social_conversations WHERE company_id=1 AND source_code='meta_fb_vta_page'")->fetchColumn();
+metaCheck($name==='Verified family contact','second Meta message does not overwrite staff-verified customer name');
+
+
 $ig=['object'=>'instagram','entry'=>[['id'=>'17841400999000111','messaging'=>[
  ['sender'=>['id'=>'99887766554433'],'recipient'=>['id'=>'17841400999000111'],
  'message'=>['mid'=>'m_insta00123456789','text'=>'Da Nang private tour?']]
