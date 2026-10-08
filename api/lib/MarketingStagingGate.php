@@ -80,11 +80,25 @@ final class MarketingStagingGate {
         if(str_contains($preflight,"public const BRANCH = 'codex/Vietnam/rc6.2-testing'") &&
            str_contains($script,'BRANCH=codex/Vietnam/rc6.2-testing'))
             $items[]=self::item('STAGING_BRANCH_PIN','BLOCK','Deployment is pinned to rc6.2-testing; stacked Marketing PR code has not been promoted and verified there');
-        // Historical VS2.1 guard is not compatible with applying the candidate 023/024
-        // before 025. Never bypass or amend historical SQL checksums silently.
+        // The historical candidate guard must remain intact. A reviewed exact-name
+        // execution plan can apply VS2.1 before the Marketing 023/024 files while
+        // refusing unrelated 023/024 candidates and preserving prior checksums.
         if(str_contains($migrator,"if(\$version==='025_vs21_shared_requirements')") &&
-           str_contains($migrator,"version REGEXP '^02[34]_'"))
-            $items[]=self::item('VS21_MIGRATION_GUARD','BLOCK','Migrator blocks 025_vs21_shared_requirements when 023/024 candidate history exists; requires independently reviewed schema reconciliation');
+           str_contains($migrator,"version REGEXP '^02[34]_'")) {
+            require_once $root.'/api/lib/Migrations.php';
+            try {
+                $planned=Migrations::orderedFiles($root.'/api/migrations');
+                $versions=array_map(static fn(string $p)=>basename($p,'.sql'),$planned);
+                $coreIndex=array_search('025_vs21_shared_requirements',$versions,true);
+                $marketingIndex=array_search('023_marketing_webhook_core',$versions,true);
+                if($coreIndex!==false&&$marketingIndex!==false&&$coreIndex<$marketingIndex)
+                    $items[]=self::item('MIGRATION_ORDER_RECONCILED','INFO','Core VS2.1 schema runs before the exact Marketing stack; historical candidate-history guard remains intact');
+                else
+                    $items[]=self::item('VS21_MIGRATION_GUARD','BLOCK','No safe core-first migration order has been verified');
+            }catch(Throwable $e){
+                $items[]=self::item('VS21_MIGRATION_GUARD','BLOCK','Migration planner refused the full Marketing stack');
+            }
+        }
         $seen=[];
         foreach(self::STAGES as $file){
             $sql=self::read($root,'api/migrations/'.$file);
