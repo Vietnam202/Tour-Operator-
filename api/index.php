@@ -122,6 +122,7 @@ try {
     QuoteProposal::publicHandle($route,$method,$db,$config);
     WebhookCenter::publicHandle($route,$method,$db,$config);
     WebsiteInbox::publicHandle($route,$method,$db,$config);
+    WebsiteChatDelivery::publicHandle($route,$method,$db,$config);
 
     $user=Auth::requireUser($db);
     $companyId=(int)$user['company_id'];
@@ -132,6 +133,7 @@ try {
     LeadHub::handle($route,$method,$db,$user);
     WebhookCenter::adminHandle($route,$method,$db,$config,$user);
     WebsiteInbox::adminHandle($route,$method,$db,$user);
+    WebsiteChatDelivery::adminHandle($route,$method,$db,$user);
     LandingPages::handle($route,$method,$db,$user);
     MarketingStudio::handle($route,$method,$db,$user);
     CampaignPilot::handle($route,$method,$db,$user);
