@@ -18,3 +18,9 @@
 .vs23 .vta-price-advanced{margin-top:14px;border:1px solid #dce4ed;border-radius:7px;padding:10px}
 .vs23 .vta-price-advanced summary{cursor:pointer;color:#3c5975;font-size:12px}
 @media(max-width:600px){.vs23 .vta-price-compact{min-width:700px}.vs23 .vta-vehicles{min-width:680px}.vs23 .vta-price-heading h3{font-size:13px}}
+
+.vs23 .vta-inline-price summary{cursor:pointer;white-space:nowrap;color:#1f5e9b;font-weight:600;list-style:none}
+.vs23 .vta-inline-price[open]{min-width:155px}
+.vs23 .vta-inline-price label{margin-top:8px;font-size:11px;color:#52677a}
+.vs23 .vta-inline-price input{border:1px solid #d7e2ed;border-radius:5px;padding:5px;width:155px;font-size:12px}
+.vs23 .vta-inline-price button{margin-top:7px;font-size:11px;padding:6px 9px}
