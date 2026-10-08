@@ -56,11 +56,22 @@ final class WebsiteInbox {
         if(!hash_equals((string)$old['payload_hash'],$hash))throw new DomainException('Event ID reused for different content');
         return ['accepted'=>true,'replayed'=>true,'conversation_id'=>(int)$old['conversation_id']];
     }
+    private static function throttle(PDO $db,int $company,string $source,string $thread):void {
+        $window=date('Y-m-d H:i:00');
+        foreach([['SOURCE',hash('sha256',$source),300],['THREAD',hash('sha256',$thread),30]] as $limit) {
+            self::q($db,'INSERT INTO social_webhook_rate_windows(company_id,source_code,scope_type,scope_key,window_start,accepted_count) VALUES(?,?,?,?,?,1) ON DUPLICATE KEY UPDATE accepted_count=accepted_count+1',[
+                $company,$source,$limit[0],$limit[1],$window]);
+            $count=(int)self::q($db,'SELECT accepted_count FROM social_webhook_rate_windows WHERE company_id=? AND source_code=? AND scope_type=? AND scope_key=? AND window_start=?',[
+                $company,$source,$limit[0],$limit[1],$window])->fetchColumn();
+            if($count>$limit[2])throw new OverflowException('Website message rate limit');
+        }
+    }
     public static function ingest(PDO $db,int $company,int $campaign,string $source,array $event,string $hash):array {
         $key=WebhookCenter::eventKey($source,$event['event_id']);
         $db->beginTransaction();
         try {
             self::q($db,'INSERT INTO social_webhook_events(company_id,source_code,event_key,payload_hash) VALUES(?,?,?,?)',[$company,$source,$key,$hash]);
+            self::throttle($db,$company,$source,$event['external_id']);
             self::q($db,"INSERT IGNORE INTO social_conversations(company_id,campaign_id,source_code,external_conversation_id,contact_name,email,phone,attribution_json,reply_draft) VALUES(?,?,?,?,?,?,?,?,'')",[
                 $company,$campaign,$source,$event['external_id'],$event['contact_name']?:'Website visitor',
                 $event['email'],$event['phone'],$event['attribution']?json_encode($event['attribution'],JSON_THROW_ON_ERROR):null]);
@@ -111,7 +122,8 @@ final class WebsiteInbox {
             if(!$form)Http::json(['ok'=>false,'error'=>'SOURCE_NOT_READY'],503);
             $result=self::ingest($db,(int)$form['company_id'],(int)$form['campaign_id'],$source,$event,hash('sha256',$raw));
             Http::json(['ok'=>true]+$result,202);
-        }catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'INVALID_PAYLOAD'],422);}
+        }catch(OverflowException $e){header('Retry-After: 60');Http::json(['ok'=>false,'error'=>'RATE_LIMITED'],429);}
+         catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'INVALID_PAYLOAD'],422);}
          catch(DomainException $e){Http::json(['ok'=>false,'error'=>'CONFLICT'],409);}
          catch(Throwable $e){error_log('VTA website inbox: '.get_class($e));Http::json(['ok'=>false,'error'=>'PROCESSING_FAILED'],503);}
     }
