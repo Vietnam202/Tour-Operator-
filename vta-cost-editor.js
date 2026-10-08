@@ -307,7 +307,7 @@
       host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
         if(!edit)return;
         const raw=input.value.trim(),key=input.dataset.guest;
-        if(!/^\\d+$/.test(raw) || Number(raw)>10000 || (key==='paying_pax'&&Number(raw)<1)){
+        if(!/^\d+$/.test(raw) || Number(raw)>10000 || (key==='paying_pax'&&Number(raw)<1)){
           status('Invalid guest count');return;
         }
         send({[key]:Number(raw),review_reason:'Service population edited in Cost'},
