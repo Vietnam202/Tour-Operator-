@@ -39,6 +39,7 @@ window.VTATourProposalStudio={
    container.classList.add('vtps-host');
    container.querySelector('[data-pricing-warnings]').textContent=validatePrices(current.proposal.private_prices).join(' ');
    container.classList.toggle('vtps-preview',preview);
+   if(!canEdit){container.querySelectorAll('input,textarea,select,button[data-action="save"],button[data-action="add-day"],button[data-action="add-private"],button[data-action="add-hotel"],button[data-day-action],button[data-remove-private],button[data-remove-hotel]').forEach(el=>{el.disabled=true;if(el.tagName==='BUTTON')el.hidden=true;});container.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));container.querySelector('[data-vtps-state]').textContent='Chỉ xem · Không có quyền sửa';}
   }
   function read(){
    const one=s=>container.querySelector(s);
@@ -63,7 +64,7 @@ window.VTATourProposalStudio={
    current.days.push({day:current.days.length+1,date:'',title:'New Day',description:'',meals:'',overnight:'',notes:''});screen();
   }
   async function save(){
-   if(pending)return;
+   if(pending||!canEdit)return;
    read();
    if(!clean(current.title)){toast('Nhập tên chương trình.',true);return;}
    if(current.status==='ACTIVE'&&!current.days.length){toast('Chương trình ACTIVE phải có ngày tour.',true);return;}
@@ -85,7 +86,8 @@ window.VTATourProposalStudio={
   container.addEventListener('input',e=>{if(container.querySelector('[data-vtps-state]'))container.querySelector('[data-vtps-state]').textContent='Chưa lưu thay đổi';},{signal:controller.signal});
   container.addEventListener('click',async e=>{
    const scroll=e.target.closest('[data-scroll]');if(scroll){container.querySelector('#'+scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});return;}
-   const b=e.target.closest('button');if(!b||!container.contains(b))return;
+   const b=e.target.closest('button');if(!b||!container.contains(b)||b.disabled)return;
+   if(!canEdit&&!['back','preview'].includes(b.dataset.action||''))return;
    if(b.dataset.action==='save'){await save();return;}
    if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');await onBack();return;}
    if(b.dataset.action==='preview'){read();preview=!preview;screen();return;}
