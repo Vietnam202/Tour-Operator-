@@ -21,6 +21,7 @@ $db->exec("CREATE TABLE marketing_content (
  status ENUM('DRAFT','PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'DRAFT',
  body TEXT NOT NULL,
  asset_url VARCHAR(1000) NOT NULL DEFAULT '',
+ rights_note VARCHAR(500) NOT NULL DEFAULT '',
  KEY idx_marketing_queue(company_id,status)
 )");
 $contents=[
@@ -36,6 +37,8 @@ $db->exec("INSERT INTO users VALUES(1,1,'Writer'),(2,1,'Reviewer'),(3,2,'Another
 $db->exec("INSERT INTO campaigns VALUES(1,1),(2,2)");
 foreach($contents as $a)$stmt->execute($a);
 $sql=file_get_contents(__DIR__.'/../api/migrations/039_social_publishing_core.sql');
+foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$db->exec($statement);
+$sql=file_get_contents(__DIR__.'/../api/migrations/040_instagram_publishing.sql');
 foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$db->exec($statement);
 
 $config=['integrations'=>['social_publishing'=>[
