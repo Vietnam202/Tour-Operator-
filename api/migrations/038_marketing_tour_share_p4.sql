@@ -1,5 +1,5 @@
 -- 038: Versioned, expiring, revocable Tour Library marketing share links.
--- P4 is customer-safe HTML itinerary outline only; no quotes, PDFs or supplier costing.
+-- P4 is customer-safe HTML itinerary outline only (no quotes, PDFs or supplier costing.
 CREATE TABLE IF NOT EXISTS marketing_tour_shares (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  company_id BIGINT UNSIGNED NOT NULL,
