@@ -29,6 +29,7 @@ async function harness({locked=false,cost=true}={}){
     lines:[fixture(star,'HOTEL',10),fixture(star,'TRANSPORT',11),fixture(star,'CRUISE',12),
       {...fixture(star,'HOTEL',13),unit_rate_vnd:String(star*120000)}]})),
     supplier_choices:[{id:1,name:'Supplier A'}]};
+  d.items.push({...d.items[1],variant_id:44,variant_key:'custom-4-3',cruise_level:3});
   const api={request:async(route,opts={})=>{
     calls.push({route,...opts});
     if(route.endsWith('/options'))return structuredClone(d);
@@ -94,7 +95,6 @@ async function harness({locked=false,cost=true}={}){
   assert(calls.some(c=>c.body?.requirement?.id===10&&c.body.requirement.scope?.dates?.join(',')==='2027-01-02,2027-01-03'));
   console.log('PASS guest populations edit directly with quote revision');
   // First select the existing 4-star-hotel / 3-star-cruise draft, then attempt to duplicate Option B (4/4).
-  h.d.items.push({...h.d.items[1],variant_id:44,variant_key:'custom-4-3',cruise_level:3});
   let duplicate=root.querySelector('[data-mix-hotel="0"]');duplicate.value='4';
   duplicate.dispatchEvent(new w.Event('change'));await settle();
   assert.equal(root.querySelector('[data-vta-summary="0"] [data-mix-hotel]').value,'4');
