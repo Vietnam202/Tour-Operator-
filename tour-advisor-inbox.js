@@ -16,6 +16,7 @@ window.VTATourAdvisorPanel={
     '<p class="mk-note">'+hint+'</p>'+
     '<label class="vta-tour-search">'+t('Search tour','Tìm chương trình')+
     '<input type="search" maxlength="190" name="tour_query" value="'+safe(activeSearch)+'" placeholder="'+t('Destination or program name','Điểm đến hoặc tên tour')+'"></label>'+
+    '<label class="vta-tour-lang">'+t('Reply language','Ngôn ngữ trả lời')+'<select name="tour_language"><option value="en">English</option><option value="vi">Tiếng Việt</option></select></label>'+ 
     '<button type="button" class="btn" data-tour-action="search" '+(busy?'disabled':'')+'>'+t('Find tours','Tìm tour')+'</button>'+
     '<div class="vta-tour-results">'+(items.map(p=>'<div class="vta-tour-card" data-program-id="'+Number(p.id)+'">'+
        '<strong>'+safe(p.title)+'</strong><small>'+safe(p.destination)+' · '+Number(p.day_count)+' '+t('days','ngày')+'</small>'+
@@ -55,7 +56,7 @@ window.VTATourAdvisorPanel={
       if(!canDraft)return;
       busy=true;render();
       try{
-        const language=(document.documentElement.lang||'en').toLowerCase().startsWith('vi')?'vi':'en';
+        const language=host.querySelector('[name=tour_language]')?.value==='vi'?'vi':'en';
         const key='tour_draft_'+crypto.randomUUID().replace(/-/g,'');
         const r=await api.request('marketing/tour-advisor/draft',{method:'POST',body:{conversation_id:Number(conversationId),program_id:p.id,language,request_key:key}});
         generated={id:r.id,text:r.text,program_id:r.program_id};
