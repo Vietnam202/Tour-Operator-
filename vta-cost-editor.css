@@ -106,3 +106,7 @@
 .vta-guest-controls input:focus{outline:2px solid #d4e7f8;border-color:#3380c5}
 .vta-guest-controls small{max-width:300px;font-size:11px;color:#677c90}
 @media(max-width:800px){.vta-guest-controls{gap:7px}.vta-guest-controls label{flex:1;min-width:85px}.vta-guest-controls input{width:100%}.vta-guest-controls small{max-width:100%}}
+
+.vta-info-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:10px}
+.vta-info-fields label{display:grid;gap:5px;color:#577087;font-size:12px}
+.vta-info-fields input{border:1px solid #d6e3ee;border-radius:6px;padding:8px;width:100%;color:#183d61}
