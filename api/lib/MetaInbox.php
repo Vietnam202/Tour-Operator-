@@ -154,7 +154,7 @@ final class MetaInbox {
             $event=[
                 'event_id'=>$job['event_key'],'external_id'=>$job['sender_id'],
                 'message_id'=>$job['message_id'],'text'=>$job['message_text'],
-                'contact_name'=>$job['platform']==='FACEBOOK_MESSENGER'?'Messenger customer':'Instagram customer',
+                'contact_name'=>'', // Meta sender IDs do not provide verified display names; preserve staff-enriched contact names.
                 'email'=>'','phone'=>'',
                 'attribution'=>['utm_source'=>$job['platform']==='FACEBOOK_MESSENGER'?'facebook_messenger':'instagram_dm',
                     'utm_medium'=>'social_dm']
