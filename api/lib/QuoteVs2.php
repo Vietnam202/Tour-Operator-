@@ -49,6 +49,68 @@ final class QuoteVs2 {
             if(array_intersect(array_keys($changes),['pricing_mode','pricing_value']))Auth::requirePermission($db,$u,'quote.view_profit');
             foreach($ids as $id)Vs2Variants::save($db,$u,$v,['variant_id'=>$id]+$changes);return ['variant_ids'=>$ids];
         }
+        // New package mix: select Hotel and Cruise stars independently without copying the quote.
+        // Every copied supplier cost is marked for review, and totals are still resolved server-side.
+        if($action==='mix'){
+            $hotel=(int)($b['hotel_level']??0);
+            $cruise=($b['cruise_level']??'')===''?null:(int)$b['cruise_level'];
+            $mode=$b['mode']??$variants[$ids[0]]['costing_mode'];
+            if(!in_array($hotel,[3,4,5],true)||($cruise!==null&&!in_array($cruise,[3,4,5],true))||
+                !in_array($mode,['PRIVATE','SIC','HYBRID'],true))throw new InvalidArgumentException('Invalid hotel or cruise category');
+            $graph=QuoteVs2Repository::graph($db,$v);
+            foreach($graph['variants'] as $found){
+                if($found['costing_mode']===$mode&&(int)$found['hotel_level']===$hotel&&
+                    ($found['cruise_level']===null?null:(int)$found['cruise_level'])===$cruise){
+                    return ['variant_id'=>(int)$found['id'],'reused'=>true];
+                }
+            }
+            $newId=Vs2Variants::save($db,$u,$v,[
+                'hotel_level'=>$hotel.'*','cruise_level'=>$cruise,'costing_mode'=>$mode,
+                'label'=>'Hotel '.$hotel.' star + Cruise '.($cruise===null?'none':$cruise.' star'),
+                'is_offered'=>0
+            ]);
+            $newLines=QuoteVs2Repository::q($db,"SELECT id,requirement_id FROM quote_variant_cost_lines WHERE variant_id=? AND line_kind='SERVICE'",[$newId])->fetchAll();
+            foreach($newLines as $target){
+                $requirement=null;
+                foreach($graph['requirements'] as $candidate)if((int)$candidate['id']===(int)$target['requirement_id']){
+                    $requirement=$candidate;break;
+                }
+                if(!$requirement||$requirement['requirement_state']==='NOT_APPLICABLE')continue;
+                $donor=null;
+                foreach($graph['variants'] as $source){
+                    if($source['costing_mode']!==$mode)continue;
+                    if($requirement['category']==='HOTEL'&&(int)$source['hotel_level']!==$hotel)continue;
+                    if($requirement['category']==='CRUISE'&&
+                        ($source['cruise_level']===null?null:(int)$source['cruise_level'])!==$cruise)continue;
+                    foreach($source['lines'] as $candidate){
+                        if((int)$candidate['requirement_id']===(int)$target['requirement_id']&&
+                            $candidate['line_kind']==='SERVICE'&&
+                            ($candidate['rate_version_id']!==null||$candidate['unit_amount_original']!==null)){
+                            $donor=$candidate;break 2;
+                        }
+                    }
+                }
+                if(!$donor)continue; // Need Rate, never substitute an unrelated star's amount.
+                $entry=[
+                    'quantity_source'=>$donor['quantity_source'],
+                    'quantity_override'=>$donor['quantity_override'],
+                    'custom_quantity'=>$donor['custom_quantity'],
+                    'units_override'=>$donor['units_override'],
+                    'override_reason'=>$donor['override_reason'],
+                    'supplier_id'=>$donor['supplier_id'],
+                    'original_currency'=>$donor['original_currency'],
+                    'manual_reason'=>$donor['manual_reason'],
+                    'manual_contract'=>QuoteVs2Repository::decode($donor['manual_contract_json']),
+                    'service_mode'=>$donor['service_mode']
+                ];
+                if($donor['rate_version_id']!==null)$entry['rate_version_id']=$donor['rate_version_id'];
+                else $entry['unit_amount_original']=$donor['unit_amount_original'];
+                Vs2LineEditor::write($db,$u,$v,$newId,$entry,'save',(int)$target['id']);
+            }
+            SmartCosting::refresh($db,$v);
+            Vs2Inclusions::apply($db,$v);
+            return ['variant_id'=>$newId,'reused'=>false,'requires_review'=>true];
+        }
         $input=$b['requirement']??[];$reqId=(int)($input['id']??$b['requirement_id']??0);
         if($action==='remove'){
             $dependents=QuoteVs2Repository::q($db,'SELECT id FROM quote_service_requirements WHERE quote_version_id=? AND package_requirement_id=? AND requirement_state<>?',[$v['id'],$reqId,'NOT_APPLICABLE'])->fetchColumn();
