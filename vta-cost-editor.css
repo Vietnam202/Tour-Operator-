@@ -94,3 +94,8 @@
  .vta-star-column{padding:5px 2px}
  .vta-rate-cell>input{font-size:11px}
 }
+
+.vta-mix-selectors{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-block:1px solid #e9eef3;padding:7px 0}
+.vta-mix-selectors label{display:flex;align-items:center;gap:4px;color:#4b6780;font-size:11px}
+.vta-mix-selectors select{border:1px solid #cbdbe9;border-radius:5px;background:#fff;padding:4px 6px;color:#123d61;min-width:55px}
+.vta-mix-selectors select:disabled{opacity:.65;cursor:not-allowed}
