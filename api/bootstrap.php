@@ -44,6 +44,8 @@ require_once __DIR__ . '/lib/WebsiteInbox.php';
 require_once __DIR__ . '/lib/WebsiteChatDelivery.php';
 require_once __DIR__ . '/lib/MarketingTourAdvisor.php';
 require_once __DIR__ . '/lib/MarketingTourShare.php';
+require_once __DIR__ . '/lib/MetaGraphTransport.php';
+require_once __DIR__ . '/lib/InstagramImagePoster.php';
 require_once __DIR__ . '/lib/SocialPublishing.php';
 require_once __DIR__ . '/lib/LandingPages.php';
 require_once __DIR__ . '/lib/AiChat.php';
