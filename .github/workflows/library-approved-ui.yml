@@ -6,6 +6,7 @@ on:
     paths:
       - 'tour-library.js'
       - 'vta-approved-library.css'
+      - 'vta-approved-workspaces.css'
       - 'index.html'
       - 'preview.html'
       - 'service-worker.js'
