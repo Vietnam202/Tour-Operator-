@@ -2,7 +2,7 @@
 
 ## Decision as of 2026-10-09
 
-**BLOCKED — DO NOT AUTO-DEPLOY.** This is not a production/staging deployment, not a merged release and not approval to migrate VTA hosting. GitHub-only isolated workflows P0–P9 previously passed, but they do **not** prove full production-schema compatibility or actual CyberPanel deployment.
+**BLOCKED — DO NOT AUTO-DEPLOY.** Even after reconciling source and migration history, the release remains blocked until separately documented restoration rehearsal, browser acceptance and operator signoff. This is not a production/staging deployment, not a merged release and not approval to migrate VTA hosting. GitHub-only isolated workflows P0–P9 previously passed, but they do **not** prove full production-schema compatibility or actual CyberPanel deployment.
 
 ### Three independently verified blockers
 
