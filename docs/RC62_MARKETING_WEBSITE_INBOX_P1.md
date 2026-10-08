@@ -100,3 +100,7 @@ PHP signing example on the **website server**:
 - Staff outbound gateway with delivery status, no send-on-draft behavior.
 - Facebook/Instagram Messenger and WhatsApp providers via official API and verified OAuth permissions.
 - AI Tour Advisor: use approved Tour Library data, human review for personalized proposals, and never expose supplier net costs.
+
+## Webhook Center combined monitoring
+- The Marketing Webhooks tab now combines accepted website lead events from migration 023 and accepted website message events from migration 024, with a Lead # or Chat # target and tenant isolation.
+- Both migrations are required before opening the live Webhook Center view on staging.
