@@ -15,6 +15,15 @@
   const multipliers = {HOTEL:'Nights',CRUISE:'Packages',TRANSPORT:'Trips',GUIDE:'Days',
     ATTRACTION:'Tickets',TOUR:'Tours',MEAL:'Meals',VISA:'Qty',OTHER:'Qty'};
   const isStay = r => r.category === 'HOTEL' || r.category === 'CRUISE';
+  const dateSequence = (first, qty) => {
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(first) || !Number.isInteger(qty) || qty<1 || qty>100) return null;
+    const date=new Date(first+'T00:00:00Z');
+    if(Number.isNaN(date.getTime()) || date.toISOString().slice(0,10)!==first) return null;
+    return Array.from({length:qty},(_,i)=>{
+      const day=new Date(date.getTime());day.setUTCDate(day.getUTCDate()+i);
+      return day.toISOString().slice(0,10);
+    });
+  };
   const selectHTML = (items, selected, attr) => '<select ' + attr + '>' + items.map(item =>
     '<option value="' + escapeHTML(item[0]) + '"' + (String(item[0]) === String(selected) ? ' selected' : '') +
     '>' + escapeHTML(item[1]) + '</option>').join('') + '</select>';
@@ -145,7 +154,12 @@
       const common = !stay;
       const service='<div class="vta-service"><strong>' + escapeHTML(titles[category] || category) + '</strong>' +
         input('data-name aria-label="Service name" maxlength="255"',r.service_name,'vta-name') +
-        input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination"') + '</div>';
+        input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination"') +
+        (['HOTEL','CRUISE','GUIDE'].includes(category)?'<label class="vta-date-label">' +
+          escapeHTML(category==='HOTEL'?'First hotel night':category==='CRUISE'?'Cruise departure':'First guide day') +
+          input('type="date" data-service-date aria-label="First service date"',
+            (r.scope?.dates?.[0] || r.service_date || ''),'vta-service-date') +
+          '</label>':'') + '</div>';
       const qty='<div class="vta-quantities">' +
         '<label>' + escapeHTML(['TRANSPORT','GUIDE'].includes(category)?(category==='GUIDE'?'Guides':'Vehicles'):'Pax / Units') +
         input('type="number" min="0" max="10000" data-count inputmode="numeric"',count,'vta-small') +
@@ -250,8 +264,18 @@
       row.querySelector('[data-units]').onchange=e=>{
         const units=Number(e.target.value);
         if(!Number.isInteger(units)||units<0){status('Whole number required');return;}
-        sheet({requirement:{id,service_units:units},line:{}});
+        const first=row.querySelector('[data-service-date]')?.value || r.scope?.dates?.[0] || '';
+        const dates=['HOTEL','GUIDE'].includes(r.category) && first ? dateSequence(first,units) : null;
+        if(['HOTEL','GUIDE'].includes(r.category) && first && !dates){status('Select a valid date and quantity 1–100');return;}
+        sheet({requirement:{id,service_units:units,...(dates?{scope:{...r.scope,dates}}:{})},line:{}},true);
       };
+      row.querySelector('[data-service-date]')?.addEventListener('change',e=>{
+        const first=e.target.value,units=Number(row.querySelector('[data-units]').value);
+        if(!first){status('Choose a service date');return;}
+        const dates=['HOTEL','GUIDE'].includes(r.category)?dateSequence(first,units):null;
+        if(['HOTEL','GUIDE'].includes(r.category)&&!dates){status('Valid first date and 1–100 nights/days required');return;}
+        sheet({requirement:{id,service_date:first,scope:{...r.scope,...(dates?{dates}:{})}},line:{}},true);
+      });
       const count=row.querySelector('[data-count]');
       const saveCount=()=>{
         const val=Number(count.value),custom=r.default_quantity_source==='CUSTOM_QTY';
@@ -334,8 +358,8 @@
         const selectVariant=id=>{
           const chosen=ids();chosen[index]=Number(id);
           if(new Set(chosen).size!==3){
-            status('This combination is already selected in another option');
-            render();return false;
+            render();
+            status('This combination is already selected in another option');return false;
           }
           host.dataset.vtaCostVariants=JSON.stringify(chosen);
           packages=getPackages();render();return true;
@@ -348,7 +372,10 @@
       host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
         if(!edit)return;
         const raw=input.value.trim(),key=input.dataset.guest;
-        if(!/^\d+$/.test(raw) || Number(raw)>10000 || (key==='paying_pax'&&Number(raw)<1)){
+        const n=Number(raw),total=Number(context.guests.total_guests),foc=Number(context.guests.foc);
+        if(!/^\d+$/.test(raw) || n>10000 || (key==='paying_pax'&&(n<1 || n+foc>total)) ||
+          (key!=='paying_pax'&&n>total)){
+          input.value=String(key==='paying_pax'?context.guests.paying_pax:context.profile[key]??'');
           status('Invalid guest count');return;
         }
         send({[key]:Number(raw),review_reason:'Service population edited in Cost'},
