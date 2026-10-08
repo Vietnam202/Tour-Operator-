@@ -25,7 +25,10 @@ window.VTAWebsiteInbox=function(host,opt){
     ' · '+safe(m.created_at)+'</small></article>';
   const lead=c&&c.lead_request_id?'<p class="mk-note">Lead Hub #'+Number(c.lead_request_id)+'</p>':'';
   host.innerHTML='<section class="mk-panel"><div class="mk-section-head"><div><h2>'+t('Unified Inbox · Website & Meta','Hộp thư chung · Website & Meta')+'</h2><p class="mk-note">'+t('Website supports two-way chat. Meta supports inbound text, internal drafts and Lead Hub only.','Website chat hai chiều. Meta mới nhận tin chữ, lưu nháp và chuyển Lead Hub.')+'</p></div><span class="mk-badge">'+items.length+' '+t('conversations','hội thoại')+'</span></div>'+
-   '<p class="mk-note">'+t('Meta sources configured, not live verified: ','Nguồn Meta đã cấu hình, chưa xác minh live: ')+metaAccounts.map(a=>safe(a.platform)).join(', ')+'</p>'+ '<div class="vta-inbox-layout"><aside class="vta-inbox-list"><label>'+t('Find conversation','Tìm hội thoại')+'<input type="search" class="vta-inbox-search" placeholder="'+t('Guest / message…','Tên khách / nội dung…')+'"></label><div class="vta-inbox-contacts">'+(items.map(row).join('')||'<p class="mk-note">'+t('No verified messages yet.','Chưa có tin nhắn đã xác thực.')+'</p>')+'</div></aside>'+
+   '<p class="mk-note">'+t('Meta source readiness (config only, live API not verified): ','Trạng thái kênh Meta (chỉ cấu hình, chưa xác minh API thật): ')+
+   (metaAccounts.length?metaAccounts.map(a=>safe(a.platform)+': '+(a.outbound_configured?
+      t('Messenger reply configurable','Có cấu hình trả lời Messenger'):t('Inbound / drafts only','Chỉ nhận tin / lưu nháp'))).join(' · '):
+    t('No Meta accounts configured','Chưa cấu hình tài khoản Meta'))+'</p>'+ '<div class="vta-inbox-layout"><aside class="vta-inbox-list"><label>'+t('Find conversation','Tìm hội thoại')+'<input type="search" class="vta-inbox-search" placeholder="'+t('Guest / message…','Tên khách / nội dung…')+'"></label><div class="vta-inbox-contacts">'+(items.map(row).join('')||'<p class="mk-note">'+t('No verified messages yet.','Chưa có tin nhắn đã xác thực.')+'</p>')+'</div></aside>'+
    '<div class="vta-inbox-thread"><h3>'+safe(c&&isMeta(c)&&c.contact_name==='Website visitor'?channel(c)+' visitor':(c?.contact_name||t('Select a conversation','Chọn hội thoại')))+'</h3><div class="vta-inbox-history">'+(msgs.map(inbound).join('')||'<p class="mk-note">'+t('No messages','Chưa có tin nhắn')+'</p>')+(outs.length?'<h4>'+t('Website replies','Phản hồi website')+'</h4>'+outs.map(outbound).join(''):'')+
   (metaReplies.length?'<h4>'+t('Messenger replies','Phản hồi Messenger')+'</h4>'+metaReplies.map(metaOutbound).join(''):'')+'</div>'+
   (!meta&&c?'<div id="vtaTourAdvisorPanel"></div>':'')+
@@ -57,7 +60,10 @@ window.VTAWebsiteInbox=function(host,opt){
  }
  async function refresh(){
   try{
-   const [r,meta]=await Promise.all([api.request('marketing/social-inbox'),api.request('marketing/meta-inbox').catch(()=>({accounts:[]}))]);
+   const [r,meta]=await Promise.all([
+    api.request('marketing/social-inbox'),
+    api.request('marketing/meta-replies/accounts').catch(()=>({accounts:[]}))
+   ]);
    metaAccounts=meta.accounts||[];
    if(!host.isConnected)return;
    items=r.items||[];const current=items.some(x=>Number(x.id)===selected)?selected:Number(items[0]?.id||0);
