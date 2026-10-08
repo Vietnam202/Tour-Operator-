@@ -133,4 +133,18 @@ p9check(!MetaConnectionHealth::isRecentVerified($db,1,'vta_page','MESSENGER','11
     'old health results cannot be treated as fresh');
 p9check(!MetaConnectionHealth::isRecentVerified($db,1,'vta_page','MESSENGER','11223344556677',73),
     'invalid health time threshold rejected');
+
+$guarded=$cfg;
+$guarded['integrations']['meta_connection_check']=['enforce_messenger_verified'=>true];
+$db->prepare("UPDATE social_conversations SET status='NEW',last_meta_inbound_at=UTC_TIMESTAMP() WHERE company_id=1 AND id=?")->execute([$cid]);
+$blocked=MetaReplies::thread($db,$guarded,1,$cid);
+p9check(!$blocked['can_send']&&$blocked['reason']==='CONNECTION_CHECK_REQUIRED',
+    'Messenger can fail closed when recent connection verification is required');
+MetaConnectionHealth::store($db,1,$entry,$valid);
+$ready=MetaReplies::thread($db,$guarded,1,$cid);
+p9check($ready['can_send']===true,'Messenger may queue a staff reply after fresh valid Meta health check');
+$db->exec("UPDATE marketing_meta_connection_checks SET checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 DAY) WHERE company_id=1");
+$stale=MetaReplies::thread($db,$guarded,1,$cid);
+p9check(!$stale['can_send']&&$stale['reason']==='CONNECTION_CHECK_REQUIRED',
+    'Messenger reply rejected if required verification record becomes stale');
 echo "P9 Connection Center MariaDB integration complete.\n";
