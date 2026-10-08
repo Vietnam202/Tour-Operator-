@@ -64,6 +64,7 @@
     const visible = () => context.requirements.filter(r => r.requirement_state !== 'NOT_APPLICABLE' &&
       packages.some(p => line(p,r)?.active));
     let pendingUndo = null;
+    const pendingPropertyMeta = new Map();
     let queue = Promise.resolve();
     const status = msg => {const node = host.querySelector('[data-vta-status]');if(node)node.textContent = msg;};
     const setMoney = (node, value) => {if(node)node.textContent = money(value);};
@@ -246,8 +247,14 @@
       if(!supplier||!reason){proof.open=true;status('Select supplier and evidence before saving this rate');proof.querySelector(!supplier?'[data-supplier]':'[data-evidence]').focus();return;}
       const manual={supplier_id:Number(supplier),original_currency:'VND',unit_amount_original:rate.value,
         manual_reason:reason,manual_contract:{evidence:reason,tax_basis:'NET'}};
-      if(isStay(r))return sheet({requirement_id:Number(r.id),shared:false,variant_ids:[Number(p.variant_id)],
-        lines:{[p.variant_id]:manual}});
+      if(isStay(r)){
+        const tier = r.category === 'HOTEL' ? parseInt(p.hotel_level,10) : p.cruise_level;
+        const matching=packages.filter(candidate=>
+          (r.category === 'HOTEL'?parseInt(candidate.hotel_level,10):candidate.cruise_level)===tier);
+        const variantIds=matching.map(candidate=>Number(candidate.variant_id));
+        return sheet({requirement_id:Number(r.id),shared:false,variant_ids,
+          lines:Object.fromEntries(variantIds.map(id=>[id,manual]))});
+      }
       return sheet({requirement_id:Number(r.id),shared:true,line:manual});
     }
     function bindRow(row) {
@@ -303,9 +310,11 @@
         const idx=Number(e.target.dataset.property),p=packages[idx];
         const key=r.category==='HOTEL'?'hotel_names':'cruise_names';
         const star=r.category==='HOTEL'?parseInt(p.hotel_level,10):p.cruise_level;
-        const names={...(r.metadata?.[key]||{})};
+        const draft={...r.metadata,...pendingPropertyMeta.get(id)};
+        const names={...(draft[key]||{})};
         names[star]=e.target.value.trim();
-        sheet({requirement:{id,metadata:{...r.metadata,[key]:names}},line:{}});
+        draft[key]=names;pendingPropertyMeta.set(id,draft);
+        sheet({requirement:{id,metadata:draft},line:{}},true);
       });
       const remove=row.querySelector('[data-remove]'),confirm=row.querySelector('.vta-remove-confirm');
       remove.onclick=()=>{confirm.hidden=false;confirm.querySelector('[data-remove-reason]').focus();};
