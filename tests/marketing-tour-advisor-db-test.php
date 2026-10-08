@@ -33,7 +33,7 @@ foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$db->exec($stat
 $conv=(int)$first['conversation_id'];
 $team=['company_id'=>1,'id'=>1];
 $managerListings=MarketingTourAdvisor::programs($db,$team,$conv,'Ha Long',true);
-checked(count($managerListings)===2,'manager can see ACTIVE matching internal library records');
+checked(count($managerListings)===1,'manager sees matching ACTIVE programs but not DRAFT or other-tenant records');
 $publicListings=MarketingTourAdvisor::programs($db,$team,$conv,'',false);
 checked(count($publicListings)===0,'Marketing cannot share ACTIVE tours without separate approval');
 $target=array_values(array_filter($managerListings,fn($p)=>$p['id']===100))[0];
