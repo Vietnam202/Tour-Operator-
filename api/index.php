@@ -122,6 +122,7 @@ try {
     QuoteProposal::publicHandle($route,$method,$db,$config);
     WebhookCenter::publicHandle($route,$method,$db,$config);
     WebsiteInbox::publicHandle($route,$method,$db,$config);
+    MetaInbox::publicHandle($route,$method,$db,$config);
     WebsiteChatDelivery::publicHandle($route,$method,$db,$config);
     MarketingTourShare::publicHandle($route,$method,$db);
 
@@ -134,6 +135,7 @@ try {
     LeadHub::handle($route,$method,$db,$user);
     WebhookCenter::adminHandle($route,$method,$db,$config,$user);
     WebsiteInbox::adminHandle($route,$method,$db,$user);
+    MetaInbox::adminHandle($route,$method,$db,$config,$user);
     WebsiteChatDelivery::adminHandle($route,$method,$db,$config,$user);
     MarketingTourAdvisor::adminHandle($route,$method,$db,$user);
     MarketingTourShare::adminHandle($route,$method,$db,$user);
