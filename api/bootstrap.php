@@ -54,6 +54,7 @@ require_once __DIR__ . '/lib/QuoteCostItems.php';
 require_once __DIR__ . '/lib/ScheduleImport.php';
 require_once __DIR__ . '/lib/QuoteReuse.php';
 require_once __DIR__ . '/lib/TourLibrary.php';
+require_once __DIR__ . '/lib/PartnerHub.php';
 require_once __DIR__ . '/lib/ServiceTravelDetails.php';
 
 $db = Database::connect($config['db']);
