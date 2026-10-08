@@ -52,3 +52,15 @@ CREATE TABLE IF NOT EXISTS social_webhook_events (
  KEY idx_social_webhook_recent(company_id,id),
  FOREIGN KEY(company_id,conversation_id) REFERENCES social_conversations(company_id,id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Backpressure for untrusted traffic entering the trusted website relay.
+CREATE TABLE IF NOT EXISTS social_webhook_rate_windows (
+ company_id BIGINT UNSIGNED NOT NULL,
+ source_code VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ scope_type ENUM('SOURCE','THREAD') NOT NULL,
+ scope_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ window_start DATETIME NOT NULL,
+ accepted_count INT UNSIGNED NOT NULL DEFAULT 0,
+ PRIMARY KEY(company_id,source_code,scope_type,scope_key,window_start),
+ FOREIGN KEY(company_id) REFERENCES companies(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
