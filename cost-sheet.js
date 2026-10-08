@@ -8,7 +8,9 @@
  window.mountCostSheet=async function(host,{api,quoteData,can,navigate,modal,closeModal,toast,refresh,onProposal,ctx,data}){
   const v=quoteData.version,q=quoteData.quote,base='quote-versions/'+v.id,locked=['SENT','CONFIRMED','SUPERSEDED'].includes(v.version_status),cost=can('quote.view_cost'),profit=can('quote.view_profit'),edit=can('quote.edit')&&!locked;
   let revision=ctx.costing_revision,busy=false,mode=host.dataset.sheetMode||data.items.find(x=>Number(x.is_offered))?.costing_mode||['PRIVATE','SIC','HYBRID'].find(m=>[3,4,5].every(star=>data.items.some(x=>x.costing_mode===m&&parseInt(x.hotel_level)===star)))||data.items[0]?.costing_mode||'PRIVATE';
-  const packages=[3,4,5].map(star=>data.items.find(x=>x.costing_mode===mode&&parseInt(x.hotel_level)===star&&x.variant_key===mode.toLowerCase()+'-'+star+'-'+star)||data.items.find(x=>x.costing_mode===mode&&parseInt(x.hotel_level)===star));
+  let selectedIds=null;try{const pick=JSON.parse(host.dataset.vtaCostVariants||'null');if(Array.isArray(pick)&&pick.length===3)selectedIds=pick;}catch(e){}
+  const selectedPackages=selectedIds?.map(id=>data.items.find(p=>Number(p.variant_id)===Number(id)&&p.costing_mode===mode));
+  const packages=selectedPackages?.every(Boolean)?selectedPackages:[3,4,5].map(star=>data.items.find(x=>x.costing_mode===mode&&parseInt(x.hotel_level)===star&&x.variant_key===mode.toLowerCase()+'-'+star+'-'+star)||data.items.find(x=>x.costing_mode===mode&&parseInt(x.hotel_level)===star));
   const ids=packages.filter(Boolean).map(x=>Number(x.variant_id)),all=ids.length===3;
   let proposal=null;const priceView=host.dataset.sheetStep==='price';
   const request=async(path,b,method='POST')=>{const r=await api.request(path,{method,body:{...b,expected_revision:revision}});if(r.costing_revision!==undefined)revision=r.costing_revision;return r;};
