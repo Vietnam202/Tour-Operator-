@@ -93,10 +93,17 @@ async function harness({locked=false,cost=true}={}){
   firstDate.value='2027-01-02';firstDate.dispatchEvent(new w.Event('change'));await settle();
   assert(calls.some(c=>c.body?.requirement?.id===10&&c.body.requirement.scope?.dates?.join(',')==='2027-01-02,2027-01-03'));
   console.log('PASS guest populations edit directly with quote revision');
+  // First select the existing 4-star-hotel / 3-star-cruise draft, then attempt to duplicate Option B (4/4).
+  h.d.items.push({...h.d.items[1],variant_id:44,variant_key:'custom-4-3',cruise_level:3});
   let duplicate=root.querySelector('[data-mix-hotel="0"]');duplicate.value='4';
   duplicate.dispatchEvent(new w.Event('change'));await settle();
-  assert.equal(root.querySelector('[data-vta-summary="0"] [data-mix-hotel]').value,'3');
+  assert.equal(root.querySelector('[data-vta-summary="0"] [data-mix-hotel]').value,'4');
+  duplicate=root.querySelector('[data-mix-cruise="0"]');duplicate.value='4';
+  duplicate.dispatchEvent(new w.Event('change'));await settle();
+  assert.equal(root.querySelector('[data-vta-summary="0"] [data-mix-cruise]').value,'3');
   assert(root.querySelector('[data-vta-status]').textContent.includes('already selected'));
+  duplicate=root.querySelector('[data-mix-hotel="0"]');duplicate.value='3';
+  duplicate.dispatchEvent(new w.Event('change'));await settle();
   let mix=root.querySelector('[data-mix-cruise="0"]');mix.value='5';mix.dispatchEvent(new w.Event('change'));await settle();
   assert(calls.some(c=>c.body?.action==='mix'&&c.body.hotel_level===3&&c.body.cruise_level===5));
   assert(root.textContent.includes('Hotel 3★ / Cruise 5★'));
