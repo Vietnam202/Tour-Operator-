@@ -274,7 +274,22 @@
     }
     function bind() {
       host.querySelector('[data-sales]').onclick=()=>navigate('sales-list',{salesTab:'quotes'});
-      host.querySelector('[data-info]').onclick=()=>{host.dataset.vtaCostInfo='1';previous(host,env);};
+      host.querySelector('[data-info]').onclick=()=>{
+        if(typeof env.modal!=='function')return;
+        const field=(label,name,value,type='text')=>'<label>'+escapeHTML(label)+
+          '<input name="'+name+'" type="'+type+'" value="'+escapeHTML(value??'')+'"'+(!edit?' disabled':'')+'></label>';
+        const body='<form data-vta-info-form class="vta-info-fields">'+
+          field('Tour Name','tour_name',version.tour_name)+
+          field('Start Date','start_date',version.start_date,'date')+
+          field('End Date','end_date',version.end_date,'date')+
+          field('FX · VND per USD','fx_rate',version.fx_rate,'number')+'</form>';
+        const m=env.modal('Quote Info',body,edit?'<button type="button" class="btn primary" data-vta-info-save>Save</button>':'');
+        if(edit)m.querySelector('[data-vta-info-save]').onclick=()=>{
+          const changes=Object.fromEntries(new FormData(m.querySelector('form')));
+          env.closeModal?.();
+          send(changes,'/smart-costing/context','PUT',true);
+        };
+      };
       host.querySelector('[data-itinerary]').onclick=()=>onProposal?.();
       host.querySelector('[data-price]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
       host.querySelector('[data-proposal]').onclick=()=>onProposal?.();
