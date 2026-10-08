@@ -90,12 +90,41 @@ final class PriceMatrix {
         if(!self::overrideExists($db,$cell,$hash))self::q($db,'INSERT INTO commercial_overrides(matrix_id,cell_id,context_hash,reason,approved_by) VALUES(?,?,?,?,?)',[$m['id'],$cell['id'],$hash,$reason,$u['id']]);
         Audit::log($db,(int)$u['company_id'],(int)$u['id'],'COMMERCIAL_MARGIN_OVERRIDE_APPROVED','price_matrix_cell',(int)$cell['id'],null,['reason'=>$reason,'context_hash'=>$hash]);return ['cell_id'=>(int)$cell['id'],'context_hash'=>$hash,'approved'=>true];
     }
+    private static function manualPrice(PDO $db,array $u,array $v,array $m,array $b): void {
+        if($m['status']!=='DRAFT')throw new DomainException('DRAFT_MATRIX_REQUIRED');
+        $c=self::cell($db,$m,(int)($b['cell_id']??0));
+        $reason=QuoteVs2Domain::text($b['reason']??'',1000);
+        $input=$b['selling_per_pax']??null;
+        if(!is_string($input)&&!is_int($input))throw new InvalidArgumentException('Selling price per pax required');
+        $gross=Vs2Decimal::parse((string)$input);
+        if($gross<=0)throw new InvalidArgumentException('Positive selling price required');
+        $p=QuoteVs2Repository::decode($c['policy_snapshot_json']);
+        $commission=Vs2Decimal::parse((string)$p['commission_pct'],4);
+        $net=Vs2Decimal::format(Vs2Decimal::ratio($gross,1000000-$commission,1000000));
+        $cfg=QuoteVs2Repository::decode($m['config_json']);
+        $result=QuoteVs2Repository::decode($c['result_json']);
+        if(!empty($result['failures'])||empty($result['scenarios']))throw new DomainException('SCENARIO_COST_REVIEW_REQUIRED');
+        $status='VALID';
+        foreach($result['scenarios'] as &$sc){
+            $cost=Vs2Decimal::parse((string)$sc['cost']['cost_total_vnd']);
+            $price=CommercialPolicy::pricing($cost,(int)$sc['pax'],(string)$cfg['fx_rate'],$p,$net);
+            $sc['pricing']=$price;
+            if($price['pricing_status']==='MARGIN_BELOW_POLICY')$status='MARGIN_BELOW_POLICY';
+            elseif($price['pricing_status']==='MARGIN_WARNING'&&$status==='VALID')$status='MARGIN_WARNING';
+        }unset($sc);
+        $actual=$result['scenarios'][0]['pricing'];
+        $result['manual_price']=['entered_selling_per_pax'=>(string)$input,'reason'=>$reason,'reviewed_by'=>(int)$u['id']];
+        $hash=QuoteVs2Domain::hash([$c['context_hash'],$c['id'],$net,$result,$reason]);
+        self::q($db,'UPDATE quote_price_matrix_cells SET status=?,selling_per_pax=?,net_per_pax=?,result_json=?,context_hash=? WHERE id=?',
+            [$status,$actual['selling_per_pax'],$net,QuoteVs2Repository::json($result),$hash,$c['id']]);
+    }
     public static function change(PDO $db,array $u,int $id,string $action,array $b): array {
         return QuoteVs2Repository::atomic($db,function()use($db,$u,$id,$action,$b){$v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$id,QuoteVs2Repository::expected($b));$m=self::row($db,$v)??throw new DomainException('MATRIX_NEEDED');
             if($action==='override')return self::override($db,$u,$v,$m,$b);QuoteVs2Repository::mutable($db,$v);
             if($action==='unlock'){if($m['status']!=='LOCKED')throw new DomainException('LOCKED_MATRIX_REQUIRED');$reason=QuoteVs2Domain::text($b['reason']??'',1000);self::q($db,"UPDATE quote_price_matrices SET status='DRAFT' WHERE id=?",[$m['id']]);}
             else{if($m['status']==='LOCKED')throw new DomainException('LOCKED_MATRIX');
-                if($action==='select'){if($m['status']!=='DRAFT')throw new DomainException('DRAFT_MATRIX_REQUIRED');$cell=self::cell($db,$m,(int)($b['cell_id']??0));self::q($db,'UPDATE quote_price_matrix_cells SET is_selected=?,is_recommended=? WHERE id=?',[!empty($b['is_selected'])?1:0,!empty($b['is_recommended'])?1:0,$cell['id']]);}
+                if($action==='manual-price'){$reason=QuoteVs2Domain::text($b['reason']??'',1000);self::manualPrice($db,$u,$v,$m,$b);}
+                elseif($action==='select'){if($m['status']!=='DRAFT')throw new DomainException('DRAFT_MATRIX_REQUIRED');$cell=self::cell($db,$m,(int)($b['cell_id']??0));self::q($db,'UPDATE quote_price_matrix_cells SET is_selected=?,is_recommended=? WHERE id=?',[!empty($b['is_selected'])?1:0,!empty($b['is_recommended'])?1:0,$cell['id']]);}
                 else{$report=self::report($db,$v);if(!$report['valid'])throw new DomainException('MATRIX_VALIDATION: '.implode(', ',array_unique(array_column($report['errors'],'code'))));if($action==='lock'&&$m['status']!=='VALIDATED')throw new DomainException('VALIDATE_MATRIX_FIRST');
                     if($action==='lock'){$days=365;foreach(self::cells($db,$m) as $c)if($c['is_selected'])$days=min($days,(int)QuoteVs2Repository::decode($c['policy_snapshot_json'])['validity_days']);self::q($db,"UPDATE quote_price_matrices SET status='LOCKED',locked_by=?,locked_at=NOW(),valid_until=DATE_ADD(CURDATE(),INTERVAL ? DAY) WHERE id=?",[$u['id'],$days,$m['id']]);}else self::q($db,"UPDATE quote_price_matrices SET status='VALIDATED',validated_at=NOW(),updated_by=? WHERE id=?",[$u['id'],$m['id']]);}
             }
@@ -160,7 +189,7 @@ final class PriceMatrix {
     }
     public static function handle(string $route,string $method,PDO $db,array $u): void {
         if($route==='commercial-policies'){Auth::requirePermission($db,$u,'sales.view');Auth::requirePermission($db,$u,'quote.view_cost');try{if($method==='GET')Http::json(['ok'=>true,'items'=>self::q($db,'SELECT * FROM commercial_policies WHERE company_id=? ORDER BY policy_key,version_no DESC',[$u['company_id']])->fetchAll()]);if($method==='POST'){Auth::requirePermission($db,$u,'commercial.policy_manage');Http::json(['ok'=>true,'policy'=>CommercialPolicy::create($db,$u,Http::body())],201);}}catch(InvalidArgumentException|DomainException $e){Http::json(['ok'=>false,'error'=>'VALIDATION','message'=>$e->getMessage()],422);}return;}
-        if(!preg_match('#^quote-versions/(\d+)/price-matrix(?:/(generate|validate|lock|unlock|select|override|recheck|transport-options))?$#',$route,$matches))return;Auth::requirePermission($db,$u,'sales.view');$id=(int)$matches[1];$action=$matches[2]??'';
+        if(!preg_match('#^quote-versions/(\d+)/price-matrix(?:/(generate|validate|lock|unlock|select|override|recheck|transport-options|manual-price))?$#',$route,$matches))return;Auth::requirePermission($db,$u,'sales.view');$id=(int)$matches[1];$action=$matches[2]??'';
         try{$v=QuoteOptions::version($db,(int)$u['company_id'],$id);if($method==='GET'&&$action==='')Http::json(['ok'=>true]+self::context($db,$u,$v));Auth::requirePermission($db,$u,'quote.view_cost');
             if($method==='GET'&&$action==='transport-options')Http::json(['ok'=>true]+self::transportOptions($db,$u,$v));
             if($method!=='POST')return;$b=Http::body();
