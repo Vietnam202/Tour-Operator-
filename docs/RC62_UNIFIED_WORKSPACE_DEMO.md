@@ -1,5 +1,7 @@
 # VTA — giao diện hợp nhất theo demo
 
+> Cập nhật 09/10/2026: Luồng Kho chương trình trong Hồ sơ tour đã có API/Word editor thật và đã qua native PHP/MariaDB. Báo cáo mới và hướng dẫn upload: [RC62_MODULES_AND_TESTS_VI.md](RC62_MODULES_AND_TESTS_VI.md). Các kết quả bên dưới ghi lại lượt kiểm thử UI tích hợp ban đầu.
+
 Nhánh làm việc: `codex/Vietnam/rc6-unified-workspace-demo-v1`.
 
 Đây là nhánh tích hợp để duyệt giao diện và kiểm thử, **không phải bản đã triển khai**. Không merge các PR nguồn, không sửa `main`, không chạy migration trên staging/production và không triển khai CyberPanel.
@@ -11,7 +13,7 @@ Nhánh làm việc: `codex/Vietnam/rc6-unified-workspace-demo-v1`.
 | Tổng quan | Workspace Home, task/control center, cảnh báo và tìm kiếm chung | Công việc cần xử lý; AI là drawer theo ngữ cảnh, không là phòng ban |
 | Sales & B2B | Sales Command Center, Lead Hub, Inquiry, quote list, CRM/Customer 360, agents, B2B Partner Hub | Pipeline / Inquiry / B2B Partners / Rate & Contract; CRM là truy cập trong Sales |
 | Hồ sơ tour | Quote versions, Word program editor, Smart Cost, server Price Matrix, confirmation, Booking, handover, Operations Center, guest/flight/service/supplier-order/travel-doc modules | Danh sách hồ sơ và 6 tab theo chuyến đi; Trung tâm điều hành là tab trong workspace |
-| Kho mẫu | Tour Program Library, V5 Proposal Studio, template gallery, import DOCX/PDF/text, clone/reuse, nâng cao Inventory | Không trộn chương trình mẫu với booking thật |
+| Kho chương trình | Tour Program Library, V5 Proposal Studio, template gallery, import DOCX/PDF/text, clone/reuse, nâng cao Inventory | Không trộn chương trình mẫu với booking thật |
 | Nhà cung cấp | Supplier Vault, source documents, extraction/review, Approved Rate Master | Chỉ giá được duyệt mới dùng trong costing; giữ chứng từ nguồn |
 | Marketing | Content/calendar/campaigns/library/webhooks, social publishing, Meta connections, inbox, tour advisor/share, channels và insights | Giữ nguyên engine, approval và provider gates; dùng shell chung |
 | Báo cáo | Reports, Finance, AR/AP, profitability, reconciliation | Tài chính vẫn có tab riêng và kiểm tra quyền từng sổ; không cộng các đồng tiền |

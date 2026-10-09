@@ -1,0 +1,233 @@
+Disposable database: vta_test_a1456185d0
+PASS migration manifest includes the RC5.3 baseline
+PASS fresh migrations match the complete filename manifest
+PASS fresh install keeps core before deferred Marketing
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS identical qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one current sales follow-up task; handover task history retained
+PASS request qualification Sales acceptance conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS L50 explicit activation strategy
+PASS L12 populations initially unset
+PASS L29 six variants over one itinerary
+PASS L26 union shared requirement defaults
+PASS L27 regeneration idempotent
+PASS L43 complete reviewed PRIVATE option validates
+PASS L03 native hotel formula
+PASS L10 HOTEL_PAX only bound arithmetic
+PASS L10 VISA_PAX leaves hotel bytes stable
+PASS L10 MEAL_PAX dependency
+PASS L11 override stable and review flagged
+PASS L15 transfer capacity context preserves arithmetic
+PASS L14 invalid population reduction atomic (DomainException)
+PASS L14 failed command rolls back
+PASS L31 clearing override restores binding
+PASS L15 overcapacity does not invent package price
+PASS L16 cosmetic scope accepted
+PASS L16 route scope blocks
+PASS L41 posted stored-rate price rejected (InvalidArgumentException)
+PASS L20 untrusted inclusion keys rejected (InvalidArgumentException)
+PASS L40 stale command rejected (DomainException)
+PASS L42 legacy writer blocked (DomainException)
+PASS L28/L29 custom mix shares hotel parent and itinerary
+PASS L30 cruise star change leaves hotel untouched
+PASS L22 approved exact guide inclusion suppressed
+PASS L21 expired package cannot cover
+PASS L18 approved supplier terms immutable (DomainException)
+PASS L19 no room-to-pax conversion
+PASS L33 reviewed signed adjustment valid
+PASS L35 configured margin blocks
+PASS L44 source drift blocks send (DomainException)
+PASS L44 FX drift blocks send (DomainException)
+PASS L44 policy hash drift blocks send (DomainException)
+PASS L44 approved terms drift blocks send (DomainException)
+PASS L44 scope drift blocks send (DomainException)
+PASS L44 offered set drift blocks send (DomainException)
+PASS L37 public projection safe
+PASS L45 sent context immutable (DomainException)
+PASS L46 parent-only acceptance rejected (DomainException)
+PASS L46 unoffered sibling rejected (DomainException)
+PASS L46 stale sent hash rejected (DomainException)
+PASS L40 booking idempotent
+PASS L47 signed adjustment folded into original VND service
+PASS L45 sent retry ignores subsequent supplier change
+PASS L48 child IDs remapped on same revision system
+PASS L48 issued/accepted state never copied
+VS2.1 native MariaDB checks complete.
+PASS VS22 fixture uses unchanged VS21 validator
+PASS VS22 original bytes preserved privately
+PASS VS22 optimized image / thumbnail generated
+PASS VS22 public media metadata excludes private paths
+PASS VS22 duplicate detection reuses accessible asset
+PASS VS22 unsupported image rejected (InvalidArgumentException)
+PASS VS22 oversized upload rejected (InvalidArgumentException)
+PASS VS22 cross-tenant media unavailable (OutOfBoundsException)
+PASS VS22 visual workspace saves existing schedule and separate media assignments
+PASS VS22 company draft media blocks finalization (DomainException)
+PASS VS22 company library approval workflow
+PASS VS22 favorites scoped to user
+PASS VS22 template VTA_STANDARD_B2B renders
+PASS VS22 VTA_STANDARD_B2B privacy
+PASS VS22 template VTA_B2B_WHITE_LABEL renders
+PASS VS22 VTA_B2B_WHITE_LABEL privacy
+PASS VS22 partner ownership stays internal
+PASS VS22 template VTA_EXPLORER_B2C renders
+PASS VS22 VTA_EXPLORER_B2C privacy
+PASS VS22 B2C excludes agent-only fields
+PASS VS22 template VTA_PREMIUM_B2C renders
+PASS VS22 VTA_PREMIUM_B2C privacy
+PASS VS22 B2C excludes agent-only fields
+PASS VS22 template switching duplicates no itinerary / costing / quote
+PASS VS22 section reorder uses structured blocks
+PASS VS22 stale presentation write blocked (DomainException)
+PASS VS22 public snapshot excludes unit_rate_vnd
+PASS VS22 public snapshot excludes cost_total_vnd
+PASS VS22 public snapshot excludes profit_vnd
+PASS VS22 public snapshot excludes margin_pct
+PASS VS22 public snapshot excludes storage_path
+PASS VS22 public snapshot excludes drive_file_id
+PASS VS22 public snapshot excludes source_locator
+PASS VS22 public snapshot excludes internal_notes
+PASS VS22 public snapshot excludes special_requests
+PASS VS22 unrelated asset title does not mutate candidate caption
+PASS VS22 send freezes public representation in existing sent bundle
+PASS VS22 archive does not mutate Sent representation
+PASS VS22 Sent presentation immutable (DomainException)
+PASS VS22 native structured PDF output
+PASS VS22 DOCX contains editable styles / images
+PASS VS22 DOCX structured tables / privacy
+PASS VS22 anonymous link resolves exact Sent snapshot
+PASS VS22 public link policy (DomainException)
+PASS VS22 link revocation (OutOfBoundsException)
+PASS VS22 selected Drive import stores normalized origin / link metadata
+PASS VS22 Drive update creates immutable new media revision
+PASS VS22 Drive allowlist blocks unrelated folder (DomainException)
+PASS VS22 historical VS21 Sent / accepted / booking rows unchanged
+PASS VS22 own Sent snapshot bytes unchanged after library / Drive updates
+PASS VS22 fresh quote reuses shared costing validator
+PASS VS22 Approve / Send / Accept / Booking carries frozen presentation
+PASS VS22 revision editable with prices withheld pending review
+PASS VS22 fresh booking / revision preserve prior issued bytes
+VS2.2 native media/proposal acceptance complete.
+PASS VS23 inclusive overlapping bands rejected (InvalidArgumentException)
+PASS VS23 exact method rejects ranges (InvalidArgumentException)
+PASS VS23 B2C commission forbidden (InvalidArgumentException)
+PASS VS23 zero selling price blocked (DomainException)
+PASS VS23 markup and target margin distinct
+PASS VS23 margin is on net after commission
+PASS VS23 below-policy price explicitly flagged
+PASS VS23 minimum margin blocks validate and send (DomainException)
+PASS VS23 override records actor time reason and exact cell
+PASS VS23 five default bands for two channels over one variant
+PASS VS23 scenario generation never changes persistent costs
+PASS VS23 SAFE_PRICE evaluates every pax B2B_AGENT 2-2
+PASS VS23 FOC preserved 2
+PASS VS23 SAFE_PRICE evaluates every pax B2B_AGENT 3-4
+PASS VS23 FOC preserved 3
+PASS VS23 FOC preserved 4
+PASS VS23 SAFE_PRICE evaluates every pax B2B_AGENT 5-9
+PASS VS23 FOC preserved 5
+PASS VS23 FOC preserved 6
+PASS VS23 FOC preserved 7
+PASS VS23 FOC preserved 8
+PASS VS23 FOC preserved 9
+PASS VS23 SAFE_PRICE evaluates every pax B2B_AGENT 10-14
+PASS VS23 FOC preserved 10
+PASS VS23 FOC preserved 11
+PASS VS23 FOC preserved 12
+PASS VS23 FOC preserved 13
+PASS VS23 FOC preserved 14
+PASS VS23 SAFE_PRICE evaluates every pax B2B_AGENT 15-20
+PASS VS23 FOC preserved 15
+PASS VS23 FOC preserved 16
+PASS VS23 FOC preserved 17
+PASS VS23 FOC preserved 18
+PASS VS23 FOC preserved 19
+PASS VS23 FOC preserved 20
+PASS VS23 SAFE_PRICE evaluates every pax B2C_DIRECT 2-2
+PASS VS23 FOC preserved 2
+PASS VS23 SAFE_PRICE evaluates every pax B2C_DIRECT 3-4
+PASS VS23 FOC preserved 3
+PASS VS23 FOC preserved 4
+PASS VS23 SAFE_PRICE evaluates every pax B2C_DIRECT 5-9
+PASS VS23 FOC preserved 5
+PASS VS23 FOC preserved 6
+PASS VS23 FOC preserved 7
+PASS VS23 FOC preserved 8
+PASS VS23 FOC preserved 9
+PASS VS23 SAFE_PRICE evaluates every pax B2C_DIRECT 10-14
+PASS VS23 FOC preserved 10
+PASS VS23 FOC preserved 11
+PASS VS23 FOC preserved 12
+PASS VS23 FOC preserved 13
+PASS VS23 FOC preserved 14
+PASS VS23 SAFE_PRICE evaluates every pax B2C_DIRECT 15-20
+PASS VS23 FOC preserved 15
+PASS VS23 FOC preserved 16
+PASS VS23 FOC preserved 17
+PASS VS23 FOC preserved 18
+PASS VS23 FOC preserved 19
+PASS VS23 FOC preserved 20
+PASS VS23 shared supplier costs with distinct selling channels
+PASS VS23 SAFE_PRICE takes maximum required price inside band
+PASS VS23 stale revision generation blocked (DomainException)
+PASS VS23 FX dependency change invalidates draft
+PASS VS23 validated matrix locks
+PASS VS23 locked matrix cannot silently regenerate (DomainException)
+PASS VS23 public proposal selling only
+PASS VS23 proposal renders locked star matrix
+PASS VS23 matrix follows existing send
+PASS VS23 exact eight pax recheck
+PASS VS23 acceptance outside offered band blocked (DomainException)
+PASS VS23 acceptance freezes exact pax
+PASS VS23 booking snapshot exact accepted pax
+PASS VS23 structured handover created from immutable booking
+PASS VS23 operations return requires reason (InvalidArgumentException)
+PASS VS23 return visible to Sales
+PASS VS23 operations accepts without supplier booking prerequisite
+PASS VS23 change foundation never modifies confirmed snapshot
+PASS VS23 historical and current Sent bytes remain identical
+PASS VS23 fixed guide/vehicle package preserved 245
+PASS VS23 fixed guide/vehicle package preserved 247
+PASS VS23 capacity shortage rejected without inventing supplier rate (DomainException)
+PASS VS23 Sent matrix cannot regenerate (DomainException)
+VS2.3 native commercial/handover acceptance complete.
+PASS RC6 source draft contains a reviewed transfer line
+PASS RC6 supplier capacity selects one reviewed vehicle for 2 and 20 paying pax plus FOC
+PASS RC6 vehicle upgrades change supplier unit cost, never reuse sedan rate for 29-seater
+PASS RC6 preserves FOC and uses total traveling guests for fleet sizing
+PASS RC6 2–20 pax simulation never persists supplier cost changes
+PASS RC6 absent 29-seater supplier rate blocks invented selling price (DomainException)
+RC6 group vehicle native MariaDB checks complete.

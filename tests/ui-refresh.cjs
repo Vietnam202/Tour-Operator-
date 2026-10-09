@@ -16,7 +16,7 @@ for(const page of pages){
 const sw=read('service-worker.js');
 assert(sw.includes("'./vta-ui-refresh.css?v=RC62-UI2'"),'PWA includes versioned CSS offline');
 assert(/["']\.\/vta-ui-refresh\.css\?v=RC62-UI2["']/.test(sw),'PWA includes versioned CSS offline');
-assert(sw.includes("const CACHE='vta-RC62-UNIFIED-DEMO-1'"),'PWA installs fresh cache');
+assert(sw.includes("const CACHE='vta-RC62-PROGRAM-1'"),'PWA installs fresh cache');
 assert(css.includes('@media screen {'),'screen-specific UI overrides');
 assert(!css.includes('@media print'),'leave existing exported/printed document layout alone');
 for(const selector of ['.vtps .vtps-paper','.wd-page','.vta-direct-cost .vta-cost-line','.tour-library .tl-card','.app-shell .sidebar']){

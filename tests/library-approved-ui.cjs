@@ -18,15 +18,15 @@ for (const p of ['index.html', 'preview.html']) {
   const page = read(p);
   assert.equal((page.match(/vta-approved-library\.css\?v=RC62-LIB3/g)||[]).length, 1, p + ': one approved stylesheet');
   assert(page.indexOf('vta-approved-library.css') > page.indexOf('vta-ui-refresh.css'), p + ': latest screen layer loads last');
-  assert(page.includes('tour-library.js?v=RC62-LIB3'), p + ': new library JS cache-busted');
+  assert(page.includes('tour-library.js?v=PROGRAM-1'), p + ': new library JS cache-busted');
   assert(page.includes('vta-approved-workspaces.css?v=RC62-WS1'), p + ': approved workspaces layer installed');
   assert(page.indexOf('vta-approved-workspaces.css') > page.indexOf('vta-approved-library.css'), p + ': workspaces polish loads last');
 }
 const sw = read('service-worker.js');
-assert(sw.includes("const CACHE='vta-RC62-UNIFIED-DEMO-1'"), 'new PWA cache');
+assert(sw.includes("const CACHE='vta-RC62-PROGRAM-1'"), 'new PWA cache');
 assert(sw.includes("'./vta-approved-library.css?v=RC62-LIB3'"), 'approved CSS precached');
 assert(sw.includes("'./vta-approved-workspaces.css?v=RC62-WS1'"), 'approved workspace CSS precached');
-assert(sw.includes("'./tour-library.js?v=RC62-LIB3'"), 'gallery JS precached');
+assert(sw.includes("'./tour-library.js?v=PROGRAM-1'"), 'gallery JS precached');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const rows = [
   {id:1,title:'Halong Bay Cruise',destination:'Halong Bay',day_count:3,status:'ACTIVE',language:'en',tags:['Private'],source_type:'PC'},

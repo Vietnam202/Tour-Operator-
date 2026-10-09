@@ -1,0 +1,128 @@
+{
+  "recorded_at_utc": "2026-10-09T07:21:42.057672+00:00",
+  "upstream_base_commit": "70f21f5f19b7134f96a16946250fd6927912e727",
+  "scope": "RC6.2 integrated modules + server-backed program library in tour Word editor",
+  "runtime": {
+    "php": "8.3.6 native",
+    "mariadb": "10.11.14, isolated test instance",
+    "chromium": "local headless browser"
+  },
+  "fixtures_only": true,
+  "production_or_staging_changed": false,
+  "suites": [
+    {
+      "suite": "frontend",
+      "status": "PASS",
+      "pass_lines": 345,
+      "evidence": "frontend.txt"
+    },
+    {
+      "suite": "unified",
+      "status": "PASS",
+      "pass_lines": 51,
+      "evidence": "unified.txt"
+    },
+    {
+      "suite": "library-ui",
+      "status": "PASS",
+      "pass_lines": 22,
+      "evidence": "library-ui.txt"
+    },
+    {
+      "suite": "library-demo",
+      "status": "PASS",
+      "pass_lines": 12,
+      "evidence": "library-demo.txt"
+    },
+    {
+      "suite": "program-ui",
+      "status": "PASS",
+      "pass_lines": 6,
+      "evidence": "program-ui.txt"
+    },
+    {
+      "suite": "program-browser",
+      "status": "PASS",
+      "pass_lines": 2,
+      "evidence": "program-browser.txt"
+    },
+    {
+      "suite": "unified-browser",
+      "status": "PASS",
+      "pass_lines": 3,
+      "evidence": "unified-browser.txt"
+    },
+    {
+      "suite": "marketing-browser",
+      "status": "PASS",
+      "pass_lines": 2,
+      "evidence": "marketing-browser.txt"
+    },
+    {
+      "suite": "backend-tour-library.php",
+      "status": "PASS",
+      "pass_lines": 149,
+      "evidence": "backend-tour-library.txt"
+    },
+    {
+      "suite": "backend-tour-program-workspace-unit.php",
+      "status": "PASS",
+      "pass_lines": 11,
+      "evidence": "backend-tour-program-workspace-unit.txt"
+    },
+    {
+      "suite": "backend-b2b-partner-hub-unit.php",
+      "status": "PASS",
+      "pass_lines": 8,
+      "evidence": "backend-b2b-partner-hub-unit.txt"
+    },
+    {
+      "suite": "backend-rc6-group-pricing-unit.php",
+      "status": "PASS",
+      "pass_lines": 8,
+      "evidence": "backend-rc6-group-pricing-unit.txt"
+    },
+    {
+      "suite": "backend-rc6-group-pricing-manual-unit.php",
+      "status": "PASS",
+      "pass_lines": 5,
+      "evidence": "backend-rc6-group-pricing-manual-unit.txt"
+    },
+    {
+      "suite": "backend-document-freeform-unit.php",
+      "status": "PASS",
+      "pass_lines": 23,
+      "evidence": "backend-document-freeform-unit.txt"
+    },
+    {
+      "suite": "backend-tour-program-workspace-native.php",
+      "status": "PASS",
+      "pass_lines": 196,
+      "evidence": "backend-tour-program-workspace-native.txt"
+    },
+    {
+      "suite": "backend-rc6-group-pricing-native.php",
+      "status": "PASS",
+      "pass_lines": 227,
+      "evidence": "backend-rc6-group-pricing-native.txt"
+    },
+    {
+      "suite": "backend-marketing-staging-schema-p12-db-test.php",
+      "status": "PASS",
+      "pass_lines": 53,
+      "evidence": "backend-marketing-staging-schema-p12-db-test.txt"
+    },
+    {
+      "suite": "backend-staging_deploy_safety.php",
+      "status": "PASS",
+      "pass_lines": 70,
+      "evidence": "backend-staging_deploy_safety.txt"
+    }
+  ],
+  "server_acceptance_pending": [
+    "existing DB clone upgrade/manifest review",
+    "real multi-role sessions and configured private storage",
+    "supplier price/availability review and live document downloads",
+    "live provider configuration and device/PWA acceptance"
+  ]
+}

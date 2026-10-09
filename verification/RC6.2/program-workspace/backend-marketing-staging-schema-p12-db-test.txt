@@ -1,0 +1,54 @@
+PASS ten reviewed Marketing versions are pinned to hashes
+PASS schema planner applies core 025 before Marketing 023
+PASS staging database identifier cannot be used for clone apply
+PASS staging runtime cannot write even to clone-named database
+PASS real social publishing prevents schema rehearsal
+PASS core source pinned: 001_phase1_core
+PASS core source pinned: 002_phase1_rate_rules_import
+PASS core source pinned: 003_phase1_contracting_rules_reconciliation
+PASS core source pinned: 004_sales_core
+PASS core source pinned: 005_booking_operations
+PASS core source pinned: 006_finance_control
+PASS core source pinned: 007_lead_attribution
+PASS core source pinned: 008_tour_inventory
+PASS core source pinned: 009_quote_options
+PASS core source pinned: 010_travel_documents
+PASS core source pinned: 011_finance_ledgers
+PASS core source pinned: 012_operations_resources_issues
+PASS core source pinned: 013_invoice_schedules
+PASS core source pinned: 014_service_travel_details
+PASS core source pinned: 015_commercial_invoice_documents
+PASS core source pinned: 016_rc1_editing
+PASS core source pinned: 017_campaignpilot
+PASS core source pinned: 018_ai_chat
+PASS core source pinned: 019_marketing_studio
+PASS core source pinned: 020_landing_pages
+PASS core source pinned: 021_tour_library
+PASS core source pinned: 022_lead_sales_handover
+PASS core source pinned: 025_vs21_shared_requirements
+PASS core source pinned: 026_vs21_rate_terms
+PASS core source pinned: 027_vs21_variant_costs
+PASS core source pinned: 028_vs21_acceptance_links
+PASS core source pinned: 029_vs22_media_library
+PASS core source pinned: 030_vs22_proposal_links
+PASS core source pinned: 031_vs23_commercial_policies
+PASS core source pinned: 032_vs23_price_matrices
+PASS core source pinned: 033_vs23_commercial_acceptance
+PASS core source pinned: 034_vs23_sales_operations_handover
+PASS core source pinned: 035_quote_confirmation_roles
+PASS core source pinned: 036_tour_library_proposal_studio
+PASS core source pinned: 037_b2b_partner_hub
+PASS all actual baseline core migrations applied to disposable MariaDB
+PASS ledger inspect identifies exactly the ten unapplied Marketing migrations
+PASS wrong review fingerprint rejects schema DDL
+PASS all ten real Marketing migrations run on disposable core schema
+PASS all Marketing versions have exact checksum entries
+PASS original quotation option schema is preserved byte-for-byte
+PASS final connection diagnostics table exists on clone
+PASS Meta inbox queue is installed on clone
+PASS Messenger outbound queue is installed on clone
+PASS forward-only rehearsal is idempotent on an already-upgraded clone
+PASS historical Marketing checksum tampering fails closed
+PASS successful disposable clone rehearsal does not authorize real staging deployment
+PASS private controller, release branch and human acceptance remain blocked
+P12 full repository core + Marketing schema rehearsal checks complete.

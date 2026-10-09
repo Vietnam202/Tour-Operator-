@@ -1,0 +1,3 @@
+PASS 44 preview tab layouts at 1440, 820, 390 and 360px; no page overflow or blank tabs
+PASS 12 real-mode fixture layouts, read-only status requests, no JavaScript errors or external calls
+NOTE: local Chromium and synthetic accounts; no live provider, staging or CyberPanel verification.

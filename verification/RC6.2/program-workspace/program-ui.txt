@@ -1,0 +1,11 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> vta-rc6-phase1-tests@3.4.0-rc6.2 test:program
+> node tour-program-workspace.cjs
+
+PASS picker pagination, code search, archived exclusion, save-before-copy and revision-only API payload
+PASS issued/read-only program browsing never writes
+PASS failed copy keeps the old document and an actionable retry
+PASS dismissed picker cannot apply after an asynchronous save
+PASS save-as requires reviewed content and never submits quote/customer/cost records
+PASS a delayed master document response cannot replace a newer workspace

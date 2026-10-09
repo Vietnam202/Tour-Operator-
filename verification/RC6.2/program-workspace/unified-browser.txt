@@ -1,0 +1,4 @@
+PASS 90 real Chromium layouts across 1440, 1024, 820, 390 and 360px, eight menu modules, B2B, tour editor/cost/quote/booking/operations/files and inquiry
+PASS mobile drawer makes every module reachable; no page overflow, blank modules, live API or external calls
+PASS real Word engine saves an editable draft through the before-leave guard without hiding the unified navigation
+NOTE: sample preview data; live PHP/MariaDB and provider acceptance remain separate.

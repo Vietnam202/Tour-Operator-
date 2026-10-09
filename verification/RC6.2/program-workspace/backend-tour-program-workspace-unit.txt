@@ -1,0 +1,12 @@
+PASS marked price blocks never enter a reusable program
+PASS ordinary tables, prose, uploaded image and page break survive
+PASS reusable images remain owned asset IDs
+PASS legacy programs convert without prices, internal notes or template travel dates
+PASS picker summaries expose code/type without the full document
+PASS master revision covers content changes rather than timestamp precision
+PASS native Word master needs no forced day cards
+PASS script nodes rejected before library persistence
+PASS unsupported public section attributes rejected
+PASS empty Word programs cannot be activated
+PASS legacy hotel names become editable tables without copying prices
+Tour program workspace domain checks complete.

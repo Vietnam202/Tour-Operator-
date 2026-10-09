@@ -1,0 +1,9 @@
+PASS Five exact group vehicle choices
+PASS Pax-dependent approved rate selection
+PASS Hotel rate cannot be passed as transfer price Vehicle rates must target current transfer lines
+PASS All vehicle bands required One vehicle choice per pax band is required
+PASS Unknown band rate rejected Rate must belong to current vehicle band
+PASS Unreviewed source refused VEHICLE_SOURCE_REVIEW_REQUIRED
+PASS Missing source refuses fabricated price VEHICLE_RATE_REQUIRED
+PASS Legacy matrix remains backward compatible
+RC6 group pricing unit tests complete.

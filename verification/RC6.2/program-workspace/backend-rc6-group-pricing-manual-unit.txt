@@ -1,0 +1,6 @@
+PASS RC6 direct markup selling price accepted at safe margin
+PASS RC6 manual selling update changes calculation hash
+PASS RC6 reason persisted to internal commercial trace
+PASS RC6 below-minimum manual selling price flagged before lock
+PASS RC6 zero manual price blocked
+RC6 direct group selling override tests complete.

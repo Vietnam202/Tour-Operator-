@@ -1,0 +1,9 @@
+PASS: V5 day survives normalized agency editing
+PASS: Unexpected supplier or secret values never persisted to agency content
+PASS: Imported historical NET and raw source excluded from publication
+PASS: Server-side NET plus markup calculation uses approved snapshot
+PASS: Unmatched configuration cannot invent prices
+PASS: Expired NET cannot be quoted
+PASS: Client Word/PDF source blocks contain only selling price, no NET
+PASS: Unpriced itinerary exports allowed without a rate
+B2B partner hub domain assertions passed.

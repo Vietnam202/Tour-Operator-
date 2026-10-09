@@ -1,4 +1,4 @@
-import { Editor, Node, mergeAttributes } from '@tiptap/core';
+import { Editor, Node, Extension, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { TableKit } from '@tiptap/extension-table';
@@ -20,6 +20,10 @@ const PageBreak = Node.create({
   parseHTML:()=>[{tag:'div[data-page-break]'}],
   renderHTML:()=>['div',{'data-page-break':'true',class:'wd-page-break',contenteditable:'false'},'Page break'],
 });
+const PublicSection = Extension.create({
+  name:'vtaPublicSection',
+  addGlobalAttributes(){return [{types:['heading','paragraph','table'],attributes:{vtaSection:{default:null,parseHTML:el=>el.getAttribute('data-vta-section')==='pricing'?'pricing':null,renderHTML:a=>a.vtaSection==='pricing'?{'data-vta-section':'pricing'}:{}}}}];}
+});
 window.VtaDocumentEngine = {
   version:'Tiptap 3.31.3 / ProseMirror',
   create(element,options) {
@@ -27,7 +31,7 @@ window.VtaDocumentEngine = {
       StarterKit.configure({link:false,code:false,codeBlock:false,strike:false}),
       TextStyleKit.configure({backgroundColor:false,fontFamily:false,lineHeight:false}),
       TextAlign.configure({types:['heading','paragraph']}),
-      TableKit.configure({table:{resizable:true}}),AssetImage,PageBreak
+      TableKit.configure({table:{resizable:true}}),AssetImage,PageBreak,PublicSection
     ],...options});
   }
 };
