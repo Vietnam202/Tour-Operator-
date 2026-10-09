@@ -43,7 +43,7 @@
       '',
       'VERIFIED TOUR / CAMPAIGN BRIEF (manually paste public, approved product facts; never paste guest data or supplier net rates):',
       '[Paste brief here]'
-    ].join('\\n'),
+    ].join('\n'),
     'marketing-base': [
       'Act as Vietnam Travel Advisor (VTA) inbound tour marketing copywriter.',
       'Write ONE polished, short, ready-to-edit BASE COPY for the multichannel Content Composer.',
@@ -56,7 +56,7 @@
       '',
       'VERIFIED NON-CONFIDENTIAL TOUR BRIEF:',
       '[Paste approved product summary here]'
-    ].join('\\n'),
+    ].join('\n'),
     document: [
       'Act as the professional itinerary and proposal editor for Vietnam Travel Advisor (VTA).',
       'Rewrite the text below for a premium, client-ready Word/PDF tour proposal.',
