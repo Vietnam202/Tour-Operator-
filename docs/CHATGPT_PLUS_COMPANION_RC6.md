@@ -24,6 +24,8 @@ node --check workspace-centers.js
 node tests/vta-plus-assist.cjs
 node tests/vta-plus-assist-dom.cjs
 ```
-Automated DOM interaction coverage checks clipboard, ChatGPT URL without data in query parameters, no automatic CRM changes, read-only apply restrictions, copy/paste approval, failure recovery and modal closing. GitHub Actions passed these checks on the companion branch.\n\nStill do real-browser UAT on desktop and mobile: clipboard, popup blocking, modal close, preview read-only document, editor insertion, autosave and no unintentional CRM disclosure.
+Automated DOM interaction coverage checks clipboard, ChatGPT URL without data in query parameters, no automatic CRM changes, read-only apply restrictions, copy/paste approval, failure recovery and modal closing. GitHub Actions passed these checks on the companion branch.
+
+Still do real-browser UAT on desktop and mobile: clipboard, popup blocking, modal close, preview read-only document, editor insertion, autosave and no unintentional CRM disclosure.
 
 **Deployment:** review-only feature branch and draft PR. Do not deploy RC6 to CyberPanel or merge onto a production branch without acceptance.
