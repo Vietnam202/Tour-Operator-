@@ -1,0 +1,40 @@
+name: RC6 Approved Demo UI QA
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc62-ui-refresh-minimal-v1'
+    paths:
+      - 'vta-cost-editor.js'
+      - 'vta-approved-ui.css'
+      - 'index.html'
+      - 'preview.html'
+      - 'service-worker.js'
+      - 'tests/vta-approved-ui.cjs'
+      - 'tests/ui-refresh.cjs'
+      - '.github/workflows/approved-demo-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  approved-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install UI test dependencies
+        run: npm ci --prefix tests
+      - name: Check source syntax and approved UI constraints
+        run: |
+          node --check vta-cost-editor.js
+          node --check tests/vta-approved-ui.cjs
+          node tests/vta-approved-ui.cjs
+          node tests/ui-refresh.cjs
+      - name: Regression checks against real cost editor and existing itinerary
+        run: |
+          node tests/vta-cost-editor-ui.cjs
+          node tests/v5-template-gallery-ui.cjs
+          node tests/tour-proposal-studio.cjs
+          node tests/document-days-ui.cjs
+          node tests/document-cost-ui.cjs

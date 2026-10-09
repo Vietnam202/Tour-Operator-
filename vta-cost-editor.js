@@ -155,18 +155,76 @@
         '<button type="button" data-apply-count>Apply</button><button type="button" data-cancel-count>Cancel</button></div>':'') +
         '</article>';
     }
+    // Approved demo layout: option-first accommodation cards, always backed by VS2.1 API.
+    function optionStay(r,p,i) {
+      const l=line(p,r);
+      if(!l || !l.active) return '';
+      const star=r.category==='HOTEL'?parseInt(p.hotel_level,10):p.cruise_level;
+      const key=r.category==='HOTEL'?'hotel_names':'cruise_names';
+      const property=(r.metadata?.[key]||{})[star]||'';
+      const destination=r.scope?.destination||'Destination';
+      const rate=l.coverage_state==='INCLUDED'?'Included':input('type="number" min="0" step="0.01" inputmode="decimal" data-option-rate aria-label="VND unit rate"',''+(l.unit_rate_vnd??''),'vta-option-rate','placeholder="Need rate"');
+      return '<div class="vta-option-stay" data-vta-option-stay data-requirement="'+r.id+'" data-index="'+i+'">' +
+        '<div class="vta-option-stay-head"><strong>'+escapeHTML(titles[r.category]||r.category)+' · '+escapeHTML(destination)+'</strong>' +
+        '<small>'+escapeHTML(r.service_units||1)+' '+escapeHTML(multipliers[r.category]||'Qty')+'</small></div>' +
+        input('data-option-property aria-label="Hotel or cruise property" maxlength="255"',property,'vta-option-property','placeholder="Hotel / Cruise name"') +
+        '<div class="vta-option-rate-row"><label>VND / pax / '+(r.category==='HOTEL'?'night':'package')+rate+'</label>' +
+        '<span class="vta-option-line-total">Total <b>'+money(l.total_vnd)+'</b></span></div>' +
+        (l.review_required||l.coverage_state==='UNRESOLVED'?'<small class="vta-option-review">Supplier review required</small>':'')+
+        detailsFor(r,p,i) + '</div>';
+    }
     function buildSummary(p,i) {
       const star=parseInt(p.hotel_level,10);
       const per=p.pricing?.cost_per_paying_pax ?? (p.pricing?.cost_total_vnd!=null&&Number(context.guests.paying_pax)>0?
         Number(p.pricing.cost_total_vnd)/Number(context.guests.paying_pax):null);
-      return '<article class="vta-cost-summary" data-vta-summary="' + i + '">' +
-        '<strong>Option ' + String.fromCharCode(65+i) + ' · Hotel ' + star + '★ / Cruise ' +
-        (p.cruise_level==null?'—':p.cruise_level+'★') + '</strong>' +
-        '<div class="vta-mix-selectors"><label>Hotel ' + selectHTML([[3,'3★'],[4,'4★'],[5,'5★']],star,'data-mix-hotel="' + i + '"' + (!edit?' disabled':'')) +
-        '</label><label>Cruise ' + selectHTML([['','None'],[3,'3★'],[4,'4★'],[5,'5★']],p.cruise_level ?? '','data-mix-cruise="' + i + '"' + (!edit?' disabled':'')) + '</label></div>' +
-        '<span>Total cost <b data-total>' + money(p.pricing?.cost_total_vnd) + '</b> VND</span>' +
-        '<span>Cost / paying pax <b data-per-pax>' + money(per) + '</b> VND</span>' +
+      const cruise=p.cruise_level==null?'—':p.cruise_level+'★';
+      const stays=visible().filter(isStay);
+      return '<article class="vta-cost-summary" data-vta-summary="'+i+'">' +
+        '<div class="vta-option-head"><strong>OPTION '+String.fromCharCode(65+i)+'</strong><span>Hotel '+star+'★ / Cruise '+cruise+'</span></div>' +
+        '<div class="vta-option-price"><b data-per-pax>'+money(per)+'</b><small>VND / paying pax</small></div>' +
+        '<div class="vta-option-total">Total tour cost <b data-total>'+money(p.pricing?.cost_total_vnd)+'</b> VND</div>' +
+        '<div class="vta-mix-selectors"><label>Hotel '+selectHTML([[3,'3 Stars'],[4,'4 Stars'],[5,'5 Stars']],star,'data-mix-hotel="'+i+'"'+(!edit?' disabled':'')) +
+        '</label><label>Cruise '+selectHTML([['','None'],[3,'3 Stars'],[4,'4 Stars'],[5,'5 Stars']],p.cruise_level??'','data-mix-cruise="'+i+'"'+(!edit?' disabled':''))+'</label></div>' +
+        '<div class="vta-option-stays">'+stays.map(r=>optionStay(r,p,i)).join('')+'</div>' +
         '</article>';
+    }
+    // Read-only private pax-group matrix. Scenario math and resource counts remain server-owned.
+    async function loadGroupMatrix() {
+      const target=host.querySelector('[data-pax-matrix-body]');
+      if(!target)return;
+      const requested=ids();
+      const initial=[2,4,6,8,10,12,16].map(n=>String(n));
+      try {
+        const matrix=await api.request(base+'/price-matrix');
+        if(!target.isConnected)return;
+        const source=(matrix.cells||[]).filter(c=>c.result?.mode==='PRIVATE');
+        const configured=(matrix.config?.bands||[]).map(b=>b.min===b.max?String(b.min):String(b.min)+'–'+String(b.max));
+        const bands=[...new Set([...configured,...source.map(c=>String(c.band_key))])];
+        const list=bands.length?bands:initial;
+        const selectCell=(band,variant)=>source.filter(c=>
+          String(c.band_key)===String(band) && Number(c.variant_id)===Number(variant))
+          .sort((a,b)=>['B2B_AGENT','B2C_DIRECT'].indexOf(a.channel)-['B2B_AGENT','B2C_DIRECT'].indexOf(b.channel))[0];
+        const rows=list.sort((a,b)=>(parseInt(a,10)||0)-(parseInt(b,10)||0));
+        target.innerHTML=rows.map(band=>'<div class="vta-group-row">' +
+          '<div class="vta-group-size"><b>'+escapeHTML(band)+'</b><small>paying pax / group</small></div>' +
+          requested.map(id=>{
+            const cell=selectCell(band,id),scenarios=cell?.result?.scenarios||[];
+            const cost=scenarios[0]?.pricing?.cost_per_paying_pax_vnd;
+            const valid=cost!==undefined&&cost!==null&&cost!=='';
+            return '<div class="vta-group-value"><strong>'+ (valid?money(cost):'—') +'</strong>' +
+              '<small>'+ (cell?escapeHTML(cell.channel||'Private')+' · '+escapeHTML(cell.status||'Review required'):'Chưa có kịch bản')+'</small></div>';
+          }).join('')+'</div>').join('');
+        const note=host.querySelector('[data-group-status]');
+        if(note)note.textContent=source.length?'Dữ liệu Pricing Matrix hiện có · rà soát trạng thái từng kịch bản trước báo giá':
+          'Chưa tạo Pricing Matrix cho Private Tour. Hãy cấu hình từng nhóm khách trong phần Price.';
+      }catch(_error){
+        if(!target.isConnected)return;
+        target.innerHTML=initial.map(n=>'<div class="vta-group-row">' +
+          '<div class="vta-group-size"><b>'+n+'</b><small>paying pax / group</small></div>' +
+          requested.map(()=>'<div class="vta-group-value"><strong>—</strong><small>Chưa có giá xác nhận</small></div>').join('') + '</div>').join('');
+        const note=host.querySelector('[data-group-status]');
+        if(note)note.textContent='Chưa truy cập được Pricing Matrix. Không sử dụng giá từ quy mô nhóm hiện tại để ngoại suy.';
+      }
     }
     function render() {
       packages=getPackages();
@@ -181,8 +239,8 @@
         arr.map(buildRow).join('') + (arr.length?'':'<p class="vta-empty">No services yet. Use + Add.</p>') +
         '</div></section>';
       const guest=context.guests || {},profile=context.profile || {};
-      host.innerHTML='<div class="page cost-sheet vta-direct-cost">' +
-        '<div class="page-head"><div><h1>' + escapeHTML(version.tour_name || quote.quote_ref) + '</h1>' +
+      host.innerHTML='<div class="page cost-sheet vta-direct-cost vta-approved-cost">' +
+        '<div class="page-head"><div><small class="vta-demo-eyebrow">VTA TOUR OPERATOR / SMART COST</small><h1>' + escapeHTML(version.tour_name || quote.quote_ref) + '</h1>' +
         '<p>' + escapeHTML(quote.quote_ref) + ' · Cost Sheet · V' + escapeHTML(version.version_no) + '</p></div>' +
         '<button type="button" class="btn" data-sales>Sales</button></div>' +
         '<nav class="quote-steps"><button type="button" data-info>Info</button><button type="button" data-itinerary>Itinerary</button>' +
@@ -193,16 +251,33 @@
         '<span class="vta-save-state" role="status" data-vta-status>' + (locked?'Read-only':'Saved') + '</span></div>' +
         '<div class="vta-guest-controls">' +
         '<label>Paying Pax' + input('type="number" min="1" max="10000" data-guest="paying_pax" inputmode="numeric"',guest.paying_pax,'vta-guest-input') + '</label>' +
+        '<label>FOC Guests<input class="vta-guest-input" type="text" value="'+escapeHTML(guest.foc ?? Math.max(0,Number(guest.total_guests||0)-Number(guest.paying_pax||0)))+'" disabled aria-label="FOC Guests"></label>' +
+        '<label>Total Guests<input class="vta-guest-input" type="text" value="'+escapeHTML(guest.total_guests??'')+'" disabled aria-label="Total Guests"></label>' +
         '<label>Hotel Pax' + input('type="number" min="0" max="10000" data-guest="hotel_pax" inputmode="numeric"',profile.hotel_pax ?? '','vta-guest-input','placeholder="Review"') + '</label>' +
         '<label>Cruise Pax' + input('type="number" min="0" max="10000" data-guest="cruise_pax" inputmode="numeric"',profile.cruise_pax ?? '','vta-guest-input','placeholder="Review"') +
         '</label><small>Guest composition is managed in Info. FOC costs stay included; cost/pax uses Paying Pax.</small></div>' +
-        card('A. Common Services',common,false) + card('B. Hotel & Cruise · Each destination has its own rate',stays,true) +
+        '<div class="vta-summary-title"><span>Three live costing options</span><small>All costs are calculated by the server · VND</small></div>' +
+        '<div class="vta-cost-summaries">' + packages.map(buildSummary).join('') + '</div>' +
+        '<section class="vta-cost-section vta-private-groups" data-private-groups>' +
+        '<header><div><small class="vta-group-label">PRIVATE TOUR · GROUP SIZE COMPARISON</small>' +
+        '<h2>Tour riêng theo từng nhóm khách</h2><p>So sánh chi phí mỗi khách theo số lượng người trả tiền</p></div>' +
+        '<button type="button" class="btn" data-open-group-price>Mở Price →</button></header>' +
+        '<div class="vta-group-columns"><span>Nhóm khách</span>' +
+        packages.map((p,i)=>'<span>Option '+String.fromCharCode(65+i)+' · H'+escapeHTML(parseInt(p.hotel_level,10))+'★ / C'+escapeHTML(p.cruise_level??'—')+'★</span>').join('')+'</div>' +
+        '<div class="vta-group-data" data-pax-matrix-body role="status">Đang tải báo giá theo quy mô đoàn…</div>' +
+        '<p class="vta-group-footnote">Chỉ hiển thị chi phí do Pricing Matrix tính trên dữ liệu đã lưu. Chưa có kịch bản thì để trống, không tự suy diễn giá xe/guide hoặc tỷ lệ FOC. Đơn vị: VND / paying pax.</p>' +
+        '<p class="vta-group-status" data-group-status role="status"></p>' +
+        '</section>' +
         '<div class="vta-add-bar">' +
         (edit?selectHTML(options,'HOTEL','data-new-service aria-label="Service to add"') +
           '<button type="button" class="btn primary" data-add>+ Add Service</button>':'') +
         (pendingUndo && edit ? '<button type="button" class="btn" data-undo>Undo remove</button>':'') + '</div>' +
-        '<section class="vta-cost-section"><header><h2>C. Total Tour Cost</h2><small>Server-calculated · VND</small></header>' +
-        '<div class="vta-cost-summaries">' + packages.map(buildSummary).join('') + '</div></section>' +
+        card('A. Common Services',common,false) +
+        '<details class="vta-advanced-stays"><summary>B. Hotel & Cruise · Detailed rate matrix</summary>' +
+        card('B. Hotel & Cruise · Each destination has its own rate',stays,true) + '</details>' +
+        '<section class="vta-cost-section vta-overview"><header><h2>C. Costing Overview</h2>' +
+        '<small>3 options above · paying PAX excludes FOC</small></header>' +
+        '<p>Rates, reviews and totals originate from the VTA server. No artificial sample rates are used in this quotation.</p></section>' +
         '<div class="vta-cost-bottom"><button type="button" class="btn" data-check>Check Quote</button>' +
         '<button type="button" class="btn primary" data-next>Next: Price →</button></div>' +
         '<div class="vta-validation" data-validation></div>' +
@@ -210,6 +285,7 @@
         'Missing supplier rates remain unresolved, never zero. Supplier approval and pricing validation are enforced by the server.</p>' +
         '</div>';
       bind();
+      loadGroupMatrix();
     }
     function saveRate(row, index) {
       const r=context.requirements.find(x=>String(x.id)===row.dataset.vtaRow),p=packages[index],
@@ -273,6 +349,7 @@
       };
     }
     function bind() {
+      host.querySelector('[data-open-group-price]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
       host.querySelector('[data-sales]').onclick=()=>navigate('sales-list',{salesTab:'quotes'});
       host.querySelector('[data-info]').onclick=()=>{
         if(typeof env.modal!=='function')return;
@@ -318,6 +395,40 @@
         send({variant_ids:ids(),action:'mix',mode,hotel_level:hotel,cruise_level:cruise})
           .then(result=>{if(result?.variant_id){selectVariant(result.variant_id);
             status('Combination saved · supplier rates require review');}});
+      });
+      // Inline Hotel/Cruise inputs share the same persisted requirement and supplier validation.
+      host.querySelectorAll('[data-vta-option-stay]').forEach(card=>{
+        const id=Number(card.dataset.requirement),index=Number(card.dataset.index);
+        const r=context.requirements.find(x=>Number(x.id)===id),p=packages[index];
+        if(!r || !p || !edit)return;
+        const storeRate=()=>{
+          const field=card.querySelector('[data-option-rate]');
+          if(!field || field.value==='' || !Number.isFinite(Number(field.value)) || Number(field.value)<0){
+            status('Enter a valid rate; missing rate is not zero');return;
+          }
+          const proof=card.querySelector('[data-proof]'),supplier=proof?.querySelector('[data-supplier]')?.value,
+            reason=proof?.querySelector('[data-evidence]')?.value.trim();
+          if(!supplier || !reason){
+            if(proof)proof.open=true;
+            status('Select supplier and evidence before saving this rate');
+            proof?.querySelector(!supplier?'[data-supplier]':'[data-evidence]')?.focus();
+            return;
+          }
+          const manual={supplier_id:Number(supplier),original_currency:'VND',
+            unit_amount_original:field.value,manual_reason:reason,
+            manual_contract:{evidence:reason,tax_basis:'NET'}};
+          sheet({requirement_id:id,shared:false,variant_ids:[Number(p.variant_id)],
+            lines:{[p.variant_id]:manual}},true);
+        };
+        card.querySelector('[data-option-rate]')?.addEventListener('change',storeRate);
+        card.querySelector('[data-apply]')?.addEventListener('click',storeRate);
+        card.querySelector('[data-option-property]')?.addEventListener('change',event=>{
+          const key=r.category==='HOTEL'?'hotel_names':'cruise_names';
+          const star=r.category==='HOTEL'?parseInt(p.hotel_level,10):p.cruise_level;
+          const names={...(r.metadata?.[key]||{})};
+          names[star]=event.target.value.trim();
+          sheet({requirement:{id,metadata:{...r.metadata,[key]:names}},line:{}},true);
+        });
       });
       host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
         if(!edit)return;
