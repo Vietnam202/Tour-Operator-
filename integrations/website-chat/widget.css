@@ -1,0 +1,18 @@
+.vta-chat-widget{--vta-blue:#153860;position:fixed;z-index:2147483000;right:18px;bottom:18px;font:14px/1.45 system-ui,-apple-system,sans-serif;color:#172d45}
+.vta-chat-widget *{box-sizing:border-box}
+.vta-chat-launch{border:0;background:var(--vta-blue);color:#fff;padding:13px 18px;border-radius:99px;cursor:pointer;font:600 14px system-ui;box-shadow:0 4px 20px #142e5040}
+.vta-chat-panel{position:absolute;bottom:60px;right:0;width:min(355px,calc(100vw - 36px));height:min(580px,calc(100dvh - 115px));background:#fff;border:1px solid #dce4ec;border-radius:14px;box-shadow:0 12px 48px #142f4e45;display:flex;flex-direction:column;overflow:hidden}
+.vta-chat-panel[hidden]{display:none}
+.vta-chat-panel header{background:var(--vta-blue);color:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.vta-chat-close{color:#fff;background:transparent;border:0;font-size:24px;cursor:pointer}
+.vta-chat-notice{font-size:12px;padding:8px 12px;margin:0;color:#536777;background:#f5f8fb}
+.vta-chat-history{padding:12px;display:flex;flex-direction:column;gap:10px;flex:1;overflow:auto}
+.vta-chat-bubble{padding:10px 12px;border-radius:12px;max-width:89%;white-space:pre-wrap;overflow-wrap:anywhere}
+.vta-chat-mine{align-self:flex-end;background:#e6f2ff}.vta-chat-staff{align-self:flex-start;background:#edf3f7}
+.vta-chat-form{padding:10px;border-top:1px solid #e2e8ef;display:grid;gap:7px}
+.vta-chat-form label{font-size:12px;display:grid;gap:2px;color:#40566e}
+.vta-chat-form input,.vta-chat-form textarea{width:100%;border:1px solid #bfcbd9;border-radius:7px;padding:7px;font:14px system-ui;background:#fff;color:#172d45}
+.vta-chat-form button{border:0;background:var(--vta-blue);color:#fff;border-radius:7px;padding:10px;cursor:pointer;font-weight:600}
+.vta-chat-form button:disabled{opacity:.6;cursor:wait}
+.vta-chat-status{font-size:11px;min-height:15px;margin:0;padding:0 10px 8px;color:#4c6274}
+@media(max-width:480px){.vta-chat-widget{right:12px;bottom:12px}.vta-chat-panel{width:calc(100vw - 24px);height:min(620px,calc(100dvh - 105px))}}

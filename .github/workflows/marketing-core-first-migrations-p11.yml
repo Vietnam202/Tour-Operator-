@@ -1,0 +1,52 @@
+name: Marketing Core-first Migrations P11
+on:
+  pull_request:
+    paths:
+      - 'api/lib/Migrations.php'
+      - 'api/lib/MarketingStagingGate.php'
+      - 'tests/marketing-core-first-migrations-p11.php'
+      - 'tests/marketing-staging-readiness-p10.php'
+      - '.github/workflows/marketing-core-first-migrations-p11.yml'
+  workflow_dispatch:
+jobs:
+  migration-order:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/Migrations.php
+          php -l api/lib/MarketingStagingGate.php
+          php -l tests/marketing-core-first-migrations-p11.php
+          php -l tests/marketing-staging-readiness-p10.php
+      - name: MariaDB dependency planning and migration checksums
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-core-first-migrations-p11.php
+      - name: P10 readiness remains blocked
+        run: |
+          set +e
+          php api/bin/marketing-staging-preflight.php > /tmp/marketing-preflight.json
+          code=$?
+          set -e
+          test "$code" -eq 2
+          php -r '$j=json_decode(file_get_contents("/tmp/marketing-preflight.json"),true); if($j["safe_to_release"]!==false)exit(1); $s=array_column($j["checks"],"id");if(!in_array("MIGRATION_ORDER_RECONCILED",$s,true))exit(2);if(!in_array("STAGING_DEPLOY_MIGRATIONS",$s,true))exit(3);'

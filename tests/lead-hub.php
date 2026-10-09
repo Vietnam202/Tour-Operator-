@@ -14,14 +14,17 @@ function rejects(callable $fn,string $class,string $name): void {
 }
 $password=getenv('VTA_TEST_DB_PASSWORD');
 if(!$password) throw new RuntimeException('Set VTA_TEST_DB_PASSWORD for a disposable local database server');
-$db=new PDO('mysql:host=127.0.0.1;port=33317;charset=utf8mb4','root',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+$testPort=filter_var(getenv('VTA_TEST_DB_PORT')?:33317,FILTER_VALIDATE_INT);
+if($testPort===false||$testPort<1024||$testPort>65535)throw new RuntimeException('Invalid disposable local test port');
+$db=new PDO('mysql:host=127.0.0.1;port='.$testPort.';charset=utf8mb4','root',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
 $database='vta_test_'.bin2hex(random_bytes(5));
 $db->exec("CREATE DATABASE `$database` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");$db->exec("USE `$database`");
 echo "Disposable database: $database\n";
 $migrationFiles=glob(__DIR__.'/../api/migrations/*.sql')?:[];sort($migrationFiles,SORT_STRING);
 $manifest=array_map(fn($file)=>basename($file,'.sql'),$migrationFiles);
 check(in_array('021_tour_library',$manifest,true),'migration manifest includes the RC5.3 baseline');
-$versions=Migrations::run($db,__DIR__.'/../api/migrations');check($versions===$manifest,'fresh migrations match the complete filename manifest');
+$versions=Migrations::run($db,__DIR__.'/../api/migrations');$actualManifest=$versions;sort($actualManifest,SORT_STRING);check($actualManifest===$manifest,'fresh migrations match the complete filename manifest');
+check(array_search('025_vs21_shared_requirements',$versions,true)<array_search('023_marketing_webhook_core',$versions,true),'fresh install keeps core before deferred Marketing');
 check(Migrations::run($db,__DIR__.'/../api/migrations')===[],'migration rerun is a no-op');
 $db->exec("INSERT INTO companies(code,name) VALUES('TEST','Test'),('OTHER','Other')");
 $db->exec("INSERT INTO roles(company_id,code,name) VALUES(1,'ADMIN','Admin'),(2,'ADMIN','Admin')");

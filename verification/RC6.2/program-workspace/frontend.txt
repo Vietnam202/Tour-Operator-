@@ -1,0 +1,362 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> vta-rc6-phase1-tests@3.4.0-rc6.2 test
+> node frontend.cjs && node marketing-unit.cjs && node marketing-preview.cjs && node marketing-studio-ui.cjs && node marketing-shell-ui.cjs && node landing-ui.cjs && node landing-pro.cjs && node ai-ui.cjs && node pwa.cjs && node schedule-sections-ui.cjs && node operations-center.cjs && node operations-demo.cjs && node tour-library-ui.cjs && node tour-library-demo.cjs && node navigation-library.cjs && node workspace-centers-ui.cjs && node workspace-demo.cjs && node ai-drawer.cjs && node vs0-shell.cjs && node vs1-workspace.cjs && node vs21-ui.cjs && node vs22-ui.cjs && node document-cost-ui.cjs && node document-days-ui.cjs && node vs23-ui.cjs && node quote-confirmation-ui.cjs && node booking-operations-ui.cjs
+
+PASS JavaScript syntax app.js
+PASS JavaScript syntax request.js
+PASS JavaScript syntax embed.js
+PASS JavaScript syntax service-worker.js
+PASS JavaScript syntax ai-chat.js
+PASS JavaScript syntax platform.js
+PASS JavaScript syntax marketing.js
+PASS JavaScript syntax marketing-model.js
+PASS JavaScript syntax marketing-demo.js
+PASS JavaScript syntax marketing-studio.js
+PASS JavaScript syntax landing-model.js
+PASS JavaScript syntax landing-extensions.js
+PASS JavaScript syntax landing-builder.js
+PASS query parameters preserved separately from API route
+PASS mutation sends CSRF token and JSON body
+PASS API conflict is surfaced to UI
+PASS escaped content in generated markup
+PASS status-dependent controls
+PASS submit handler
+PASS approval handler
+PASS rejection handler
+PASS read-only controls
+PASS Lead Hub navigation
+PASS preview no API calls
+PASS mobile and preview wiring
+NOTE: simulated DOM/API tests; not browser, authorization or MariaDB integration tests.
+PASS preview shows campaigns, content and clear demo label
+PASS create campaign stays in memory and escapes user text
+PASS seven channels and new draft creation
+PASS simulated DRAFT to PENDING to APPROVED flow
+PASS revision preserves original approved content
+PASS simulated rejection
+PASS data survives navigation and reset restores samples
+PASS complete demo flow makes no backend, AI or publishing calls
+PASS UTC+7 roundtrip, invalid date and unsafe URLs
+PASS multichannel recurrence and batch size cap
+PASS current eleven studio tabs and clear demo state
+PASS campaign creation and escaped content
+PASS review editable per-channel variants and save four drafts
+PASS approval changes state without publishing
+PASS new revision preserves approved snapshot
+PASS save reusable template and recurring-plan entry
+PASS calendar and day filtering
+PASS manual note, reply draft and staff assignment
+PASS demo lead handoff is deduplicated
+PASS sample reports and channel links to actual Meta status
+PASS no network/provider calls in demo
+PASS read-only account hides write controls
+PASS live and preview load every Marketing dependency before the studio, with matching PWA versions
+PASS shipped preview opens all eleven populated tabs offline without provider calls
+PASS Vietnamese navigation and capability text reflect the current modules
+PASS Facebook channel opens real Meta status and escapes account labels
+PASS four controller errors show localized retry states and recover without false connection claims
+PASS missing controller files show a fallback and recover when the module becomes available
+PASS read-only accounts cannot create, approve or cancel jobs; self approval stays hidden
+PASS late webhook responses cannot replace a newer tab
+PASS navigation, status checks and retry issue reads only; no delivery or provider action
+NOTE: jsdom integration coverage; visual layout and device installation need browser review.
+PASS builder opens offline file preview with tour template
+PASS palette drag inserts block before the actual drop target
+PASS drag handle reorders existing block to page end
+PASS undo and redo restore document order
+PASS touch and keyboard buttons move, duplicate with fresh ID and delete
+PASS editor escapes text and rejects script URLs before export
+PASS responsive preview uses sandboxed, trusted runtime with isolated preview document
+PASS demo save updates same record and exports JSON plus standalone HTML
+PASS saved page reopens with original content and block order
+PASS JSON import restores editable design
+PASS Pro template, fixed UTC+7 deadline, tablet preview and editable pricing items
+PASS import validates type allowlist, duplicate IDs, size, links and image attribution
+PASS demo makes no API or provider call
+PASS read-only account cannot save or add blocks
+PASS real preview shell opens the current Webhooks tab; standalone landing builder stays covered above
+NOTE: jsdom event simulation, not a real browser/device or live-host test.
+PASS Standard 6D5N and Pro templates serialize all supplied module types
+PASS gallery, detailed itinerary and reviews render escaped content without CDN dependencies
+PASS expired countdown remains ended rather than resetting
+PASS form maps actual Lead Hub JSON fields, public token and ad attribution
+PASS retry keeps submission key and success prevents duplicate submission
+PASS editing a failed request generates a new idempotency key
+PASS downloaded local file cannot accidentally submit to the live API
+PASS builder preview disables lead capture and blocks outbound connections with CSP
+PASS unconfigured form is visibly disabled
+PASS invalid form tokens, calendar dates and item limits rejected
+NOTE: generated-page runtime uses mocked fetch; no lead was sent to hosting.
+PASS user, assistant and title text escaped
+PASS consent required before AI request
+PASS retry preserves text and key; duplicate submit blocked
+PASS marketing handoff creates editable draft without approval or delivery call
+PASS create disables submit and leaves close control usable
+PASS missing server configuration disables send
+PASS preview explicitly labeled and makes no AI calls
+PASS late response cannot replace another workspace
+PASS real preview shell exposes global AI drawer without an AI department or replacing the workspace
+NOTE: jsdom with simulated API. Real-device and live API tests remain required.
+PASS all precache assets exist; app HTML and API absent
+PASS API, writes, cross-origin and arbitrary exports are not intercepted
+PASS navigation always uses network with generic offline fallback
+PASS VS2.2 cache activation removes prior released assets and preserves current/unrelated apps
+PASS install manifest and PNG icon dimensions
+NOTE: service worker simulation; browser installation requires device testing.
+PASS commercial section editors present
+PASS atomic save includes edits and explicit clear
+PASS preview and apply do not save; absent sections retained
+PASS append sections and days independently
+PASS no detected heading keeps existing section
+PASS cancel preserves editor
+PASS section text escaped
+PASS import keeps current unsaved editor content
+PASS upload uses shared preview and applies reviewed terms
+PASS immutable quote versions remain read only
+PASS all 15 operations cards open functional modules and return home
+PASS changing booking reloads the right record and preserves selection across modules
+PASS a late booking response cannot replace a newer navigation
+PASS late task completion leaves an external booking workspace intact
+PASS late incident loader cannot open a dialog after returning home
+PASS actual attraction category and guest room preference are displayed
+PASS movement date and refresh request the selected date with correct route contract
+PASS malformed list endpoints and booking detail arrays show a visible retry
+PASS booking modules deep-link to the selected booking and relevant tab
+PASS missing and non-array API fields render empty or retry states without map crashes
+PASS restricted cards stay disabled and do not fetch forbidden data
+PASS resource assignment submits typed IDs and local timestamps through existing API
+PASS tasks complete and incident resolution use existing mutation contracts
+PASS failed assignment retains form and re-enables retry
+PASS supplier payment records amount, date and reference with fixed original currency and an idempotency key
+PASS failed payment retains typed fields; unchanged retries reuse their key and changed payments receive a new key
+PASS AP-only users record supplier payments without booking, customer AR or operations requests
+PASS late supplier payment preserves another workspace and its dialog without refreshing it
+PASS API text is escaped across operations modules
+PASS API failure remains visible and retry restores the module
+PASS Unhandled routes are delegated without fabricating success
+PASS Default date uses current UTC+7 and does not move November demo services to today
+PASS Both query styles return selected-day production-shaped movement and readiness
+PASS Legacy departures honors the actual date window and timeline date
+PASS Resource creation validates types and seat capacity
+PASS Assignment retries are stable and readiness uses actual assigned resource capacity
+PASS Overlapping assignments, wrong dates, invalid timestamps and incomplete intervals are rejected
+PASS Cancellation removes assignments from readiness and updates legacy contacts
+PASS Incident creation validates owner, severity, required content and booking
+PASS Incident resolution requires follow-up details and updates live readiness
+PASS Travel detail defaults use every customer-facing production field
+PASS Travel detail partial edits preserve old values and validate dates before mutation
+PASS Supplier payments update AP and record one in-memory payment with integer cents
+PASS Payment retry accepts equivalent amount formatting without reducing balance twice
+PASS Invalid payment requests leave AP and payment lists untouched
+PASS Full payment marks the payable paid and its retry succeeds after the balance reaches zero
+PASS Preview state is isolated per DemoApi and does not persist across a new instance
+PASS Internal approvals receives contract arrays and tasks created from the global form appear
+18 operations preview behavior groups passed
+PASS library title, metadata search, destination/language filters and archived visibility
+PASS no library data requested without view permission
+PASS legacy supplier view gives read-only library; no manage or quote actions
+PASS legacy document.upload grants import/manage without advanced inventory
+PASS preview requires explicit save and retains edited Included/Excluded/Terms with import token
+PASS Drive batch isolates errors, saves valid items and retries failed item without duplicate saves
+PASS unsafe links and Drive folders rejected before network requests
+PASS multiple PC files use separate multipart previews; unsupported Preview files need real pasted text
+PASS rejected file extension stays rejected on retry
+PASS failed save remains editable and retry preserves draft fields
+PASS unparsed text supports explicit empty DRAFT without invented days
+PASS add/remove day and tab switches preserve edited import schedules
+PASS program fields escaped and unsafe source link omitted; original source route uses trusted numeric id
+PASS quote copy lists draft targets and delegates empty-draft validation to API
+PASS late library load cannot overwrite another workspace
+PASS late edit closes only captured dialog and preserves new workspace/dialog
+PASS old instance response cannot overwrite a newer library instance
+PASS pending later preview locks editors and refresh, preserving prior READY edits
+PASS pending earlier save locks later editors and saves previously collected draft values
+PASS supplier utility remains reachable while Preview hides live-only advanced inventory
+PASS library fetches every metadata page before applying search and filters
+PASS unchanged uncertain-save retry retains creation key; edited payload starts new creation key
+Tour library UI verification complete
+PASS Unhandled APIs delegated; no library without view permission
+PASS Real Vietnamese itinerary parsed with separate Included Excluded Terms
+PASS Unstructured text returns correctable empty draft; no invented itinerary
+PASS Renumbers source days and rejects over 90 days / oversized text
+PASS Create saves content; source text and commercial sections retained
+PASS Stable creation key retries do not duplicate; changed payload conflicts
+PASS Edit and archive preserve original source data; archive remains reviewable
+PASS Pagination works for many programs and validates bounds
+PASS Private previews have no fake Drive or PDF results
+PASS Preview state isolated across users/instances; view-only cannot mutate
+PASS Copy to quote refuses issued or nonempty drafts without changing content
+PASS Copy to empty draft rebases dates and freezes program/terms
+12 demo behavior groups passed
+PASS RC6 grouped navigation exposes three workspaces and shared/control services
+PASS Home works for every role and ADMIN honors effective deny permissions
+PASS Mobile has Home and three workflows plus More without AI department
+PASS Library opens reused module and maps inventory to shared Product
+PASS Sales opens command center while old salesTab link opens classic list
+PASS Focused inquiry read targets server ID rather than first300 rows
+PASS CRM reads same customer and agent entities with manage controls scoped
+PASS Legacy today/bookings route reaches matching operational tile
+PASS Legacy Product supplier route reads only permitted Supplier entity
+PASS Shared Documents avoids requesting forbidden booking/supplier domains
+PASS Finance overview groups currencies and uses modern AR/AP rather than legacy totals
+PASS Finance overview role does not fetch AR/AP without their independent permissions
+PASS Apps lists accessible shared services and global AI trigger without AI module
+PASS AI opens globally preserving workspace, closes with Escape, and rejects late results
+PASS Context sends only active quote/booking references and navigation closes drawer
+PASS Forbidden deep link cannot call API or replace active view
+16 RC6 navigation integration groups passed
+PASS Sales has nine attention queues, snapshot date/timezone and metric definitions
+PASS card click requests matching server queue and pagination reaches records past first page
+PASS typed row mapping opens quote editor and ignores arbitrary response routes
+PASS existing inquiry focus, new inquiry callback and shared CRM shortcut
+PASS local permissions hide create/shared actions and block unavailable queues
+PASS booking-only user can access confirmed-today queue
+PASS sales makes no protected request without permission
+PASS home makes no protected request without permission
+PASS initial focused queue remains compatible with other card actions
+PASS queue error preserves card navigation and retry reruns same filter
+PASS incomplete API response shows error rather than fabricated zero metrics
+PASS empty queue has explicit state and no misleading pagination
+PASS response text is escaped and invalid ids do not create navigation actions
+PASS delayed initial response cannot overwrite another workspace
+PASS older same-view renderer cannot replace newer instance
+PASS latest queue click wins over late previous queue response
+PASS Home locally filters workspace, metric and attention data by effective permissions
+PASS lead-view-only Marketing access, focused New Leads link and no unsafe financial totals
+PASS Vietnamese Home labels and existing booking/task navigation
+PASS server-null unavailable Home queues and operations-only plaintext booking rows
+PASS server-null unavailable Sales queues retain permitted card access
+PASS campaign-manage-only Home cannot request or route Marketing read access
+PASS task-view-only Home contains own task attention and routes shared task queue
+PASS booking-view-only Home routes Sales without exposing unrelated attention data
+PASS workspace-centers-ui complete: 24 groups
+PASS local UTC+7 day, NEW requests created today and overlapping qualification queue
+PASS follow-up midnight boundaries and terminal inquiry exclusions
+PASS quote queues require current-version and quote lifecycle agreement
+PASS confirmed-today is booking creation date, includes completed and excludes cancelled
+PASS Home derives scoped union of at-risk/today bookings, own OPEN/SNOOZED tasks and no money
+PASS effective permissions redact unavailable counts and row queues, even ADMIN role
+PASS zero-permission Sales rejects while Home returns only redacted metadata without role bypass
+PASS unbounded matching count and stable second-page selection
+PASS unsupported queues and invalid page bounds rejected
+PASS read projection does not mutate source and metrics change with existing-record updates
+PASS singular legacy DemoApi quote/qv records are reused
+PASS lead-view-only Marketing attention reads actual existing preview state
+PASS unrelated routes and mutations remain with their original handler
+PASS focused inquiry/request queries reuse scoped arrays without fabricating leads
+PASS campaign-manage-only Home cannot read Marketing metrics
+PASS task, operations and booking single-permission projections match backend access
+PASS focused leads query filters request_id instead of lead id and keeps tenant scope
+PASS workspace-demo complete: 17 groups
+PASS Drawer mounts independently and never replaces the active Operations workspace
+PASS Context resolver receives only a reference and its result is visibly separate from an existing thread
+PASS New chat defaults to the workspace profile and submits server-resolved context_ref
+PASS Existing legacy campaign selection remains available when workspace attachment is deselected
+PASS Frozen thread reference is labelled and never replaced with the currently open workspace
+PASS Missing or forbidden context offers a chat without silent placeholder data
+PASS Consent remains required, successful send reloads the same drawer and preserves workspace
+PASS Failed sends keep request keys for a deliberate retry and block duplicate submission
+PASS Closing while initial requests load cannot reopen or overwrite any workspace
+PASS Closing while a message is being generated discards late UI updates without reopening
+PASS A closed create dialog cannot close an unrelated dialog after its late response
+PASS Preview is illustrative, follows the suggested workspace profile and performs no context/provider calls
+PASS Unconfigured provider preserves setup state and disabled sending in the drawer
+13 AI drawer groups passed. jsdom and simulated API; no provider calls.
+PASS Home New Leads forwards initialQueue into real Sales card/API filter
+PASS Readonly Sales disables create controls and guards direct create handlers/forms
+PASS Shared Document review preserves association/status with empty supplier list
+PASS Shared Document review preserves association/status with missing associated supplier
+PASS Shared Document review preserves association/status with no supplier read permission
+PASS Booking role finance deep link cannot fetch ledger, statement or profit
+PASS Finance ar rows cannot deep link booking without booking.view
+PASS Finance profitability rows cannot deep link booking without booking.view
+PASS Reports separate currencies and distinguish pending actual from actual zero
+PASS Report without profit permission hides returned private profit data
+PASS Report month form changes persisted period and API query
+PASS Delayed report cannot replace Home after navigation
+PASS Newer report month wins when older response resolves later
+PASS Delayed booking detail cannot replace Home
+PASS Delayed booking detail cannot replace newer record ID
+PASS Delayed quote detail cannot replace Home
+PASS Delayed quote detail cannot replace newer record ID
+PASS CRM customer button passes numeric ID into the actual Customer360 mount
+18 VS0/VS1 shell interaction groups passed
+PASS scoped Marketing cards count actual new/pending records without foreign tenant data
+PASS qualification uses named active owner, explicit note/SLA, optimistic version and action key
+PASS pending leads cannot convert; accepted conversion presents unselected contact suggestions without name-only auto matching
+PASS checkbox and deliberate identity selection gate conversion and preserve campaign/source with existing customer
+PASS replay of conversion does not duplicate identity, trip, inquiry, tasks or events
+PASS return requires visible reason and resubmission retains source/history with one open shared follow-up and completed task history
+PASS read-only UI has no mutation controls and Preview enforces command permission independently
+PASS handover without lead.view makes no protected API requests
+PASS stage, tenant owner, stale version and reused-key conflicts do not partially mutate a lead
+PASS customer suggestions changed after review require renewed review rather than stale conversion
+PASS deliberate new customer with matching contact requires a distinct-identity reason
+PASS existing identity linking remains available while create-new controls follow customer.manage
+PASS failed command keeps reviewed form and retries with the same action key
+PASS delayed handover response cannot overwrite a different workspace
+PASS changing queue cancels delayed identity review rendering
+PASS handover counts include all scoped records and pagination reaches beyond first thirty
+PASS untrusted lead text is escaped and permission revocation stops an already-open command
+PASS Customer360 navigates typed shared objects and keeps currency-separated issued balances, own tasks and metadata only
+PASS Customer360 section permissions redact forbidden metadata and money from API and UI
+PASS delayed Customer360 cannot replace a subsequent page
+PASS Customer360 uses company-scoped identity and read projection does not mutate source records
+PASS Vietnamese labels expose people and explicit handover stages
+PASS create-new conversion preserves singular seeded trip IDs and isolates both customers’ inquiries, bookings and invoice balances
+PASS VS1 workspace complete: 23 groups
+PASS L10/L12 guest inputs carry revision, not totals
+PASS L31 Simple/Advanced shows trace and distinct financial stages
+PASS L42 validation blocks missing rates
+PASS L36 guest-only UI never loads supplier costing
+PASS L45 issued quote editor read-only
+PASS VS22 three-column builder never loads supplier costs
+PASS VS22 assignments bind stable day key with stale-write guard
+PASS VS22 duplicate/reorder preserves original media identity
+PASS VS22 switching template retains same itinerary/media
+PASS VS22 snapshot preview desktop/mobile and output actions
+PASS VS22 SENT content stays read-only while A4 and outline view controls remain usable
+PASS VS22 denied media permission causes no asset requests
+PASS UX one spreadsheet, three option cards, compact guest summary
+PASS UX adults recalculate additional FOC and paying using existing non-paying offset
+PASS UX inline common price keeps supplier evidence and never submits client totals
+PASS UX separate option writes target only selected variant
+PASS UX remove preserves requirement evidence instead of destructive deletion
+PASS UX accommodation editing preserves independent option selections
+PASS UX no financial view or financial requests without cost permission
+PASS UX Sent sheet cannot edit prices or guest quantities
+PASS UX Document default, lazy media, live schedule and typed save with stable day identity
+PASS P0 direct Add/Duplicate/Delete/Reorder controls stay in Document View
+PASS P0 Add Day creates a unique immediately editable day and saves typed prose
+PASS P0 Add Day undo/redo restores the complete draft in one operation
+PASS P0 Duplicate Day preserves paragraphs, breaks, bold/italic, lists, tables, structured day data and media
+PASS P0 editing a duplicated day never changes source data or formatting
+PASS P0 duplicate/reorder/delete keeps independent day keys and consecutive numbering
+PASS P0 deleting and undoing a duplicate restores its formatted content and media assignments
+PASS P0 save/reload/reopen preserves all day identities and independent formatted copies
+PASS P0 reopened document preview/PDF/DOCX uses existing proposal output routes
+PASS P0 failed save preserves edits, reports failure and blocks stale preview until retry
+PASS P0 Advanced View reuses the same deep-copy day operation
+PASS P0 empty itinerary can add its first day and cannot delete its last day
+PASS P0 Sent/accepted document retains read-only controls and content
+PASS P0 Chromium nested paragraph/list/div formatting survives duplicate and save in order
+PASS rich import preview retains formatting, reports skipped images and applies only after review
+PASS document toolbar preserves sanitized rich paste, image width and A4/outline controls
+PASS rich paste sanitizes nested wrappers and preserves CSS text marks / line breaks
+PASS document autosave persists rich edits without redrawing the active editor
+PASS VS23 user generates five SAFE_PRICE bands with stale-write guard
+PASS VS23 cost-denied UI never fetches supplier-cost endpoints
+PASS VS23 sent UI cannot regenerate or edit matrix
+PASS VS23 handover saves checklist without supplier/payment mutation
+PASS ADMIN confirms offered option without loading supplier costs
+PASS SALES confirms offered option without loading supplier costs
+PASS OPERATIONS confirms offered option without loading supplier costs
+PASS matrix confirmation uses exact offered cell and eligible pax
+PASS confirmed quotation converts directly to booking
+PASS stale/error response remains visible and retryable
+PASS Marketing without quote.confirm cannot load confirmation panel
+PASS late confirmation response cannot replace a newer workspace
+PASS Operations saves supplier/status/hotel details via existing service, without financial endpoints
+PASS stale save remains visible and retryable
+PASS relevant service groups and terminal booking read-only behavior

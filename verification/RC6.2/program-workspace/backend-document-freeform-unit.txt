@@ -1,0 +1,24 @@
+PASS blank output has no forced heading, commercial sections or generated days
+PASS text nodes keep spaces exactly
+PASS legacy rich proposal survives conversion through compatibility field
+PASS typed model serializes and reopens losslessly
+PASS image references are unique owned asset IDs
+PASS browser CSS colors canonicalize safely
+PASS CSS injection rejected
+PASS executable and unsupported nodes rejected
+PASS unapproved link / code marks rejected
+PASS external unowned images rejected
+PASS ragged table is rejected before storage
+PASS HTML exports one unified tree with formatting, lists, tables and image
+PASS DOCX is a readable native Word ZIP
+PASS native Word XML well formed
+PASS DOCX uses real editable Word lists and starting numbers
+PASS DOCX includes native table, embedded image and page break
+PASS DOCX packages embedded image and list relationship/content type
+PASS DOCX reimports editable content and image bytes
+PASS PDF exports a complete Unicode printable document
+PASS DOCX preserves merged column cells
+PASS page breaks and uploaded images inside table cells save and reopen
+PASS DOCX table-cell image limitation is explicitly reported
+PASS recursive legacy documents rejected
+Freeform unit/import/export checks complete; no database.

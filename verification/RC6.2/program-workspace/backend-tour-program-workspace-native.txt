@@ -1,0 +1,203 @@
+Disposable database: vta_test_fe005ffb3c
+PASS migration manifest includes the RC5.3 baseline
+PASS fresh migrations match the complete filename manifest
+PASS fresh install keeps core before deferred Marketing
+PASS migration rerun is a no-op
+PASS public form accepted
+PASS submission retry creates one request
+PASS changed retry rejected (DomainException)
+PASS FOC not double counted (InvalidArgumentException)
+PASS invalid calendar date rejected (InvalidArgumentException)
+PASS negative guests rejected (InvalidArgumentException)
+PASS cross-company request blocked (OutOfBoundsException)
+PASS cross-company owner blocked (InvalidArgumentException)
+PASS identical qualification retry reuses lead
+PASS conversion retry reuses inquiry and trip
+PASS one inquiry persisted
+PASS guest counts preserved
+PASS attribution preserved
+PASS one current sales follow-up task; handover task history retained
+PASS request qualification Sales acceptance conversion audited
+PASS archived form rejected (OutOfBoundsException)
+PASS cross-company program blocked (OutOfBoundsException)
+PASS cross-company component blocked (InvalidArgumentException)
+PASS invalid version rolled back
+PASS component snapshot independent of master
+PASS full day itinerary copied to existing quote
+PASS public itinerary excludes service internals
+PASS program copy cannot overwrite itinerary (DomainException)
+PASS tour revision numbers increment
+PASS new program version does not change quote
+PASS approved matching rate found
+PASS rate matching tenant isolation
+PASS pax band applied
+PASS blackout excludes approved rate
+PASS season adjustment applied
+PASS outside season excluded
+PASS unapproved rate excluded
+PASS transport day overtime and extra-km costing
+PASS transport capacity uses total guests (DomainException)
+PASS migration drift blocked (RuntimeException)
+Lead Hub and inventory integration checks complete. This is not the full v3 smoke test.
+PASS L50 explicit activation strategy
+PASS L12 populations initially unset
+PASS L29 six variants over one itinerary
+PASS L26 union shared requirement defaults
+PASS L27 regeneration idempotent
+PASS L43 complete reviewed PRIVATE option validates
+PASS L03 native hotel formula
+PASS L10 HOTEL_PAX only bound arithmetic
+PASS L10 VISA_PAX leaves hotel bytes stable
+PASS L10 MEAL_PAX dependency
+PASS L11 override stable and review flagged
+PASS L15 transfer capacity context preserves arithmetic
+PASS L14 invalid population reduction atomic (DomainException)
+PASS L14 failed command rolls back
+PASS L31 clearing override restores binding
+PASS L15 overcapacity does not invent package price
+PASS L16 cosmetic scope accepted
+PASS L16 route scope blocks
+PASS L41 posted stored-rate price rejected (InvalidArgumentException)
+PASS L20 untrusted inclusion keys rejected (InvalidArgumentException)
+PASS L40 stale command rejected (DomainException)
+PASS L42 legacy writer blocked (DomainException)
+PASS L28/L29 custom mix shares hotel parent and itinerary
+PASS L30 cruise star change leaves hotel untouched
+PASS L22 approved exact guide inclusion suppressed
+PASS L21 expired package cannot cover
+PASS L18 approved supplier terms immutable (DomainException)
+PASS L19 no room-to-pax conversion
+PASS L33 reviewed signed adjustment valid
+PASS L35 configured margin blocks
+PASS L44 source drift blocks send (DomainException)
+PASS L44 FX drift blocks send (DomainException)
+PASS L44 policy hash drift blocks send (DomainException)
+PASS L44 approved terms drift blocks send (DomainException)
+PASS L44 scope drift blocks send (DomainException)
+PASS L44 offered set drift blocks send (DomainException)
+PASS L37 public projection safe
+PASS L45 sent context immutable (DomainException)
+PASS L46 parent-only acceptance rejected (DomainException)
+PASS L46 unoffered sibling rejected (DomainException)
+PASS L46 stale sent hash rejected (DomainException)
+PASS L40 booking idempotent
+PASS L47 signed adjustment folded into original VND service
+PASS L45 sent retry ignores subsequent supplier change
+PASS L48 child IDs remapped on same revision system
+PASS L48 issued/accepted state never copied
+VS2.1 native MariaDB checks complete.
+PASS VS22 fixture uses unchanged VS21 validator
+PASS VS22 original bytes preserved privately
+PASS VS22 optimized image / thumbnail generated
+PASS VS22 public media metadata excludes private paths
+PASS VS22 duplicate detection reuses accessible asset
+PASS VS22 unsupported image rejected (InvalidArgumentException)
+PASS VS22 oversized upload rejected (InvalidArgumentException)
+PASS VS22 cross-tenant media unavailable (OutOfBoundsException)
+PASS VS22 visual workspace saves existing schedule and separate media assignments
+PASS VS22 company draft media blocks finalization (DomainException)
+PASS VS22 company library approval workflow
+PASS VS22 favorites scoped to user
+PASS VS22 template VTA_STANDARD_B2B renders
+PASS VS22 VTA_STANDARD_B2B privacy
+PASS VS22 template VTA_B2B_WHITE_LABEL renders
+PASS VS22 VTA_B2B_WHITE_LABEL privacy
+PASS VS22 partner ownership stays internal
+PASS VS22 template VTA_EXPLORER_B2C renders
+PASS VS22 VTA_EXPLORER_B2C privacy
+PASS VS22 B2C excludes agent-only fields
+PASS VS22 template VTA_PREMIUM_B2C renders
+PASS VS22 VTA_PREMIUM_B2C privacy
+PASS VS22 B2C excludes agent-only fields
+PASS VS22 template switching duplicates no itinerary / costing / quote
+PASS VS22 section reorder uses structured blocks
+PASS VS22 stale presentation write blocked (DomainException)
+PASS VS22 public snapshot excludes unit_rate_vnd
+PASS VS22 public snapshot excludes cost_total_vnd
+PASS VS22 public snapshot excludes profit_vnd
+PASS VS22 public snapshot excludes margin_pct
+PASS VS22 public snapshot excludes storage_path
+PASS VS22 public snapshot excludes drive_file_id
+PASS VS22 public snapshot excludes source_locator
+PASS VS22 public snapshot excludes internal_notes
+PASS VS22 public snapshot excludes special_requests
+PASS VS22 unrelated asset title does not mutate candidate caption
+PASS VS22 send freezes public representation in existing sent bundle
+PASS VS22 archive does not mutate Sent representation
+PASS VS22 Sent presentation immutable (DomainException)
+PASS VS22 native structured PDF output
+PASS VS22 DOCX contains editable styles / images
+PASS VS22 DOCX structured tables / privacy
+PASS VS22 anonymous link resolves exact Sent snapshot
+PASS VS22 public link policy (DomainException)
+PASS VS22 link revocation (OutOfBoundsException)
+PASS VS22 selected Drive import stores normalized origin / link metadata
+PASS VS22 Drive update creates immutable new media revision
+PASS VS22 Drive allowlist blocks unrelated folder (DomainException)
+PASS VS22 historical VS21 Sent / accepted / booking rows unchanged
+PASS VS22 own Sent snapshot bytes unchanged after library / Drive updates
+PASS VS22 fresh quote reuses shared costing validator
+PASS VS22 Approve / Send / Accept / Booking carries frozen presentation
+PASS VS22 revision editable with prices withheld pending review
+PASS VS22 fresh booking / revision preserve prior issued bytes
+VS2.2 native media/proposal acceptance complete.
+PASS UX paste detects seven detailed days without duplicate schedule days
+PASS UX meals and public policies classified
+PASS UX editable typed content preserves prose
+PASS UX duplicate day flagged without silent correction
+PASS UX uncontrolled HTML rejected (InvalidArgumentException)
+PASS UX malformed tables rejected (InvalidArgumentException)
+PASS UX proposal import leaves paying pax and FX unchanged
+PASS UX HTML output renders escaped rich runs
+PASS UX DOCX export reimports document prose
+PASS UX ordered DOCX import supports exported document
+PASS UX PDF output generated
+PASS UX PDF import returns explicit extraction quality
+PASS UX three variants reuse one itinerary
+PASS UX shared cost calculated three times by existing authoritative formula
+PASS UX separate cost calculates all three option totals
+PASS UX multi-option failure rolls back (InvalidArgumentException)
+PASS UX no partial shared or separate writes
+PASS UX markup margin and manual price remain distinct
+PASS UX document price projection contains three selling prices only
+PASS UX three reviewed packages validate with central validator
+PASS UX three prices and independent accommodation reach frozen proposal
+PASS UX Sent sheet immutable (DomainException)
+PASS UX Quote Cost Price Proposal Approve Send Accept Booking
+PASS UX all prior sent rows byte-stable
+PASS UX all prior booking rows byte-stable
+Document and Cost Sheet native acceptance complete.
+PASS FF native existing proposal API saves and independently reopens unified document
+PASS FF freeform save changes no itinerary, 3/4/5-star lines, rates or selling results
+PASS FF stale revision blocks overwrite (DomainException)
+PASS FF cross-tenant write refused (OutOfBoundsException)
+PASS FF draft output has only chosen document content and no hidden operational/cost fields
+PASS FF typed legacy document remains available after save
+PASS FF existing sent/accepted quotation cannot be replaced by freeform save (DomainException)
+PASS FF all historical Sent/Accepted/Booking snapshot bytes unchanged
+PASS FF freeform document stays compatible with the existing central send validator
+PASS FF existing Send snapshot freezes the unified document and public HTML
+PASS FF new freeform Sent document is immutable (DomainException)
+PASS FF rejected edits preserve new frozen snapshot bytes
+Freeform native save/safety acceptance complete.
+PASS Program native excludes marked sample prices
+PASS Program native apply preserves trip identity, customer link, pax, dates, FX, schedule and pricing totals
+PASS Program native apply preserves every guest profile, requirement, variant and cost line byte
+PASS Program native copying never writes the master
+PASS Program native copy preserves editable table and assigned approved photo
+PASS Program native edit/save/reload remains independent of the master
+PASS Program native stale quote revision blocked (DomainException)
+PASS Program native stale master preview blocked (DomainException)
+PASS Program native rejected copies preserve the target bytes
+PASS Program native tenant boundary enforced (OutOfBoundsException)
+PASS Program native saving requires content review (InvalidArgumentException)
+PASS Program native retries create one master
+PASS Program native quote photo becomes an unbound personal copy without broadening permissions
+PASS Program native source quote photo stays bound to its original quote
+PASS Program native Word export/reimport retains edited prose, table and embedded photos
+PASS Program native PDF output renders the saved program
+PASS Program native Word canvas saves metadata and document through one revision guard
+PASS Program native simultaneous master edits conflict (DomainException)
+PASS Program native issued version cannot accept a program (DomainException)
+PASS Program native preserves historical sent and booking snapshot bytes
+Tour program workspace native acceptance complete.

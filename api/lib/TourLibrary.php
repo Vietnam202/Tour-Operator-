@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/TourProgramWorkspace.php';
 
 /** Company-scoped reusable programs. Import text is data; it is never executed. */
 final class TourLibrary {
@@ -59,7 +60,7 @@ final class TourLibrary {
         foreach(['children','payment','cancellation','notes'] as $key)$policy[$key]=self::text($policies[$key]??'',30000,'policy '.$key);
         $type=$v('tour_type',20);
         if($type!==''&&!in_array($type,['PRIVATE','SIC','BOTH'],true))throw new InvalidArgumentException('Invalid tour type');
-        return [
+        $out = [
             'schema'=>'VTA_LIBRARY_PROPOSAL_V1',
             'tour_code'=>$v('tour_code',50),
             'tour_type'=>$type?:'PRIVATE',
@@ -70,6 +71,9 @@ final class TourLibrary {
             'hotels'=>$hotelRows,
             'policies'=>$policy
         ];
+        if(array_key_exists('document',$raw))$out['document']=TourProgramWorkspace::reusableDocument($raw['document']);
+        if(isset($raw['duration_days'])){$duration=filter_var($raw['duration_days'],FILTER_VALIDATE_INT);if($duration===false||$duration<0||$duration>90)throw new InvalidArgumentException('Invalid program duration');$out['duration_days']=$duration;}
+        return $out;
     }
 
     public static function normalize(array $b): array {
@@ -93,7 +97,7 @@ final class TourLibrary {
         if($out['source_type']!=='GOOGLE_DRIVE'&&$out['source_url']!=='')throw new InvalidArgumentException('A Drive link requires Google Drive source type');
         $out['status']=self::text($b['status']??'DRAFT',16,'status');
         if(!in_array($out['status'],['DRAFT','ACTIVE'],true))throw new InvalidArgumentException('Use DRAFT or ACTIVE; archive with the archive action');
-        if($out['status']==='ACTIVE'&&!$out['days'])throw new InvalidArgumentException('Add at least one itinerary day before activating the program');
+        if($out['status']==='ACTIVE'&&!$out['days']&&(!isset($out['proposal']['document'])||!TourProgramWorkspace::hasContent($out['proposal']['document'])))throw new InvalidArgumentException('Add itinerary content before activating the program');
         if(strlen(self::json($out))>3000000)throw new InvalidArgumentException('Program content is too large');
         return $out;
     }
@@ -237,6 +241,62 @@ final class TourLibrary {
             $out['import_token']=self::stage($db,$config,$u,$path,$name,$ext,$type,$url);$out['has_source']=true;return $out;
         }finally {if($type==='GOOGLE_DRIVE'&&is_file($path))unlink($path);}
     }
+    /**
+     * Preview a ZIP of existing B2B Word programs; each DOCX is staged with its
+     * original binary, reviewed individually and then saved via the normal V5 API.
+     * No prices are approved or published by this importer.
+     */
+    public static function previewZip(PDO $db,array $cfg,array $u,array $file):array {
+        if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_uploaded_file($file['tmp_name']??''))
+            throw new InvalidArgumentException('Upload a ZIP file from your PC');
+        if(($file['size']??0)>209715200||($file['size']??0)<20)
+            throw new InvalidArgumentException('ZIP must be under 200 MB');
+        if(!class_exists('ZipArchive'))throw new RuntimeException('ZIP import requires PHP ZipArchive');
+        $zip=new ZipArchive();
+        if($zip->open($file['tmp_name'])!==true)throw new InvalidArgumentException('Invalid ZIP archive');
+        $items=[];$seen=[];$total=0;$count=0;
+        try{
+            if($zip->numFiles>250)throw new InvalidArgumentException('ZIP has too many archive entries');
+            for($i=0;$i<$zip->numFiles;$i++){
+                $stat=$zip->statIndex($i);if(!$stat)continue;
+                $path=(string)($stat['name']??'');
+                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
+                if(str_contains($path,"\0")||str_contains($path,'\\')||str_contains($path,'../')||str_starts_with($path,'/'))
+                    throw new InvalidArgumentException('Unsafe ZIP entry name');
+                $name=self::filename(basename($path));$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
+                if(!in_array($ext,['docx','pdf','txt'],true))continue;
+                if(++$count>50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
+                if(isset($seen[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
+                $seen[strtolower($name)]=true;
+                $size=(int)($stat['size']??0);$packed=(int)($stat['comp_size']??0);$total+=$size;
+                if($size<1||$size>self::MAX_FILE_BYTES||$total>209715200||$size/max(1,$packed)>150)
+                    throw new InvalidArgumentException('ZIP file limit or unsafe compression ratio: '.$name);
+                $temp=tempnam(sys_get_temp_dir(),'vta-b2b-');
+                if($temp===false)throw new RuntimeException('Cannot create temporary import file');
+                try {
+                    $stream=$zip->getStream($path);if(!$stream)throw new InvalidArgumentException('Cannot read ZIP member');
+                    $output=fopen($temp,'wb');
+                    if(!$output){fclose($stream);throw new RuntimeException('Cannot open import temp file');}
+                    $copied=stream_copy_to_stream($stream,$output,self::MAX_FILE_BYTES+1);fclose($stream);fclose($output);
+                    if($copied!==$size)throw new InvalidArgumentException('ZIP member decompression did not match expected size');
+                    self::validateFile($temp,$ext);
+                    $r=DocumentParser::extract($temp,$ext);
+                    if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Document too long');
+                    $item=self::previewText($r['text'],$name,'PC','');
+                    $item['warnings'][]=$r['note'];
+                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original Word source is retained.';
+                    $item['extraction_quality']=$r['quality'];
+                    $item['import_token']=self::stage($db,$cfg,$u,$temp,$name,$ext,'PC','');
+                    $item['has_source']=true;
+                    $items[]=['name'=>$name,'status'=>'READY','preview'=>$item];
+                }catch(Throwable $e){
+                    $items[]=['name'=>$name,'status'=>'ERROR','message'=>$e->getMessage()];
+                }finally{if(is_file($temp))unlink($temp);}
+            }
+        }finally{$zip->close();}
+        if($count===0)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
+        return ['items'=>$items,'total'=>$count,'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
+    }
     private static function program(PDO $db,int $company,int $id,bool $lock=false): array {
         $r=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND id=?'.($lock?' FOR UPDATE':''),[$company,$id])->fetch(PDO::FETCH_ASSOC);
         if(!$r)throw new OutOfBoundsException('Tour program not found');return $r;
@@ -244,7 +304,9 @@ final class TourLibrary {
     public static function publicProgram(array $r,bool $detail=true): array {
         $days=json_decode($r['days_json']??'[]',true,512,JSON_THROW_ON_ERROR);$tags=json_decode($r['tags_json']??'[]',true,512,JSON_THROW_ON_ERROR);
         $out=[];foreach(['title','destination','language','source_name','source_type','source_url','status','updated_at'] as $k)$out[$k]=$r[$k]??'';
-        $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=count($days);$out['has_source']=!empty($r['source_storage_path']);
+        $proposal=json_decode($r['proposal_json']??'null',true)?:[];
+        $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=count($days)?:($proposal['duration_days']??0);$out['has_source']=!empty($r['source_storage_path']);
+        $out['tour_code']=$proposal['tour_code']??'';$out['tour_type']=$proposal['tour_type']??'PRIVATE';$out['has_document']=isset($proposal['document']);
         if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';$out['proposal']=json_decode($r['proposal_json']??'null',true)?:[];}
         return $out;
     }
@@ -253,11 +315,12 @@ final class TourLibrary {
         if(!is_string($token)||($token!==''&&!preg_match('/^[a-f0-9]{64}$/D',$token)))throw new InvalidArgumentException('Invalid import token');
         $key=$id?'':($b['creation_key']??'');if(!is_string($key)||($key!==''&&!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key)))throw new InvalidArgumentException('Invalid creation key');
         $digest=hash('sha256',self::json($data).$token);
-        $db->beginTransaction();try {
-            if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
+        $own=!$db->inTransaction();if($own)$db->beginTransaction();try {
+            if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');if($own)$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
             $before=$id?self::program($db,$company,$id,true):null;
             if($before&&$before['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');
             if(!array_key_exists('proposal',$data))$data['proposal']=$before?json_decode($before['proposal_json']??'null',true):[];
+            if(isset($data['proposal']['document']))TourProgramWorkspace::images($db,$u,$data['proposal']['document']);
             $original=null;
             if($token!=='') {
                 $original=self::q($db,'SELECT * FROM tour_library_imports WHERE company_id=? AND user_id=? AND token_hash=? FOR UPDATE',[$company,$user,hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
@@ -277,8 +340,8 @@ final class TourLibrary {
             if($original)self::q($db,'UPDATE tour_library_imports SET consumed_program_id=? WHERE company_id=? AND user_id=? AND id=?',[$id,$company,$user,$original['id']]);
             $saved=self::publicProgram(self::program($db,$company,$id));
             Audit::log($db,$company,$user,$before?'TOUR_LIBRARY_UPDATED':'TOUR_LIBRARY_CREATED','tour_library',$id,$before?['title'=>$before['title'],'status'=>$before['status']]:null,['title'=>$data['title'],'status'=>$data['status'],'days'=>count($data['days'])]);
-            $db->commit();return ['id'=>$id,'program'=>$saved];
-        }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+            if($own)$db->commit();return ['id'=>$id,'program'=>$saved];
+        }catch(Throwable $e){if($own&&$db->inTransaction())$db->rollBack();throw $e;}
     }
     /** A destination with any program/commercial/cost content is never overwritten. */
     public static function assertEmptyDraft(array $v,bool $hasCosts=false,bool $hasOptions=false,bool $hasSent=false): void {
@@ -318,6 +381,27 @@ final class TourLibrary {
     public static function handle(string $route,string $method,PDO $db,array $config,array $u): void {
         if($route!=='tour-library'&&!str_starts_with($route,'tour-library/'))return;
         try {
+            if($route==='tour-library/from-quote'&&$method==='POST'){
+                self::permission($db,$u,true);Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');
+                $b=Http::body();$version=filter_var($b['version_id']??null,FILTER_VALIDATE_INT);if(!$version||$version<1)throw new InvalidArgumentException('Select a quote version');
+                Http::json(['ok'=>true]+TourProgramWorkspace::fromQuote($db,$config,$u,$version,$b),201);
+            }
+            if(preg_match('#^tour-library/(\d+)/(document|apply-to-document)(?:/(document-import|html|docx|pdf))?$#D',$route,$m)){
+                self::permission($db,$u);$id=(int)$m[1];$action=$m[2];$output=$m[3]??'';
+                if($action==='apply-to-document'&&$output===''&&$method==='POST'){
+                    Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');Auth::requirePermission($db,$u,'media.view');
+                    $b=Http::body();$version=filter_var($b['version_id']??null,FILTER_VALIDATE_INT);if(!$version||$version<1)throw new InvalidArgumentException('Select a quote version');
+                    Http::json(['ok'=>true]+TourProgramWorkspace::apply($db,$u,$id,$version,$b));
+                }
+                if($action==='document'){
+                    if($output===''&&$method==='GET')Http::json(['ok'=>true]+TourProgramWorkspace::context($db,$u,TourProgramWorkspace::program($db,$u,$id)));
+                    if($output===''&&$method==='PUT'){self::permission($db,$u,true);Http::json(['ok'=>true]+TourProgramWorkspace::saveDocument($db,$u,$id,Http::body()));}
+                    if($output==='document-import'&&$method==='POST'){self::permission($db,$u,true);$p=TourProgramWorkspace::program($db,$u,$id);if($p['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');Http::json(['ok'=>true]+FreeformDocument::upload($_FILES['file']??[]));}
+                    if($method==='GET'&&in_array($output,['html','docx','pdf'],true))TourProgramWorkspace::output($db,$config,$u,TourProgramWorkspace::program($db,$u,$id),$output);
+                }
+                Http::json(['ok'=>false,'error'=>'METHOD_OR_ROUTE_NOT_SUPPORTED'],405);
+            }
+            if($route==='tour-library/preview-zip'&&$method==='POST'){self::permission($db,$u,true);Http::json(['ok'=>true]+self::previewZip($db,$config,$u,$_FILES['file']??[]));}
             if($route==='tour-library/preview'&&$method==='POST'){self::permission($db,$u,true);$b=isset($_FILES['file'])?$_POST:Http::body();Http::json(['ok'=>true]+self::preview($db,$config,$u,$b,$_FILES['file']??null));}
             if($route==='tour-library'&&$method==='GET') {
                 self::permission($db,$u);$limit=filter_var($_GET['limit']??100,FILTER_VALIDATE_INT);$offset=filter_var($_GET['offset']??0,FILTER_VALIDATE_INT);
@@ -325,7 +409,7 @@ final class TourLibrary {
                 $where='company_id=?';$args=[(int)$u['company_id']];$status=$_GET['status']??'ALL';
                 if(!is_string($status)||!in_array($status,['ALL','DRAFT','ACTIVE','ARCHIVED'],true))throw new InvalidArgumentException('Invalid status filter');
                 if($status!=='ALL'){$where.=' AND status=?';$args[]=$status;}
-                $search=self::text($_GET['q']??'',190,'search');if($search!==''){$where.=' AND (title LIKE ? OR destination LIKE ?)';$args[]='%'.$search.'%';$args[]='%'.$search.'%';}
+                $search=self::text($_GET['q']??'',190,'search');if($search!==''){$where.=" AND (title LIKE ? OR destination LIKE ? OR JSON_UNQUOTE(JSON_EXTRACT(proposal_json,'$.tour_code')) LIKE ?)";$args[]='%'.$search.'%';$args[]='%'.$search.'%';$args[]='%'.$search.'%';}
                 $total=(int)self::q($db,'SELECT COUNT(*) FROM tour_library_programs WHERE '.$where,$args)->fetchColumn();
                 $rows=self::q($db,'SELECT * FROM tour_library_programs WHERE '.$where.' ORDER BY updated_at DESC,id DESC LIMIT '.(int)$limit.' OFFSET '.(int)$offset,$args)->fetchAll(PDO::FETCH_ASSOC);
                 Http::json(['ok'=>true,'items'=>array_map(fn($r)=>self::publicProgram($r,false),$rows),'total'=>$total,'limit'=>$limit,'offset'=>$offset]);

@@ -1,0 +1,71 @@
+PASS exclude .env
+PASS exclude .env.production
+PASS exclude api/config.php
+PASS exclude uploads/customer.pdf
+PASS exclude storage/customer.pdf
+PASS exclude runtime/a.php
+PASS exclude logs/a.log
+PASS exclude cache/a.php
+PASS exclude backup/a.php
+PASS exclude vta_private/config.php
+PASS exclude secret.key
+PASS exclude deploy/staging-release.php
+PASS exclude docs/test.md
+PASS reject path ../app.js
+PASS reject path api/../../config.php
+PASS reject path /etc/passwd
+PASS reject path api//lib/a.php
+PASS reject path api/a.php;id
+PASS reject path api/./a.php
+PASS reject path api\a.php
+PASS allow byte-identical historical test log outside release
+PASS historical test log is excluded from deploy
+PASS reject changed historical log
+PASS reject newly tracked log
+PASS reject server log outside historical verification
+PASS preserve unchanged CRLF deployed bytes
+PASS historical migration remains untouched
+PASS reject rewritten historical migration
+PASS reject unapproved new migration
+PASS reject migration deletion
+PASS preserve untracked file on name collision
+PASS block unexpected hosting source edit
+PASS read-only ledger accepts exact applied SQL checksum
+PASS pending ledger blocks deploy
+PASS failed/partial migration blocks deploy
+PASS ledger checksum mismatch blocks deploy
+PASS host migration byte change blocks deploy
+PASS adopt exact historical baseline while Document Editor target differs
+PASS adoption verifies source without installing the target
+PASS adoption preserves CRLF runtime bytes for unchanged non-SQL source
+PASS adoption cannot substitute target bytes for historical baseline
+PASS adoption rejects existing hosting source drift
+PASS adoption rejects even SQL line-ending rewrites
+PASS only verified VS24 baseline can be adopted
+PASS PDO MySQL driver and curl are loaded with normal INI plus CLI OPcache override
+PASS private configuration backup is verified
+PASS install delta and remove only tracked obsolete source
+PASS preserve live data .env
+PASS preserve live data uploads/customer.txt
+PASS preserve live data storage/runtime.txt
+PASS preserve live data logs/test.log
+PASS rollback created, removed and changed source plus access
+PASS rollback never overwrites private configuration
+PASS recover partially installed cutover
+PASS rollback refuses to overwrite unexpected server changes
+PASS damaged backup stops rollback before source writes
+PASS backup rejection preserves access file
+PASS block preflight-to-cutover race
+PASS wrapper has strict mode and no destructive public reset or clean
+PASS explicit ancestry check rejects branch history rewrites
+PASS wrapper serializes deployments and honors failure halt
+PASS wrapper has exactly three PHP controller invocation paths
+PASS controller invocation disables CLI OPcache without dropping extensions
+PASS controller invocation disables CLI OPcache without dropping extensions
+PASS controller invocation disables CLI OPcache without dropping extensions
+PASS all existing child PHP lint/health invocation paths retained
+PASS child PHP lint/health disables only CLI OPcache
+PASS child PHP lint/health disables only CLI OPcache
+PASS child PHP lint/health disables only CLI OPcache
+PASS controller refuses this non-staging runtime before database access
+RESULT PASS 70 deployment safety checks; no application regression suite rerun

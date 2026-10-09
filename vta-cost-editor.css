@@ -110,3 +110,9 @@
 .vta-info-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:10px}
 .vta-info-fields label{display:grid;gap:5px;color:#577087;font-size:12px}
 .vta-info-fields input{border:1px solid #d6e3ee;border-radius:6px;padding:8px;width:100%;color:#183d61}
+
+.vta-date-label{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:#597189;font-size:10px}
+.vta-cost-line input.vta-service-date{width:156px;max-width:100%;height:30px;border:1px solid #e0e7f0;color:#1b466a;font-size:11px}
+.vta-proof-fields button[data-review-action]{padding:6px 8px;border:1px solid #b5d8c8;background:#eaf7f1;color:#285d46;border-radius:5px;font-size:11px;cursor:pointer}
+.vta-proof-fields button[hidden]{display:none}
+@media(max-width:800px){.vta-cost-line input.vta-service-date{height:36px;width:100%}.vta-date-label{font-size:11px}}

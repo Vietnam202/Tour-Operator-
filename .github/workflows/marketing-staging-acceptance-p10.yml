@@ -1,0 +1,53 @@
+name: Marketing Staging Acceptance P10
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MarketingStagingGate.php'
+      - 'api/bin/marketing-staging-preflight.php'
+      - 'tests/marketing-staging-readiness-p10.php'
+      - 'docs/RC62_MARKETING_STAGING_ACCEPTANCE_P10.md'
+      - '.github/workflows/marketing-staging-acceptance-p10.yml'
+  workflow_dispatch:
+jobs:
+  readonly-preflight:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_pw
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PHP sources
+        run: |
+          php -l api/lib/MarketingStagingGate.php
+          php -l api/bin/marketing-staging-preflight.php
+          php -l tests/marketing-staging-readiness-p10.php
+      - name: Verify migration/deployment blockers are detected
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/marketing-staging-readiness-p10.php
+      - name: Verify default CLI is strictly read-only and BLOCKED
+        run: |
+          set +e
+          php api/bin/marketing-staging-preflight.php > report.json
+          code=$?
+          set -e
+          cat report.json
+          test "$code" -eq 2
+          php -r '$r=json_decode(file_get_contents("report.json"),true); if (($r["safe_to_release"]??null)!==false) exit(1); if(($r["blockers"]??0)<3)exit(2);'
+          test ! -f .env

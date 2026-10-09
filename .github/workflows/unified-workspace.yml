@@ -1,0 +1,116 @@
+name: Unified VTA Workspace QA
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'unified-*.js'
+      - 'unified-workspace.css'
+      - 'document-editor.js'
+      - 'tour-program-workspace.*'
+      - 'tour-library*.js'
+      - 'api/lib/Tour*.php'
+      - 'api/lib/FreeformDocument.php'
+      - 'editor-build/**'
+      - 'index.html'
+      - 'preview.html'
+      - 'service-worker.js'
+      - 'tests/**'
+      - '.github/workflows/unified-workspace.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  interface-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests
+      - name: Syntax, original modules and unified permission/navigation tests
+        run: |
+          node --check app.js
+          node --check unified-workspace.js
+          node --check unified-demo.js
+          node --check document-editor.js
+          node --check tour-program-workspace.js
+          npm test --prefix tests
+          npm run test:unified --prefix tests
+          node tests/tour-program-workspace.cjs
+      - name: Install local test browser
+        run: |
+          npm install --no-save --prefix tests playwright@1.62.1
+          cd tests
+          npx playwright install --with-deps chromium
+      - name: Desktop/mobile workflows and preserved Marketing
+        env:
+          VTA_UNIFIED_SCREENSHOTS: test-results/unified
+          VTA_MARKETING_SCREENSHOTS: test-results/marketing
+          VTA_PROGRAM_SCREENSHOTS: tests/test-results/program
+        run: |
+          npm run test:unified:browser --prefix tests
+          node tests/tour-program-workspace-browser.cjs
+          npm run test:marketing:browser --prefix tests
+          node tests/marketing-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-workspace-browser-evidence
+          path: tests/test-results
+  backend-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom, pdo_sqlite
+          coverage: none
+      - name: B2B isolation and authoritative pricing
+        env:
+          FREEFORM_FIXTURE_DIR: ${{ runner.temp }}/vta-freeform
+        run: |
+          mkdir -p "$FREEFORM_FIXTURE_DIR"
+          php -l api/lib/PartnerHub.php
+          php -l api/lib/Migrations.php
+          php tests/b2b-partner-hub-unit.php
+          php tests/rc6-group-pricing-unit.php
+          php tests/rc6-group-pricing-manual-unit.php
+          php tests/tour-library.php
+          php tests/tour-program-workspace-unit.php
+          php tests/document-freeform-unit.php
+  backend-native:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: vta-fixture-only
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 33317:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom, curl, pdo_mysql, pdo_sqlite
+          coverage: none
+      - name: Fresh schema, document/media, authoritative costing and program library acceptance
+        env:
+          VTA_TEST_DB_PASSWORD: vta-fixture-only
+          VTA_TEST_DB_PORT: '33317'
+          VS22_OUTPUT_DIR: ${{ runner.temp }}/vta-word-output
+        run: |
+          mkdir -p tests/test-results/backend
+          set -o pipefail
+          php tests/tour-program-workspace-native.php | tee tests/test-results/backend/native-acceptance.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-native-backend-evidence
+          path: tests/test-results/backend

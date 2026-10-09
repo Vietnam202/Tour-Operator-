@@ -1,0 +1,7 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> vta-rc6-phase1-tests@3.4.0-rc6.2 test:program:browser
+> node tour-program-workspace-browser.cjs
+
+PASS native Word engine: readonly browsing → new version → apply → undo → edit/save → switch/reopen → save-as → master Word editor/metadata
+PASS six tour tabs stay visible; 1440/390/360px have no page overflow, errors, live API or external calls

@@ -1,0 +1,57 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> vta-rc6-phase1-tests@3.4.0-rc6.2 test:unified
+> node unified-workspace.cjs && node ui-refresh.cjs && node library-approved-ui.cjs && node vta-approved-ui.cjs && node vta-cost-editor-ui.cjs && node rc6-group-pricing-ui.cjs && node tour-proposal-studio.cjs && node v5-template-gallery-ui.cjs
+
+PASS Eight demo menu entries and five mobile destinations
+PASS Legacy routes retain individual permissions without reappearing in sidebar
+PASS Denied admin account cannot inherit permissions from a role label
+PASS Finance-only role opens finance from the Reports menu
+PASS Sales tabs expose B2B and Inquiry over original workflows
+PASS Shared Sales context survives a module redraw without duplicate bars
+PASS B2B menu is present for staff but does not request unauthorized data
+PASS B2B portal-only role uses scoped partner API, never admin APIs
+PASS Server effective-admin response overrides local admin claim
+PASS B2B labels are escaped, and create uses original POST endpoint
+PASS Revoked permission blocks an already-open agency form
+PASS Tour index requests only permitted sources and filters escaped labels
+PASS Tour list tolerates partial source failure without claiming global KPI
+PASS Late tour index response cannot overwrite a new workspace
+PASS Late B2B response cannot overwrite Home
+PASS Six Tour Workspace tabs mount original program and pricing engines
+PASS Booking tab opens linked record without creating a second booking
+PASS No booking does not mutate or pretend the quote is confirmed
+PASS Cost and Booking tabs respect restricted access
+PASS New quote clears prior cost variant and matrix display state
+PASS Original Booking tabs, handover and financial access remain available
+PASS Settings user manager cannot edit business defaults or invent FX
+PASS Document leave guard saves before navigation and keeps latest intent
+PASS Document save failure blocks leaving the editable workspace
+PASS Late pricing subrequest cannot repaint another workspace
+PASS preview fixtures cannot execute in live mode
+26 unified workspace interaction groups passed; main/preview parity verified
+PASS: RC6.2 screen-only theme wired to main/preview/PWA, original modules and print retained
+PASS: approved library cards, sanitized labels, search and import shortcut
+PASS: no privilege escalation from redesigned library
+PASS: screen-only gallery styling and PWA wiring
+PASS approved RC6 interface wiring, syntax, PWA, security invariants and responsive CSS
+PASS separate Hanoi and Sapa hotel rows with independent rates for each option
+PASS inline shared cost update writes supplier evidence and server-calculates totals
+PASS guest populations edit directly with quote revision
+PASS independently mix hotel 3-star with cruise 5-star without changing other options
+PASS same five-star Cruise rate propagates to both mixed options
+PASS rapid hotel name edits preserve both star properties without clobbering
+PASS + Add service category without editor popup
+PASS explicit supplier review and failed autosave warning
+PASS inline remove reason and undo backed by audit-safe requirement state
+PASS issued quotes remain read-only
+PASS no finance access delegates to protected legacy view
+PASS five editable vehicle bands and preferred Hotel 3★ / Cruise 4★
+PASS submitted exact pax SAFE_PRICE, approved transfer price and FX snapshot
+PASS unresolved supplier rates display Need Rate, never a fake zero price
+PASS direct per-group selling override carries reason and revision for backend margin validation
+PASS finance permission prevents supplier vehicle-rate retrieval
+PASS SENT quote pricing cannot be regenerated or modify vehicle contracts
+PASS studio render, group/private rates, add day and API save
+PASS view-only permissions and preview
+PASS: V5 four template previews, unsaved data/caret DOM preserved, permissions, no cost/API/export changes

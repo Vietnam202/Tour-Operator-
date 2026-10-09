@@ -1,0 +1,10 @@
+.vta-tour-share{margin-top:12px;padding:12px;border:1px solid #d8e3ee;border-radius:12px;background:#fff;display:grid;gap:9px}
+.vta-tour-share h3,.vta-tour-share h4{margin:0;font-size:14px}
+.vta-share-create{display:grid;gap:8px}
+.vta-share-create label{display:grid;gap:3px;font-size:12px}
+.vta-share-create input,.vta-share-create select,.vta-share-created input{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:7px;box-sizing:border-box}
+.vta-share-created{display:grid;gap:7px;padding:10px;border:1px solid #b6d4e4;background:#f1f8fc;border-radius:9px}
+.vta-share-actions{display:flex;gap:7px;flex-wrap:wrap}
+.vta-share-history{display:grid;gap:8px;max-height:220px;overflow:auto}
+.vta-share-record{display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #e5edf4;padding-bottom:7px}
+.vta-share-record small{display:block;color:#536a7d;overflow-wrap:anywhere;font-size:11px}

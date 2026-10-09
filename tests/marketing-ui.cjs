@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
  try{
  const page=await browser.newPage();
  await page.setContent('<main id="workspace"></main>');
