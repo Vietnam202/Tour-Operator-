@@ -74,6 +74,16 @@ try {
     $blocked=false;try{MarketingSchemaUpgrade::inspect($db,$manifest);}
     catch(RuntimeException $e){$blocked=true;}
     verifyP12($blocked,'historical Marketing checksum tampering fails closed');
+    require_once __DIR__.'/../api/lib/MarketingStagingGate.php';
+    $sourceDecision=MarketingStagingGate::summary(MarketingStagingGate::inspectSource(dirname(__DIR__)));
+    verifyP12($sourceDecision['safe_to_release']===false,
+        'successful disposable clone rehearsal does not authorize real staging deployment');
+    $pendingBlockers=array_column(array_filter($sourceDecision['checks'],
+        static fn(array $x)=>($x['level']??'')==='BLOCK'),'id');
+    verifyP12(in_array('STAGING_DEPLOY_MIGRATIONS',$pendingBlockers,true)
+        &&in_array('STAGING_BRANCH_PIN',$pendingBlockers,true)
+        &&in_array('STAGING_ACCEPTANCE_NOT_SIGNED',$pendingBlockers,true),
+        'private controller, release branch and human acceptance remain blocked');
     echo "P12 full repository core + Marketing schema rehearsal checks complete.\n";
 }finally{
     foreach(glob($coreDir.'/*.sql')?:[] as $tmp)unlink($tmp);
