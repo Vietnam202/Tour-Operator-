@@ -68,6 +68,25 @@ function deferred() { let resolve, reject; const promise = new Promise((a,b) => 
  h=harness({handle:async(route,opt)=>{if(route==='tour-library'&&!opt.method)return{items:Array.from({length:100},(_,i)=>({...copy(program),id:i+1,title:'Program '+(i+1)})),total:101};if(route==='tour-library?limit=100&offset=100')return{items:[{...copy(program),id:101,title:'Last paged tour',destination:'Huế'}],total:101};}});try{await h.render();assert.equal(h.d.querySelectorAll('[data-tl-card]').length,101);set(h,'[data-tl-search]','Last paged').dispatchEvent(new h.w.Event('input'));assert.equal([...h.d.querySelectorAll('[data-tl-card]')].filter(el=>!el.hidden).length,1);assert(h.d.querySelector('[data-tl-destination]').textContent.includes('Huế'));assert.equal(h.calls.filter(c=>c.route.startsWith('tour-library')).length,2);console.log('PASS library fetches every metadata page before applying search and filters');}finally{h.close();}
  let creationFailures=2;
  h=harness({handle:async(route,opt)=>{if(route==='tour-library'&&opt.method==='POST'&&creationFailures-->0)throw Error('Network response unavailable');}});try{await h.render();await textPreview(h);await click(h,'[data-tl-save-item]');await click(h,'[data-tl-save-item]');let posts=h.calls.filter(c=>c.route==='tour-library'&&c.options.method==='POST');assert(posts[0].options.body.creation_key);assert.equal(posts[0].options.body.creation_key,posts[1].options.body.creation_key);set(h,'[name="terms_text"]','Changed after uncertain save');await click(h,'[data-tl-save-item]');posts=h.calls.filter(c=>c.route==='tour-library'&&c.options.method==='POST');assert.notEqual(posts[1].options.body.creation_key,posts[2].options.body.creation_key);assert.equal(posts[2].options.body.terms_text,'Changed after uncertain save');console.log('PASS unchanged uncertain-save retry retains creation key; edited payload starts new creation key');}finally{h.close();}
- console.log('Tour library UI verification complete');
+ h=harness();try{
+   await h.render();
+   assert(h.d.querySelector('[data-tl-tab="templates"]'),'Template Center navigation exists');
+   await click(h,'[data-tl-duplicate="1"]');
+   const post=h.calls.find(c=>c.route==='tour-library'&&c.options.method==='POST');
+   assert(post,'Duplicate must POST an independent tour record');
+   assert.equal(post.options.body.status,'DRAFT');
+   assert.equal(post.options.body.title,'Hà Nội và Hạ Long (Copy)');
+   assert.equal(post.options.body.source_type,'MANUAL');
+   assert.equal(post.options.body.id,undefined);
+   assert.equal(post.options.body.days.length,2);
+   console.log('PASS Library duplicate creates separate editable tour, preserves original');
+  }finally{h.close();}
+  h=harness({permissions:['supplier.view']});try{
+   await h.render();
+   assert(!h.d.querySelector('[data-tl-duplicate]'));
+   assert(!h.d.querySelector('[data-tl-new]'));
+   console.log('PASS View-only library cannot duplicate or create tours');
+  }finally{h.close();}
+  console.log('Tour library UI verification complete');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 

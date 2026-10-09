@@ -1,0 +1,85 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+const {JSDOM}=require('jsdom');
+const source=fs.readFileSync(path.join(__dirname,'../tour-proposal-studio.js'),'utf8');
+const program=()=>({id:8,title:'Hanoi – Halong 2D1N',destination:'Hanoi, Halong',language:'en',tags:[],status:'DRAFT',days:[{day:1,date:'',title:'Hanoi arrival',description:'Welcome to Hanoi',meals:'',overnight:'Hanoi',notes:''}],included_text:'Hotel',excluded_text:'Flights',terms_text:'Deposit 30%',source_type:'MANUAL',source_name:'',source_text:''});
+const settle=()=>new Promise(r=>setImmediate(r));
+async function run(){
+ const dom=new JSDOM('<main id="workspace"></main>',{url:'https://localhost/',runScripts:'outside-only'});
+ const w=dom.window,d=w.document,root=d.querySelector('#workspace'),calls=[],toasts=[];
+ w.eval(source);w.confirm=()=>true;
+ const api={request:async(route,opt)=>{calls.push({route,opt});return {ok:true,id:8,program:opt.body};}};
+ w.VTATourProposalStudio.mount(root,{program:program(),api,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
+ assert(root.querySelector('.vtps'));assert(root.querySelector('[data-private-row]'));assert.equal(root.querySelectorAll('[data-group-row]').length,3);
+ // Edit content and persist it through the existing tour-library API.
+ root.querySelector('[data-proposal="tour_code"]').value='VTA0602';
+ root.querySelector('[data-proposal="overview"]').value='Northern Vietnam Journey';
+ root.querySelector('[data-group-row="0"] [data-field="price"]').value='355';
+ root.querySelector('[data-private-row="0"] [data-field="three"]').value='785';
+ root.querySelector('[data-day-field="description"]').textContent='Edited day description';
+ root.querySelector('[data-action="add-day"]').click();
+ assert.equal(root.querySelectorAll('[data-day-index]').length,2);
+ root.querySelector('[data-action="save"]').click();await settle();await settle();
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].route,'tour-library/8');assert.equal(calls[0].opt.method,'PUT');
+ assert.equal(calls[0].opt.body.proposal.tour_code,'VTA0602');
+ assert.equal(calls[0].opt.body.proposal.group_prices[0].price,'355');
+ assert.equal(calls[0].opt.body.proposal.private_prices[0].three,'785');
+ assert.equal(calls[0].opt.body.days.length,2);
+ assert.equal(calls[0].opt.body.days[0].description,'Edited day description');
+ console.log('PASS studio render, group/private rates, add day and API save');
+ // A view-only user cannot mutate data and can inspect existing program.
+ w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:false,toast:(...x)=>toasts.push(x),onBack:async()=>{},onSaved:async()=>{}});
+ assert.equal(root.querySelector('[data-action="save"]').hidden,true);
+ assert.equal(root.querySelector('[data-meta="title"]').disabled,true);
+ assert.equal(root.querySelector('[data-day-field="description"]').getAttribute('contenteditable'),'false');
+ root.querySelector('[data-action="preview"]').click();await settle();
+ assert.equal(calls.length,1);
+ console.log('PASS view-only permissions and preview');
+ // Approved demo parity: pasted days are editable and reusable templates remain separate.
+ w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:true,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
+ root.querySelector('[data-action="paste"]').click();
+ assert(root.querySelector('[role="dialog"]'));
+ root.querySelector('[data-vtps-paste-text]').value='Day 2: Ha Long Bay\nCruise itinerary\nDay 3: Ninh Binh\nScenic boat journey';
+ root.querySelector('[data-action="paste-apply"]').click();
+ assert.equal(root.querySelectorAll('[data-day-index]').length,3);
+ assert.equal(root.querySelector('[data-day-index="1"] [data-day-field="title"]').textContent,'Ha Long Bay');
+ root.querySelector('[data-action="save-template"]').click();await settle();await settle();
+ const last=calls.at(-1);
+ assert.equal(last.route,'tour-library');
+ assert.equal(last.opt.method,'POST');
+ assert(last.opt.body.tags.includes('VTA_TEMPLATE'));
+ assert.equal(last.opt.body.status,'DRAFT');
+ assert.equal(last.opt.body.days.length,3);
+ assert.equal(last.opt.body.source_type,'MANUAL');
+ assert.equal(last.opt.body.id,undefined);
+ assert.equal(program().title,'Hanoi – Halong 2D1N');
+ // Changes in day title and meal codes refresh the read-only summary table without a page rerender.
+ const first=root.querySelector('[data-day-index="0"] [data-day-field="title"]');
+ first.textContent='Updated Hanoi Welcome';
+ first.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(2)').textContent,'Updated Hanoi Welcome');
+ const meals=root.querySelector('[data-day-index="0"] [data-day-field="meals"]');
+ meals.value='B/L';
+ meals.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(3)').textContent,'B/L');
+ // Overlapping price bands are identified at the time of editing, before hitting Save.
+ const band=root.querySelector('[data-private-row="1"] [data-field="min"]');
+ band.value='2';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ band.value='3';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(!root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ console.log('PASS live summary and private passenger-band warning');
+ console.log('PASS Studio paste/Save as Template creates independent draft');
+ root.querySelector('[data-mode="QUICK"]').click();
+ root.querySelector('[data-action="preview"]').click();
+ assert.equal(root.classList.contains('vtps-quick-preview'),true);
+ root.querySelector('[data-action="preview"]').click();
+ assert.equal(root.classList.contains('vtps-quick-preview'),false);
+ console.log('PASS Quick preview is reversible without overwriting program');
+ w.close();
+}
+run().catch(e=>{console.error(e);process.exitCode=1;});

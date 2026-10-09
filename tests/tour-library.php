@@ -9,6 +9,23 @@ function rejects(callable $f,string $name,string $class=InvalidArgumentException
 
 $base=['title'=>'Northern Vietnam','destination'=>'Hanoi, Halong','language'=>'en','tags'=>['Culture','Cruise','Culture'],'days'=>[['day'=>7,'date'=>'','title'=>'Hanoi','description'=>'Walk through the old quarter','meals'=>'B/L','overnight'=>'Hanoi','notes'=>'Check traffic']],'included_text'=>'Private car','excluded_text'=>'Flights','terms_text'=>'Deposit 30%','source_text'=>'Day 1: Hanoi','source_name'=>'source.txt','source_type'=>'TEXT','status'=>'ACTIVE'];
 $program=TourLibrary::normalize($base);
+
+$proposalSample=[
+ 'tour_code'=>'VTA0602','tour_type'=>'PRIVATE','overview'=>'Six day proposal','highlights'=>['Halong Bay'],
+ 'group_prices'=>[['hotel'=>'3','price'=>'355','single'=>'']],
+ 'private_prices'=>[['min'=>2,'max'=>2,'three'=>'785','four'=>'807','five'=>'918'],['min'=>3,'max'=>4,'three'=>'809','four'=>'830','five'=>'941']],
+ 'hotels'=>[['destination'=>'Hanoi','three'=>'Hotel 3 star','four'=>'Hotel 4 star','five'=>'Hotel 5 star']],
+ 'policies'=>['children'=>'Review','payment'=>'50% deposit','cancellation'=>'See terms','notes'=>'Confirm availability']
+];
+$normalizedProposal=TourLibrary::normalize(array_replace($base,['proposal'=>$proposalSample]));
+same($normalizedProposal['proposal']['tour_code'],'VTA0602','studio proposal tour code retained');
+same($normalizedProposal['proposal']['private_prices'][0]['three'],'785','studio private rates retained');
+same($normalizedProposal['proposal']['policies']['payment'],'50% deposit','studio payment policy retained');
+rejects(fn()=>TourLibrary::normalize(array_replace($base,['proposal'=>array_replace($proposalSample,['group_prices'=>[['hotel'=>'3','price'=>'$355']]])])),'rejects nonnumeric selling price');
+rejects(fn()=>TourLibrary::normalize(array_replace($base,['proposal'=>array_replace($proposalSample,['private_prices'=>[['min'=>2,'max'=>4,'three'=>'10'],['min'=>4,'max'=>6,'three'=>'9']]])])),'rejects overlapping passenger price brackets');
+rejects(fn()=>TourLibrary::normalize(array_replace($base,['proposal'=>array_replace($proposalSample,['supplier_cost'=>'123','private_prices'=>array_fill(0,31,['min'=>1,'max'=>1])])])),'rejects too many price matrix rows');
+same(array_key_exists('supplier_cost',$normalizedProposal['proposal']),false,'unknown internal costing keys are not persisted');
+
 same($program['tags'],['Culture','Cruise'],'tags deduplicated without losing order');
 same($program['days'][0]['day'],1,'stored days renumbered consistently');
 same($program['days'][0]['notes'],'Check traffic','operational notes preserved');

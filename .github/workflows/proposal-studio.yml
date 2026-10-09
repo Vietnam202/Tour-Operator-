@@ -1,0 +1,49 @@
+name: RC6.2 Proposal Studio V5 checks
+
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc6.2-testing'
+    paths:
+      - 'tour-library.js'
+      - 'tour-library-demo.js'
+      - 'tour-proposal-studio.js'
+      - 'tour-proposal-studio.css'
+      - 'api/lib/TourLibrary.php'
+      - 'api/migrations/036_tour_library_proposal_studio.sql'
+      - 'tests/tour-proposal-studio.cjs'
+      - 'tests/tour-library-ui.cjs'
+      - 'tour-library.css'
+      - 'docs/VTA_APPROVED_LIBRARY_STUDIO_V5_STANDARD.md'
+      - 'tests/tour-library.php'
+      - 'index.html'
+      - 'preview.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  studio-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated UI testing dependencies
+        run: npm ci --prefix tests
+      - name: JavaScript syntax
+        run: |
+          node --check tour-proposal-studio.js
+          node --check tour-library.js
+          node --check tour-library-demo.js
+      - name: Proposal Studio and Tour Library tests
+        run: |
+          node tests/tour-proposal-studio.cjs
+          node tests/tour-library-ui.cjs
+          node tests/tour-library-demo.cjs
+      - name: PHP syntax and proposal normalization tests
+        run: |
+          php -l api/lib/TourLibrary.php
+          php tests/tour-library.php
