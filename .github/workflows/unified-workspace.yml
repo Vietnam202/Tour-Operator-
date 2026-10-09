@@ -1,0 +1,69 @@
+name: Unified VTA Workspace QA
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'unified-*.js'
+      - 'unified-workspace.css'
+      - 'document-editor.js'
+      - 'index.html'
+      - 'preview.html'
+      - 'service-worker.js'
+      - 'tests/**'
+      - '.github/workflows/unified-workspace.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  interface-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests
+      - name: Syntax, original modules and unified permission/navigation tests
+        run: |
+          node --check app.js
+          node --check unified-workspace.js
+          node --check unified-demo.js
+          node --check document-editor.js
+          npm test --prefix tests
+          npm run test:unified --prefix tests
+      - name: Install local test browser
+        run: |
+          npm install --no-save --prefix tests playwright@1.62.1
+          cd tests
+          npx playwright install --with-deps chromium
+      - name: Desktop/mobile workflows and preserved Marketing
+        env:
+          VTA_UNIFIED_SCREENSHOTS: test-results/unified
+          VTA_MARKETING_SCREENSHOTS: test-results/marketing
+        run: |
+          npm run test:unified:browser --prefix tests
+          npm run test:marketing:browser --prefix tests
+          node tests/marketing-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-workspace-browser-evidence
+          path: tests/test-results
+  backend-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom, pdo_sqlite
+          coverage: none
+      - name: B2B isolation and authoritative pricing
+        run: |
+          php -l api/lib/PartnerHub.php
+          php -l api/lib/Migrations.php
+          php tests/b2b-partner-hub-unit.php
+          php tests/rc6-group-pricing-unit.php
+          php tests/rc6-group-pricing-manual-unit.php
+          php tests/tour-library.php
+          php tests/document-freeform-unit.php

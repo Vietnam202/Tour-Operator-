@@ -11,7 +11,7 @@ for(const [name,source] of [['index',html],['preview',preview]]) {
   assert(source.indexOf('vta-approved-ui.css')>source.indexOf('vta-ui-refresh.css'),name+' loads approved style last');
 }
 assert(html.includes('vta-cost-editor.js?v=RC6-APPROVED-1'),'uses versioned real costing editor');
-assert(sw.includes("const CACHE='vta-RC62-APPROVED1'"),'PWA cache version changed');
+assert(sw.includes("const CACHE='vta-RC62-UNIFIED-DEMO-1'"),'PWA cache version changed');
 assert(sw.includes("'./vta-approved-ui.css?v=APPROVED1'"),'PWA precaches approved stylesheet');
 assert(sw.includes("'./vta-cost-editor.js?v=RC6-APPROVED-1'"),'PWA precaches new costing code');
 for(const feature of ['data-vta-option-stay','data-option-rate','data-option-property','data-mix-hotel','data-mix-cruise','vta-advanced-stays','data-vta-summary','data-add','data-remove','data-undo','data-vta-status'])assert(js.includes(feature),'preserve '+feature);

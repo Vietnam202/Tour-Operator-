@@ -16,6 +16,6 @@ const options={api:{request:async(route,opt)=>{calls.push({route,opt});return da
  permissions=[];await context.window.VTAMarketing(options);assert(!/data-(compose|approve|submit|reject)=/.test(root.innerHTML));console.log('PASS read-only controls');
  await nodes.get('#marketingLeads').onclick();assert.equal(view,'leads');console.log('PASS Lead Hub navigation');
  calls=[];context.window.VTA_PREVIEW=true;await context.window.VTAMarketing(options);assert.equal(calls.length,0);console.log('PASS preview no API calls');
- const app=fs.readFileSync(path.join(base,'app.js'),'utf8'),preview=fs.readFileSync(path.join(base,'preview.html'),'utf8');assert(app.includes("['home','marketing','sales','operations','modules'].filter"));assert(preview.indexOf('src="marketing.js')<preview.indexOf('src="app.js'));console.log('PASS mobile and preview wiring');
+ const app=fs.readFileSync(path.join(base,'app.js'),'utf8'),preview=fs.readFileSync(path.join(base,'preview.html'),'utf8');assert(app.includes("['home','sales','tours','marketing','settings'].filter"));assert(preview.indexOf('src="marketing.js')<preview.indexOf('src="app.js'));console.log('PASS mobile and preview wiring');
  console.log('NOTE: simulated DOM/API tests; not browser, authorization or MariaDB integration tests.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

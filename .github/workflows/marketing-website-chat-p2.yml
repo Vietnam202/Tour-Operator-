@@ -1,0 +1,58 @@
+name: Marketing Website Chat P2
+on:
+  pull_request:
+    paths:
+      - 'api/lib/WebsiteChatDelivery.php'
+      - 'api/migrations/025_website_chat_outbound.sql'
+      - 'api/bootstrap.php'
+      - 'api/index.php'
+      - 'social-inbox.js'
+      - 'integrations/website-chat/**'
+      - 'tests/website-chat-delivery-db-test.php'
+      - '.github/workflows/marketing-website-chat-p2.yml'
+  workflow_dispatch:
+
+jobs:
+  php-js-mariadb:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root_ci_password
+          MARIADB_DATABASE: vta_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/lib/WebsiteChatDelivery.php
+          php -l api/lib/WebsiteInbox.php
+          php -l api/lib/WebhookCenter.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l integrations/website-chat/chat-relay.php
+          php -l tests/website-chat-delivery-db-test.php
+      - name: JS syntax
+        run: |
+          node --check social-inbox.js
+          node --check integrations/website-chat/widget.js
+          node --check marketing-studio.js
+      - name: P1 input validation
+        run: php tests/website-inbox-test.php
+      - name: P2 two-way chat database integration
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php -m | grep -i pdo_mysql
+          php tests/website-chat-delivery-db-test.php

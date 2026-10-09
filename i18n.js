@@ -2,7 +2,7 @@
 (function(){
  const vi={
  'HOME':'TRANG CHỦ','WORKSPACES':'KHÔNG GIAN LÀM VIỆC','SHARED':'DÙNG CHUNG','MANAGEMENT':'QUẢN LÝ','SYSTEM':'HỆ THỐNG',
- 'Dashboard':'Tổng quan','CRM / Customers':'CRM / Khách hàng','Tour Program Library':'Kho chương trình tour','Suppliers & Rates':'Nhà cung cấp & bảng giá','Apps & Integrations':'Ứng dụng & kết nối','Reports':'Báo cáo','✦ Ask VTA AI':'✦ Hỏi VTA AI','More':'Thêm',
+ 'Tour Workspace':'Hồ sơ tour','Tour Library':'Kho mẫu','Sales & B2B':'Sales & B2B','Business settings':'Thiết lập doanh nghiệp','Dashboard':'Tổng quan','CRM / Customers':'CRM / Khách hàng','Tour Program Library':'Kho chương trình tour','Suppliers & Rates':'Nhà cung cấp & bảng giá','Apps & Integrations':'Ứng dụng & kết nối','Reports':'Báo cáo','✦ Ask VTA AI':'✦ Hỏi VTA AI','More':'Thêm',
 
  'TOUR PROGRAM LIBRARY':'KHO CHƯƠNG TRÌNH TOUR','Tour library':'Kho tour','SUPPLIER VAULT & RATES':'NHÀ CUNG CẤP & BẢNG GIÁ','← Operations':'← Điều hành',
  'Today':'Hôm nay','Sales':'Kinh doanh','Bookings':'Đặt dịch vụ','Operations':'Điều hành','Finance':'Tài chính','Suppliers':'Nhà cung cấp','Rates':'Bảng giá','Documents':'Tài liệu','Settings':'Cài đặt','Inventory':'Kho chương trình','Lead Hub':'Khách hàng tiềm năng',

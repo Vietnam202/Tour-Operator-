@@ -1,0 +1,15 @@
+/* Native Tour Advisor P3: compact, responsive and distinct from staff messaging. */
+.vta-tour-advisor{border:1px solid #d7e0e9;background:#f8fbfe;border-radius:12px;padding:12px;margin-top:12px;display:grid;gap:8px}
+.vta-tour-advisor h3{margin:0;font-size:15px}
+.vta-tour-search{display:grid;gap:4px;font-size:12px}
+.vta-tour-search input{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px}
+.vta-tour-results{display:grid;gap:8px;max-height:340px;overflow:auto}
+.vta-tour-card{padding:10px;border:1px solid #e1e8ef;background:#fff;border-radius:9px;display:grid;gap:5px;overflow-wrap:anywhere}
+.vta-tour-card strong{font-size:13px}
+.vta-tour-card small{font-size:11px;color:#576779}
+.vta-tour-approved{font-size:11px;color:#116149}
+.vta-tour-unapproved{font-size:11px;color:#98570e}
+.vta-tour-actions{display:flex;flex-wrap:wrap;gap:6px}
+.vta-tour-draft{display:grid;gap:8px;border-top:1px solid #d3dfe9;padding-top:9px}
+.vta-tour-draft pre{font:12px/1.6 system-ui,-apple-system,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;margin:0;padding:10px;background:white;border:1px solid #e1e8ef;border-radius:7px}
+@media(max-width:650px){.vta-tour-results{max-height:270px}.vta-tour-advisor{padding:10px}}

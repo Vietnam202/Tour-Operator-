@@ -1,0 +1,48 @@
+name: RC6 Approved Tour Library UI
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc62-ui-refresh-minimal-v1'
+    paths:
+      - 'tour-library.js'
+      - 'vta-approved-library.css'
+      - 'vta-approved-workspaces.css'
+      - 'index.html'
+      - 'preview.html'
+      - 'service-worker.js'
+      - 'tests/library-approved-ui.cjs'
+      - '.github/workflows/library-approved-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gallery-and-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated DOM test dependencies
+        run: npm ci --prefix tests
+      - name: Parse production scripts
+        run: |
+          node --check tour-library.js
+          node --check tour-library-demo.js
+          node --check tour-proposal-studio.js
+          node --check vta-cost-editor.js
+          node --check document-editor.js
+      - name: Approved gallery and Tour Library regressions
+        run: |
+          node tests/library-approved-ui.cjs
+          node tests/tour-library-ui.cjs
+          node tests/tour-library-demo.cjs
+          node tests/navigation-library.cjs
+          node tests/ui-refresh.cjs
+      - name: Preserve Itinerary, Word and Smart Cost
+        run: |
+          node tests/v5-template-gallery-ui.cjs
+          node tests/tour-proposal-studio.cjs
+          node tests/vta-cost-editor-ui.cjs
+          node tests/document-days-ui.cjs
+          node tests/document-cost-ui.cjs

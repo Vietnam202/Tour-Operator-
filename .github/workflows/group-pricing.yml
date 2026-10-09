@@ -1,0 +1,61 @@
+name: RC6 Smart Group Pricing
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc6-smart-cost-direct-edit-v1'
+    paths:
+      - 'commercial-matrix.js'
+      - 'commercial-matrix.css'
+      - 'api/lib/GroupVehiclePricing.php'
+      - 'api/lib/PriceMatrix.php'
+      - 'api/lib/PaxScenario.php'
+      - 'tests/rc6-group-pricing-ui.cjs'
+      - 'tests/rc6-group-pricing-unit.php'
+      - 'tests/rc6-group-pricing-manual-unit.php'
+      - 'tests/rc6-group-pricing-native.php'
+      - '.github/workflows/group-pricing.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  group-pricing:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: rc6-group-disposable-only
+        ports:
+          - 33317:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests
+      - name: Syntax checks
+        run: |
+          node --check commercial-matrix.js
+          node --check tests/rc6-group-pricing-ui.cjs
+          php -l api/lib/PriceMatrix.php
+          php -l api/lib/PaxScenario.php
+          php -l api/lib/GroupVehiclePricing.php
+      - name: Unit and interface regression
+        run: |
+          php tests/rc6-group-pricing-unit.php
+          php -m | grep -qi pdo_sqlite || (sudo apt-get update -qq && sudo apt-get install -y php-sqlite3)
+          php -l tests/rc6-group-pricing-manual-unit.php
+          php tests/rc6-group-pricing-manual-unit.php
+          node tests/rc6-group-pricing-ui.cjs
+          node tests/vs23-ui.cjs
+          node tests/vta-cost-editor-ui.cjs
+      - name: Native supplier cost scenarios on disposable MariaDB
+        env:
+          VTA_TEST_DB_PASSWORD: rc6-group-disposable-only
+        run: |
+          php -m | grep -qi pdo_mysql || (sudo apt-get update -qq && sudo apt-get install -y php-mysql)
+          php -l tests/rc6-group-pricing-native.php
+          php tests/rc6-group-pricing-native.php

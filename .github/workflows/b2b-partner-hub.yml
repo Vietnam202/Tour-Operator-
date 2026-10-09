@@ -1,0 +1,42 @@
+name: B2B Partner Hub validation
+on:
+  pull_request:
+    paths:
+      - 'api/lib/PartnerHub.php'
+      - 'api/lib/TourLibrary.php'
+      - 'tour-library.js'
+      - 'api/index.php'
+      - 'api/bootstrap.php'
+      - 'api/migrations/037_b2b_partner_hub.sql'
+      - 'partner.html'
+      - 'partner-hub.js'
+      - 'partner-hub.css'
+      - 'tests/b2b-partner-hub-unit.php'
+      - '.github/workflows/b2b-partner-hub.yml'
+  workflow_dispatch:
+jobs:
+  b2b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom
+          coverage: none
+      - name: PHP syntax checks
+        run: |
+          php -l api/lib/PartnerHub.php
+          php -l api/lib/TourLibrary.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/b2b-partner-hub-unit.php
+      - name: JavaScript syntax check
+        run: |
+          node --check partner-hub.js
+          node --check tour-library.js
+      - name: B2B domain tests
+        run: |
+          php tests/b2b-partner-hub-unit.php
+          php tests/tour-library.php

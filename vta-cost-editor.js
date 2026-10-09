@@ -15,6 +15,15 @@
   const multipliers = {HOTEL:'Nights',CRUISE:'Packages',TRANSPORT:'Trips',GUIDE:'Days',
     ATTRACTION:'Tickets',TOUR:'Tours',MEAL:'Meals',VISA:'Qty',OTHER:'Qty'};
   const isStay = r => r.category === 'HOTEL' || r.category === 'CRUISE';
+  const dateSequence = (first, qty) => {
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(first) || !Number.isInteger(qty) || qty<1 || qty>100) return null;
+    const date=new Date(first+'T00:00:00Z');
+    if(Number.isNaN(date.getTime()) || date.toISOString().slice(0,10)!==first) return null;
+    return Array.from({length:qty},(_,i)=>{
+      const day=new Date(date.getTime());day.setUTCDate(day.getUTCDate()+i);
+      return day.toISOString().slice(0,10);
+    });
+  };
   const selectHTML = (items, selected, attr) => '<select ' + attr + '>' + items.map(item =>
     '<option value="' + escapeHTML(item[0]) + '"' + (String(item[0]) === String(selected) ? ' selected' : '') +
     '>' + escapeHTML(item[1]) + '</option>').join('') + '</select>';
@@ -42,7 +51,7 @@
       try {selection = JSON.parse(host.dataset.vtaCostVariants || 'null');} catch (_) {}
       if (Array.isArray(selection) && selection.length === 3) {
         const picked = selection.map(id => data.items.find(x => Number(x.variant_id) === Number(id)));
-        if (picked.every(p => p && p.costing_mode === mode)) return picked;
+        if (new Set(selection.map(Number)).size === 3 && picked.every(p => p && p.costing_mode === mode)) return picked;
       }
       return [3,4,5].map(star => data.items.find(p => p.costing_mode === mode &&
         parseInt(p.hotel_level,10) === star && p.variant_key === mode.toLowerCase() + '-' + star + '-' + star) ||
@@ -55,6 +64,7 @@
     const visible = () => context.requirements.filter(r => r.requirement_state !== 'NOT_APPLICABLE' &&
       packages.some(p => line(p,r)?.active));
     let pendingUndo = null;
+    const pendingPropertyMeta = new Map();
     let queue = Promise.resolve();
     const status = msg => {const node = host.querySelector('[data-vta-status]');if(node)node.textContent = msg;};
     const setMoney = (node, value) => {if(node)node.textContent = money(value);};
@@ -75,6 +85,13 @@
           if (output) output.textContent = l?.coverage_state === 'INCLUDED' ? 'Included' : money(l?.total_vnd);
           const warning = row.querySelector('[data-review="' + i + '"]');
           if (warning) warning.hidden = !(l?.review_required || l?.coverage_state === 'UNRESOLVED');
+          const rate = row.querySelector('[data-rate="' + i + '"]');
+          if (rate && rate !== host.ownerDocument.activeElement) {
+            const next = l?.unit_rate_vnd ?? '';
+            if (rate.value !== String(next)) rate.value = String(next);
+          }
+          const review = row.querySelector('[data-review-action="' + i + '"]');
+          if (review) review.hidden = !(l?.review_required && ['PRICED','INCLUDED','NO_COST'].includes(l?.coverage_state));
         });
       });
     };
@@ -99,7 +116,7 @@
         } catch (error) {
           status('Save failed — changes not saved');
           toast(error.message || 'Could not save cost',true);
-          throw error;
+          return null;
         }
       });
       return queue;
@@ -113,6 +130,10 @@
         '</label><label>Evidence<input data-evidence value="' + escapeHTML(reason) +
         '" placeholder="Contract / rate reason" ' + (!edit?'disabled':'') + '></label>' +
         (edit?'<button type="button" class="vta-proof-apply" data-apply="' + i + '">Apply rate</button>':'') +
+        (edit?'<label>Review reason<input data-review-note placeholder="Reviewed with supplier / source"></label>' +
+          '<button type="button" data-review-action="' + i + '"' +
+          (!(l?.review_required && ['PRICED','INCLUDED','NO_COST'].includes(l?.coverage_state))?' hidden':'') +
+          '>✓ Confirm reviewed cost</button>':'') +
         '</div></details>';
     };
     const input = (attr,value,classes='',extra='') => '<input class="' + classes + '" ' + attr +
@@ -134,7 +155,12 @@
       const common = !stay;
       const service='<div class="vta-service"><strong>' + escapeHTML(titles[category] || category) + '</strong>' +
         input('data-name aria-label="Service name" maxlength="255"',r.service_name,'vta-name') +
-        input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination"') + '</div>';
+        input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination"') +
+        (['HOTEL','CRUISE','GUIDE'].includes(category)?'<label class="vta-date-label">' +
+          escapeHTML(category==='HOTEL'?'First hotel night':category==='CRUISE'?'Cruise departure':'First guide day') +
+          input('type="date" data-service-date aria-label="First service date"',
+            (r.scope?.dates?.[0] || r.service_date || ''),'vta-service-date') +
+          '</label>':'') + '</div>';
       const qty='<div class="vta-quantities">' +
         '<label>' + escapeHTML(['TRANSPORT','GUIDE'].includes(category)?(category==='GUIDE'?'Guides':'Vehicles'):'Pax / Units') +
         input('type="number" min="0" max="10000" data-count inputmode="numeric"',count,'vta-small') +
@@ -297,8 +323,14 @@
       if(!supplier||!reason){proof.open=true;status('Select supplier and evidence before saving this rate');proof.querySelector(!supplier?'[data-supplier]':'[data-evidence]').focus();return;}
       const manual={supplier_id:Number(supplier),original_currency:'VND',unit_amount_original:rate.value,
         manual_reason:reason,manual_contract:{evidence:reason,tax_basis:'NET'}};
-      if(isStay(r))return sheet({requirement_id:Number(r.id),shared:false,variant_ids:[Number(p.variant_id)],
-        lines:{[p.variant_id]:manual}});
+      if(isStay(r)){
+        const tier = r.category === 'HOTEL' ? parseInt(p.hotel_level,10) : p.cruise_level;
+        const matching=packages.filter(candidate=>
+          (r.category === 'HOTEL'?parseInt(candidate.hotel_level,10):candidate.cruise_level)===tier);
+        const variantIds=matching.map(candidate=>Number(candidate.variant_id));
+        return sheet({requirement_id:Number(r.id),shared:false,variant_ids:variantIds,
+          lines:Object.fromEntries(variantIds.map(id=>[id,manual]))});
+      }
       return sheet({requirement_id:Number(r.id),shared:true,line:manual});
     }
     function bindRow(row) {
@@ -315,8 +347,18 @@
       row.querySelector('[data-units]').onchange=e=>{
         const units=Number(e.target.value);
         if(!Number.isInteger(units)||units<0){status('Whole number required');return;}
-        sheet({requirement:{id,service_units:units},line:{}});
+        const first=row.querySelector('[data-service-date]')?.value || r.scope?.dates?.[0] || '';
+        const dates=['HOTEL','GUIDE'].includes(r.category) && first ? dateSequence(first,units) : null;
+        if(['HOTEL','GUIDE'].includes(r.category) && first && !dates){status('Select a valid date and quantity 1–100');return;}
+        sheet({requirement:{id,service_units:units,...(dates?{scope:{...r.scope,dates}}:{})},line:{}},true);
       };
+      row.querySelector('[data-service-date]')?.addEventListener('change',e=>{
+        const first=e.target.value,units=Number(row.querySelector('[data-units]').value);
+        if(!first){status('Choose a service date');return;}
+        const dates=['HOTEL','GUIDE'].includes(r.category)?dateSequence(first,units):null;
+        if(['HOTEL','GUIDE'].includes(r.category)&&!dates){status('Valid first date and 1–100 nights/days required');return;}
+        sheet({requirement:{id,service_date:first,scope:{...r.scope,...(dates?{dates}:{})}},line:{}},true);
+      });
       const count=row.querySelector('[data-count]');
       const saveCount=()=>{
         const val=Number(count.value),custom=r.default_quantity_source==='CUSTOM_QTY';
@@ -331,13 +373,24 @@
       row.querySelector('[data-cancel-count]').onclick=()=>{row.querySelector('.vta-override').hidden=true;count.value=guestCount(r,line(packages[0],r),context);};
       row.querySelectorAll('[data-rate]').forEach(input=>input.onchange=()=>saveRate(row,Number(input.dataset.rate)));
       row.querySelectorAll('[data-apply]').forEach(btn=>btn.onclick=()=>saveRate(row,Number(btn.dataset.apply)));
+      row.querySelectorAll('[data-review-action]').forEach(btn=>btn.onclick=()=>{
+        const target=Number(btn.dataset.reviewAction);
+        const proof=row.querySelector('[data-proof="' + target + '"]');
+        const reason=proof.querySelector('[data-review-note]').value.trim();
+        if(!reason){proof.open=true;status('Review reason is required');proof.querySelector('[data-review-note]').focus();return;}
+        const pack=packages[target];
+        sheet({action:'review',requirement_id:id,variant_ids:
+          isStay(r)?[Number(pack.variant_id)]:ids(),review_reason:reason},true);
+      });
       row.querySelectorAll('[data-property]').forEach(input=>input.onchange=e=>{
         const idx=Number(e.target.dataset.property),p=packages[idx];
         const key=r.category==='HOTEL'?'hotel_names':'cruise_names';
         const star=r.category==='HOTEL'?parseInt(p.hotel_level,10):p.cruise_level;
-        const names={...(r.metadata?.[key]||{})};
+        const draft={...r.metadata,...pendingPropertyMeta.get(id)};
+        const names={...(draft[key]||{})};
         names[star]=e.target.value.trim();
-        sheet({requirement:{id,metadata:{...r.metadata,[key]:names}},line:{}});
+        draft[key]=names;pendingPropertyMeta.set(id,draft);
+        sheet({requirement:{id,metadata:draft},line:{}},true);
       });
       const remove=row.querySelector('[data-remove]'),confirm=row.querySelector('.vta-remove-confirm');
       remove.onclick=()=>{confirm.hidden=false;confirm.querySelector('[data-remove-reason]').focus();};
@@ -345,7 +398,9 @@
       row.querySelector('[data-confirm-remove]').onclick=()=>{
         const reason=confirm.querySelector('[data-remove-reason]').value.trim();
         if(!reason){status('Removal reason is required');return;}
-        pendingUndo={id,reason};sheet({action:'remove',requirement_id:id,reason},true);
+        sheet({action:'remove',requirement_id:id,reason},true).then(result=>{
+          if (result){pendingUndo={id,reason};render();}
+        });
       };
     }
     function bind() {
@@ -388,12 +443,16 @@
           (p.cruise_level==null?null:Number(p.cruise_level))===cruise);
         const selectVariant=id=>{
           const chosen=ids();chosen[index]=Number(id);
+          if(new Set(chosen).size!==3){
+            render();
+            status('This combination is already selected in another option');return false;
+          }
           host.dataset.vtaCostVariants=JSON.stringify(chosen);
-          packages=getPackages();render();
+          packages=getPackages();render();return true;
         };
         if(existing){selectVariant(existing.variant_id);return;}
         send({variant_ids:ids(),action:'mix',mode,hotel_level:hotel,cruise_level:cruise})
-          .then(result=>{if(result?.variant_id){selectVariant(result.variant_id);
+          .then(result=>{if(result?.variant_id && selectVariant(result.variant_id)){
             status('Combination saved · supplier rates require review');}});
       });
       // Inline Hotel/Cruise inputs share the same persisted requirement and supplier validation.
@@ -433,7 +492,10 @@
       host.querySelectorAll('[data-guest]').forEach(input=>input.onchange=()=>{
         if(!edit)return;
         const raw=input.value.trim(),key=input.dataset.guest;
-        if(!/^\d+$/.test(raw) || Number(raw)>10000 || (key==='paying_pax'&&Number(raw)<1)){
+        const n=Number(raw),total=Number(context.guests.total_guests),foc=Number(context.guests.foc);
+        if(!/^\d+$/.test(raw) || n>10000 || (key==='paying_pax'&&(n<1 || n+foc>total)) ||
+          (key!=='paying_pax'&&n>total)){
+          input.value=String(key==='paying_pax'?context.guests.paying_pax:context.profile[key]??'');
           status('Invalid guest count');return;
         }
         send({[key]:Number(raw),review_reason:'Service population edited in Cost'},
@@ -450,8 +512,9 @@
       host.querySelector('[data-undo]')?.addEventListener('click',()=>{
         if(!pendingUndo)return;
         const id=pendingUndo.id;
-        pendingUndo=null;
-        sheet({requirement:{id,requirement_state:'REQUIRED'},line:{}},true);
+        sheet({requirement:{id,requirement_state:'REQUIRED'},line:{}},true).then(result=>{
+          if(result){pendingUndo=null;render();}
+        });
       });
     }
     render();

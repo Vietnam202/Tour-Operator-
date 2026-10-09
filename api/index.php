@@ -120,6 +120,11 @@ try {
     }
 
     QuoteProposal::publicHandle($route,$method,$db,$config);
+    WebhookCenter::publicHandle($route,$method,$db,$config);
+    WebsiteInbox::publicHandle($route,$method,$db,$config);
+    MetaInbox::publicHandle($route,$method,$db,$config);
+    WebsiteChatDelivery::publicHandle($route,$method,$db,$config);
+    MarketingTourShare::publicHandle($route,$method,$db);
 
     $user=Auth::requireUser($db);
     $companyId=(int)$user['company_id'];
@@ -128,6 +133,15 @@ try {
 
     // VTA v2.4 complete core routes (Sales → Booking → Operations → Finance → TODAY)
     LeadHub::handle($route,$method,$db,$user);
+    WebhookCenter::adminHandle($route,$method,$db,$config,$user);
+    WebsiteInbox::adminHandle($route,$method,$db,$user);
+    MetaInbox::adminHandle($route,$method,$db,$config,$user);
+    MetaReplies::adminHandle($route,$method,$db,$config,$user);
+    MetaConnectionHealth::adminHandle($route,$method,$db,$config,$user);
+    WebsiteChatDelivery::adminHandle($route,$method,$db,$config,$user);
+    MarketingTourAdvisor::adminHandle($route,$method,$db,$user);
+    MarketingTourShare::adminHandle($route,$method,$db,$user);
+    SocialPublishing::adminHandle($route,$method,$db,$config,$user);
     LandingPages::handle($route,$method,$db,$user);
     MarketingStudio::handle($route,$method,$db,$user);
     CampaignPilot::handle($route,$method,$db,$user);
@@ -142,6 +156,7 @@ try {
     QuoteOptions::handle($route,$method,$db,$user);
     ScheduleImport::handle($route,$method,$db,$user);
     TourLibrary::handle($route,$method,$db,$config,$user);
+    PartnerHub::handle($route,$method,$db,$config,$user);
     QuoteReuse::handle($route,$method,$db,$user);
     QuoteCostItems::handle($route,$method,$db,$user);
     Procurement::handle($route,$method,$db,$user);
