@@ -25,6 +25,38 @@
       'SANITIZED INQUIRY (remove names, phone numbers, emails, passport details and confidential net rates):',
       '[Paste inquiry here]'
     ].join('\n'),
+    marketing: [
+      'Act as a senior inbound Vietnam travel content marketer for Vietnam Travel Advisor (VTA).',
+      'Use ONLY the verified, non-confidential tour or campaign facts that I manually paste below.',
+      'Target market: [India / Philippines / Singapore / Malaysia / other]. Audience: [families / couples / B2B travel agents / other].',
+      'Write 6 distinct, platform-adapted items based on the SAME approved offer:',
+      '1. Facebook travel post with short CTA and appropriate hashtags.',
+      '2. Instagram caption with a strong opening hook and #vntraveladvisor.',
+      '3. TikTok or Reels 30-second voiceover/script (hook / scenes / call-to-action).',
+      '4. YouTube Shorts 30-second title and short script.',
+      '5. Three Google Ads headlines and two descriptions, avoiding unverifiable claims.',
+      '6. WhatsApp B2B travel-agent pitch in professional English.',
+      'Use WhatsApp +84582230993 only as contact CTA if appropriate.',
+      'Do NOT invent prices, departures, hotel names, visa rules, flight schedules, availability, reviews or guaranteed offers.',
+      'Flag missing facts, never claim content has been posted or campaigns launched.',
+      'Only suggest media that VTA owns or has permission to use.',
+      '',
+      'VERIFIED TOUR / CAMPAIGN BRIEF (manually paste public, approved product facts; never paste guest data or supplier net rates):',
+      '[Paste brief here]'
+    ].join('\\n'),
+    'marketing-base': [
+      'Act as Vietnam Travel Advisor (VTA) inbound tour marketing copywriter.',
+      'Write ONE polished, short, ready-to-edit BASE COPY for the multichannel Content Composer.',
+      'Target market: [India / Philippines / Singapore / Malaysia / other]. Audience: [families / couples / B2B agents].',
+      'Style: clear, welcoming, credible, premium, compelling. Language: English.',
+      'Include a clear travel inquiry CTA and WhatsApp +84582230993 when appropriate.',
+      'Use #vntraveladvisor sparingly. Keep it concise so the operator can adapt it to Facebook, Instagram, Reels and WhatsApp.',
+      'Return the base copy only: no explanation, no channel labels, no multiple alternatives.',
+      'Only use verified facts below. Do not invent prices, available dates, supplier rates, hotels, cruise names, flight routes or guarantees.',
+      '',
+      'VERIFIED NON-CONFIDENTIAL TOUR BRIEF:',
+      '[Paste approved product summary here]'
+    ].join('\\n'),
     document: [
       'Act as the professional itinerary and proposal editor for Vietnam Travel Advisor (VTA).',
       'Rewrite the text below for a premium, client-ready Word/PDF tour proposal.',
