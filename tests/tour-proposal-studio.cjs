@@ -38,9 +38,11 @@ async function run(){
  assert.equal(calls.length,1);
  console.log('PASS view-only permissions and preview');
  // Approved demo parity: pasted days are editable and reusable templates remain separate.
- w.prompt=()=> 'Day 2: Ha Long Bay\nCruise itinerary\nDay 3: Ninh Binh\nScenic boat journey';
  w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:true,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
  root.querySelector('[data-action="paste"]').click();
+ assert(root.querySelector('[role="dialog"]'));
+ root.querySelector('[data-vtps-paste-text]').value='Day 2: Ha Long Bay\nCruise itinerary\nDay 3: Ninh Binh\nScenic boat journey';
+ root.querySelector('[data-action="paste-apply"]').click();
  assert.equal(root.querySelectorAll('[data-day-index]').length,3);
  assert.equal(root.querySelector('[data-day-index="1"] [data-day-field="title"]').textContent,'Ha Long Bay');
  root.querySelector('[data-action="save-template"]').click();await settle();await settle();
@@ -53,6 +55,24 @@ async function run(){
  assert.equal(last.opt.body.source_type,'MANUAL');
  assert.equal(last.opt.body.id,undefined);
  assert.equal(program().title,'Hanoi – Halong 2D1N');
+ // Changes in day title and meal codes refresh the read-only summary table without a page rerender.
+ const first=root.querySelector('[data-day-index="0"] [data-day-field="title"]');
+ first.textContent='Updated Hanoi Welcome';
+ first.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(2)').textContent,'Updated Hanoi Welcome');
+ const meals=root.querySelector('[data-day-index="0"] [data-day-field="meals"]');
+ meals.value='B/L';
+ meals.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(3)').textContent,'B/L');
+ // Overlapping price bands are identified at the time of editing, before hitting Save.
+ const band=root.querySelector('[data-private-row="1"] [data-field="min"]');
+ band.value='2';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ band.value='3';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(!root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ console.log('PASS live summary and private passenger-band warning');
  console.log('PASS Studio paste/Save as Template creates independent draft');
  root.querySelector('[data-mode="QUICK"]').click();
  root.querySelector('[data-action="preview"]').click();
