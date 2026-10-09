@@ -24,7 +24,7 @@ window.VTAWebsiteInbox=function(host,opt){
     safe(({QUEUED:t('Queued, not delivered','Đang chờ, chưa gửi'),SENDING:t('Sending to Meta','Đang gửi tới Meta'),SENT:t('Meta confirmed sending, not reading','Meta đã xác nhận gửi, không phải khách đã đọc'),UNCERTAIN:t('Unknown outcome — verify with Meta','Không rõ kết quả — cần đối soát Meta'),BLOCKED:t('Blocked by policy','Đã chặn do điều kiện gửi')}[m.status]||m.status))+
     ' · '+safe(m.created_at)+'</small></article>';
   const lead=c&&c.lead_request_id?'<p class="mk-note">Lead Hub #'+Number(c.lead_request_id)+'</p>':'';
-  host.innerHTML='<section class="mk-panel"><div class="mk-section-head"><div><h2>'+t('Unified Inbox · Website & Meta','Hộp thư chung · Website & Meta')+'</h2><p class="mk-note">'+t('Website supports two-way chat. Meta supports inbound text, internal drafts and Lead Hub only.','Website chat hai chiều. Meta mới nhận tin chữ, lưu nháp và chuyển Lead Hub.')+'</p></div><span class="mk-badge">'+items.length+' '+t('conversations','hội thoại')+'</span></div>'+
+  host.innerHTML='<section class="mk-panel"><div class="mk-section-head"><div><h2>'+t('Unified Inbox · Website & Meta','Hộp thư chung · Website & Meta')+'</h2><p class="mk-note">'+t('Website chat, Meta messages and Lead Hub handoff. Messenger replies depend on channel permissions and the reply window; Instagram replies stay as drafts.','Chat website, tin nhắn Meta và chuyển Lead Hub. Trả lời Messenger tùy quyền kênh và thời hạn trả lời; phản hồi Instagram vẫn là bản nháp.')+'</p></div><span class="mk-badge">'+items.length+' '+t('conversations','hội thoại')+'</span></div>'+
    '<p class="mk-note">'+t('Meta source readiness (config only, live API not verified): ','Trạng thái kênh Meta (chỉ cấu hình, chưa xác minh API thật): ')+
    (metaAccounts.length?metaAccounts.map(a=>safe(a.platform)+': '+(a.outbound_configured?
       t('Messenger reply configurable','Có cấu hình trả lời Messenger'):t('Inbound / drafts only','Chỉ nhận tin / lưu nháp'))).join(' · '):
@@ -69,10 +69,11 @@ window.VTAWebsiteInbox=function(host,opt){
    items=r.items||[];const current=items.some(x=>Number(x.id)===selected)?selected:Number(items[0]?.id||0);
    if(current)await choose(current);else{selected=null;detail=null;draw();}
   }catch(e){
-   if(host.isConnected){host.innerHTML='<section class="mk-panel"><h2>Unified Inbox</h2><p class="mk-note">'+t('Could not load inbox. Check migration 024 and lead.view permission.','Không tải được hộp thư. Kiểm tra migration 024 và quyền lead.view.')+'</p></section>';toast(e.message,true);}
+   if(host.isConnected){host.innerHTML='<section class="mk-panel"><h2>'+t('Unified Inbox','Hộp thư chung')+'</h2><p class="mk-note" role="status">'+t('Could not load inbox. Try again or contact your administrator.','Không tải được hộp thư. Thử lại hoặc liên hệ quản trị viên.')+'</p><button type="button" class="btn" data-vta-inbox-retry>'+t('Try again','Thử lại')+'</button></section>';toast(t('Could not load inbox.','Không tải được hộp thư.'),true);}
   }
  }
  host.addEventListener('click',e=>{
+  if(e.target.closest('[data-vta-inbox-retry]')){host.innerHTML='<section class="mk-panel"><p class="mk-note" role="status">'+t('Loading conversations…','Đang tải hội thoại…')+'</p></section>';refresh();return;}
   const btn=e.target.closest('[data-vta-conv]');
   if(btn&&host.contains(btn))choose(Number(btn.dataset.vtaConv));
  });

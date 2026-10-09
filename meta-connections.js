@@ -6,7 +6,7 @@ window.VTAMetaConnectionCenter=function(host,{api,esc,t,toast,preview}){
   host.innerHTML='<section class="mk-panel"><h2>'+t('Meta Connections','Kết nối Meta')+'</h2><p class="mk-note">'+t('Preview only. Accounts and tokens are not connected.','Chỉ xem thử. Không kết nối tài khoản hay token.')+'</p></section>';
   return;
  }
- let accounts=[],busy=false;
+ let accounts=[],busy=false,loadError=false;
  const safe=x=>esc(String(x??''));
  const title=p=>({MESSENGER:'Facebook Messenger',INSTAGRAM_DM:'Instagram DM',FACEBOOK_PAGE:'Facebook Page',INSTAGRAM_PUBLISH:'Instagram Publishing'}[p]||p);
  const status=s=>({
@@ -19,6 +19,7 @@ window.VTAMetaConnectionCenter=function(host,{api,esc,t,toast,preview}){
  }[s]||s);
  function render(){
   if(!host.isConnected)return;
+  if(busy||loadError){host.innerHTML='<section class="mk-panel"><h2>'+t('Meta Connection Center','Trung tâm kết nối Meta')+'</h2><p class="mk-note" role="status">'+(busy?t('Loading account status…','Đang tải trạng thái tài khoản…'):t('Could not load Meta connection status. Try again or contact your administrator.','Không tải được trạng thái kết nối Meta. Thử lại hoặc liên hệ quản trị viên.'))+'</p>'+(!busy?'<button type="button" class="btn" data-meta-action="refresh">'+t('Try again','Thử lại')+'</button>':'')+'</section>';return;}
   const healthy=accounts.filter(a=>a.recently_verified).length;
   host.innerHTML='<section class="mk-panel vta-meta-connection"><div class="mk-section-head"><div>'+
    '<h2>'+t('Meta Connection Center','Trung tâm kết nối Meta')+'</h2>'+
@@ -36,21 +37,21 @@ window.VTAMetaConnectionCenter=function(host,{api,esc,t,toast,preview}){
     (a.error_code?'<p class="vta-meta-warning">'+safe(a.error_code)+'</p>':'')+
     '<p class="mk-note">'+t('Required scopes','Quyền cần có')+': '+safe((a.required_scopes||[]).join(', '))+'</p></article>').join('')+'</div>':
     '<p class="mk-note">'+t('No accounts configured. A qualified administrator must provision Meta App and authorized Page/IG credentials on the private server.','Chưa có tài khoản. Quản trị viên cần thiết lập Meta App và token Facebook/Instagram được cấp phép trên máy chủ riêng.')+'</p>')+
-   '<p class="mk-note">'+t('The system cannot start OAuth or connect Meta accounts automatically in P9. Authorized administrators run the staging-only read-only CLI check after supplying private credentials.','P9 chưa có tự kết nối OAuth. Quản trị viên chạy lệnh kiểm tra chỉ đọc trên staging sau khi cấp token trong cấu hình riêng.')+'</p>'+
-   '<p class="mk-note">'+t('A green API check is not a permission to publish or send messages. Those actions remain separately controlled by existing P5/P8 checks and explicit workers.','API kiểm tra đạt không đồng nghĩa được phép đăng bài/gửi tin. P5/P8 vẫn có điều kiện cấp quyền và worker riêng.')+'</p></section>';
+   '<p class="mk-note">'+t('Automatic OAuth setup is not available. Administrators configure authorized accounts privately and verify them before enabling delivery.','Chưa hỗ trợ tự kết nối OAuth. Quản trị viên cấu hình tài khoản được cấp quyền trên máy chủ riêng và xác minh trước khi bật gửi/đăng.')+'</p>'+
+   '<p class="mk-note">'+t('A successful account check does not authorize publishing or messaging. Each delivery has separate permission checks and processing.','Kiểm tra tài khoản đạt không đồng nghĩa được phép đăng bài/gửi tin. Mỗi lần phát hành có điều kiện cấp quyền và xử lý riêng.')+'</p></section>';
  }
  async function refresh(){
   if(busy)return;
-  busy=true;
+  busy=true;loadError=false;render();
   try{
    const r=await api.request('marketing/meta-connections');
    accounts=Array.isArray(r.accounts)?r.accounts:[];
-  }catch(err){toast(err.message,true);}
+  }catch(err){loadError=true;if(host.isConnected)toast(t('Could not load Meta connection status.','Không tải được trạng thái kết nối Meta.'),true);}
   finally{busy=false;render();}
  }
  host.addEventListener('click',e=>{
    if(e.target.closest('[data-meta-action="refresh"]'))refresh();
  });
- render();refresh();
+ refresh();
 };
 })();
