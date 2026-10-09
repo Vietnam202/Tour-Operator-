@@ -7,6 +7,7 @@ on:
       - 'vta-plus-assist.js'
       - 'vta-plus-assist.css'
       - 'document-editor.js'
+      - 'marketing-studio.js'
       - 'tour-proposal-studio.js'
       - 'workspace-centers.js'
       - 'index.html'
@@ -14,6 +15,7 @@ on:
       - 'service-worker.js'
       - 'tests/vta-plus-assist.cjs'
       - 'tests/vta-plus-assist-dom.cjs'
+      - 'tests/vta-plus-marketing.cjs'
       - '.github/workflows/plus-assist-qa.yml'
   workflow_dispatch:
 permissions:
@@ -34,10 +36,13 @@ jobs:
           node --check document-editor.js
           node --check tour-proposal-studio.js
           node --check workspace-centers.js
+          node --check marketing-studio.js
           node tests/vta-plus-assist.cjs
           node tests/vta-plus-assist-dom.cjs
+          node tests/vta-plus-marketing.cjs
       - name: RC6 existing UI regression
         run: |
           node tests/vta-approved-ui.cjs
           node tests/v5-template-gallery-ui.cjs
+          node tests/marketing-studio-ui.cjs
           node tests/document-days-ui.cjs
