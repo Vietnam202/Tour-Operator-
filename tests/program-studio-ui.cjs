@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {JSDOM}=require('jsdom');
+const dom=new JSDOM('<main></main><div id="modals"></div>',{url:'https://localhost/',runScripts:'outside-only'}),w=dom.window;
+w.eval(fs.readFileSync(path.join(__dirname,'../program-studio.js'),'utf8'));
+const copy=value=>JSON.parse(JSON.stringify(value));
+const doc={schema:'VTA_DOC_2',title:'Vietnam journey',content:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Master text'}]},{type:'image',attrs:{assetId:3,width:320}}]}};
+const modal=(_,html)=>{const section=w.document.createElement('section');section.innerHTML=html;w.document.querySelector('#modals').replaceChildren(section);return section;};
+(async()=>{try{
+ const source={title:'Master',document:doc},clone=w.VtaProgramTools.fromProgram(source);
+ clone.content.content[0].content[0].text='Client-only text';assert.equal(doc.content.content[0].content[0].text,'Master text');
+ assert.deepEqual(copy(w.VtaProgramTools.linksFor(doc)).map(link=>link.asset_id),[3]);
+ console.log('PASS using a template creates an independent document and preserves image links');
+ const calls=[];let attempts=0,preparedCount=0;
+ const api={request:async(route,options)=>{calls.push({route,body:copy(options.body)});if(route==='tour-library/prepare-document'){preparedCount++;const prepared=copy(doc);prepared.content.content[1].attrs.assetId=30+preparedCount;return {document:prepared};}if(route==='tour-library'){attempts++;if(attempts===1)throw Error('Response lost after server saved the template');return {id:7};}throw Error('Unexpected route '+route);}};
+ w.VtaProgramTools.saveTemplate({api,modal,closeModal:()=>w.document.querySelector('#modals').replaceChildren(),toast:()=>{},document:doc,sourceText:'Original source',days:[]});
+ const form=w.document.querySelector('form');form.elements.title.value='Saved master';
+ await form.onsubmit({preventDefault(){},target:form});assert(form.isConnected);assert(form.querySelector('[role=alert]').textContent.includes('Response lost'));assert(!form.querySelector('button').disabled);
+ await form.onsubmit({preventDefault(){},target:form});
+ const saves=calls.filter(call=>call.route==='tour-library');assert.equal(preparedCount,1);assert.equal(saves.length,2);assert.deepEqual(saves[0].body,saves[1].body);assert(saves[0].body.creation_key);assert.equal(doc.content.content[1].attrs.assetId,3);assert(!form.isConnected);
+ console.log('PASS uncertain template save retries the same creation key and cloned media, avoiding a duplicate master');
+}finally{dom.window.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

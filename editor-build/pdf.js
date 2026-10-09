@@ -1,5 +1,5 @@
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/build/pdf.mjs';
-GlobalWorkerOptions.workerSrc='assets/document-pdf-worker.js?v=RC2-WORD-1';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
+GlobalWorkerOptions.workerSrc='assets/document-pdf-worker.js?v=RC62-STUDIO-20261009';
 window.VtaDocumentPDF={async extract(file){
  const task=getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,enableXfa:false,useSystemFonts:true,stopAtErrors:true});
  try{

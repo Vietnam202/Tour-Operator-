@@ -1,10 +1,44 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/QuoteProposal.php';
 
 /** Company-scoped reusable programs. Import text is data; it is never executed. */
 final class TourLibrary {
     public const MAX_FILE_BYTES = 10485760;
     public const MAX_TEXT_BYTES = 1000000;
+    // Existing MEDIUMTEXT storage carries a versioned envelope; old plain-text
+    // programs remain readable and no database migration is needed.
+    private const DOCUMENT_PREFIX = "VTA_PROGRAM_DOCUMENT_1\n";
+    public static function documentSource(string $source, ?array $document): string {
+        if(!$document)return $source;
+        return self::DOCUMENT_PREFIX.self::json(['schema'=>'VTA_PROGRAM_DOCUMENT_1','source_text'=>$source,'document'=>FreeformDocument::validate($document)]);
+    }
+    public static function readDocumentSource(string $source): array {
+        if(!str_starts_with($source,self::DOCUMENT_PREFIX))return ['source_text'=>$source];
+        $payload=json_decode(substr($source,strlen(self::DOCUMENT_PREFIX)),true,512,JSON_THROW_ON_ERROR);
+        if(($payload['schema']??'')!=='VTA_PROGRAM_DOCUMENT_1'||!is_string($payload['source_text']??null)||!is_array($payload['document']??null))throw new RuntimeException('Invalid stored program document');
+        return ['source_text'=>$payload['source_text'],'document'=>FreeformDocument::validate($payload['document'])];
+    }
+    public static function contentHash(array $r): string {
+        return hash('sha256',self::json(array_intersect_key($r,array_flip(['title','destination','language','tags_json','days_json','included_text','excluded_text','terms_text','source_text','status']))));
+    }
+    public static function reusableDocument(PDO $db,array $config,array $u,array $document): array {
+        $document=FreeformDocument::validate($document);$map=[];$bytes=0;
+        $ids=FreeformDocument::imageIds($document);if(count($ids)>80)throw new InvalidArgumentException('Use up to 80 document images');
+        foreach($ids as $id){
+            Auth::requirePermission($db,$u,'media.view');$asset=MediaLibrary::asset($db,$u,$id);
+            if($asset['status']==='ARCHIVED')throw new DomainException('Review archived images before saving a template.');
+            $bytes+=(int)$asset['byte_size'];if($bytes>25165824)throw new InvalidArgumentException('Document images exceed 24 MB');
+            if(!empty($asset['quote_id'])){
+                Auth::requirePermission($db,$u,'media.manage');$path=MediaLibrary::path($config,$asset);
+                if(!hash_equals($asset['content_sha256'],hash_file('sha256',$path)))throw new DomainException('Document image bytes changed');
+                $copy=MediaLibrary::ingest($db,$config,$u,file_get_contents($path),['title'=>$asset['title'],'filename'=>$asset['original_filename'],'visibility'=>'COMPANY']);
+                $map[$id]=(int)$copy['asset']['id'];
+            }else $map[$id]=$id;
+        }
+        $walk=function(array &$node)use(&$walk,$map):void{if(($node['type']??'')==='image'){$node['attrs']['assetId']=$map[$node['attrs']['assetId']];}foreach($node['content']??[] as $i=>$_)$walk($node['content'][$i]);};
+        $walk($document['content']);return FreeformDocument::validate($document);
+    }
     private static function q(PDO $db, string $sql, array $args=[]): PDOStatement { $s=$db->prepare($sql);$s->execute($args);return $s; }
     private static function json($v): string { return json_encode($v,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); }
     private static function text($v, int $max, string $name): string {
@@ -22,6 +56,11 @@ final class TourLibrary {
         $out['days']=ScheduleImport::normalize($b['days']??[]);
         foreach(['included_text','excluded_text','terms_text'] as $k)$out[$k]=self::text($b[$k]??'',100000,$k);
         $out['source_text']=self::text($b['source_text']??'',self::MAX_TEXT_BYTES,'source text');
+        if(str_starts_with($out['source_text'],self::DOCUMENT_PREFIX))throw new InvalidArgumentException('Reserved document storage prefix');
+        if(isset($b['document'])){
+            if(!is_array($b['document']))throw new InvalidArgumentException('Invalid program document');
+            $out['document']=FreeformDocument::validate($b['document']);
+        }
         $out['source_name']=self::filename(self::text($b['source_name']??'',255,'source name'));
         $out['source_type']=self::text($b['source_type']??'MANUAL',20,'source type');
         if(!in_array($out['source_type'],['PC','GOOGLE_DRIVE','TEXT','MANUAL'],true))throw new InvalidArgumentException('Invalid source type');
@@ -31,7 +70,7 @@ final class TourLibrary {
         if($out['source_type']!=='GOOGLE_DRIVE'&&$out['source_url']!=='')throw new InvalidArgumentException('A Drive link requires Google Drive source type');
         $out['status']=self::text($b['status']??'DRAFT',16,'status');
         if(!in_array($out['status'],['DRAFT','ACTIVE'],true))throw new InvalidArgumentException('Use DRAFT or ACTIVE; archive with the archive action');
-        if($out['status']==='ACTIVE'&&!$out['days'])throw new InvalidArgumentException('Add at least one itinerary day before activating the program');
+        if($out['status']==='ACTIVE'&&!$out['days']&&empty($out['document']))throw new InvalidArgumentException('Add an itinerary or editable document before activating the program');
         if(strlen(self::json($out))>3000000)throw new InvalidArgumentException('Program content is too large');
         return $out;
     }
@@ -110,7 +149,7 @@ final class TourLibrary {
     }
     private static function mime(string $ext): string { return match($ext){'pdf'=>'application/pdf','docx'=>'application/vnd.openxmlformats-officedocument.wordprocessingml.document','txt'=>'text/plain',default=>throw new InvalidArgumentException('Use DOCX, PDF or TXT')}; }
     public static function validateFile(string $path,string $ext): void {
-        self::mime($ext);$size=filesize($path);if($size===false||$size<1||$size>self::MAX_FILE_BYTES)throw new InvalidArgumentException('File must contain data and be at most 10 MB');
+        self::mime($ext);clearstatcache(true,$path);$size=filesize($path);if($size===false||$size<1||$size>self::MAX_FILE_BYTES)throw new InvalidArgumentException('File must contain data and be at most 10 MB');
         $head=file_get_contents($path,false,null,0,1024);if($head===false)throw new InvalidArgumentException('Cannot read uploaded file');
         if($ext==='pdf'&&!str_starts_with($head,'%PDF-'))throw new InvalidArgumentException('The file is not a PDF');
         if($ext==='docx') {
@@ -180,10 +219,11 @@ final class TourLibrary {
         if(!$r)throw new OutOfBoundsException('Tour program not found');return $r;
     }
     public static function publicProgram(array $r,bool $detail=true): array {
-        $days=json_decode($r['days_json']??'[]',true,512,JSON_THROW_ON_ERROR);$tags=json_decode($r['tags_json']??'[]',true,512,JSON_THROW_ON_ERROR);
+        $days=$detail||!isset($r['day_count'])?json_decode($r['days_json']??'[]',true,512,JSON_THROW_ON_ERROR):[];$tags=json_decode($r['tags_json']??'[]',true,512,JSON_THROW_ON_ERROR);
         $out=[];foreach(['title','destination','language','source_name','source_type','source_url','status','updated_at'] as $k)$out[$k]=$r[$k]??'';
-        $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=count($days);$out['has_source']=!empty($r['source_storage_path']);
-        if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';}
+        $out['id']=(int)$r['id'];$out['tags']=$tags;$out['day_count']=isset($r['day_count'])?(int)$r['day_count']:count($days);$out['has_source']=isset($r['has_source'])?(bool)$r['has_source']:!empty($r['source_storage_path']);
+        $out['has_document']=str_starts_with($r['source_text']??'',self::DOCUMENT_PREFIX);
+        if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text'] as $k)$out[$k]=$r[$k]??'';$out+=self::readDocumentSource($r['source_text']??'');$out['content_hash']=self::contentHash($r);}
         return $out;
     }
     public static function save(PDO $db,array $u,array $b,int $id=0): array {
@@ -195,6 +235,16 @@ final class TourLibrary {
             if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
             $before=$id?self::program($db,$company,$id,true):null;
             if($before&&$before['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');
+            if($before&&isset($b['expected_content_hash'])&&(!is_string($b['expected_content_hash'])||!hash_equals(self::contentHash($before),$b['expected_content_hash'])))throw new DomainException('This program changed in another window. Reopen it before saving. Your current document has not been overwritten.');
+            // Older clients updating metadata must not silently discard a Studio document.
+            if($before&&!array_key_exists('document',$b))$data+=array_intersect_key(self::readDocumentSource($before['source_text']),['document'=>true]);
+            $imageIds=FreeformDocument::imageIds($data['document']??['content'=>['type'=>'doc']]);if(count($imageIds)>80)throw new InvalidArgumentException('Use up to 80 document images');$imageBytes=0;
+            foreach($imageIds as $assetId){
+                Auth::requirePermission($db,$u,'media.view');
+                $asset=MediaLibrary::asset($db,$u,$assetId);
+                if($asset['status']==='ARCHIVED'||!empty($asset['quote_id']))throw new DomainException('Program images must be reusable media, not images belonging to another quote.');
+                $imageBytes+=(int)$asset['byte_size'];if($imageBytes>25165824)throw new InvalidArgumentException('Document images exceed 24 MB');
+            }
             $original=null;
             if($token!=='') {
                 $original=self::q($db,'SELECT * FROM tour_library_imports WHERE company_id=? AND user_id=? AND token_hash=? FOR UPDATE',[$company,$user,hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
@@ -206,7 +256,7 @@ final class TourLibrary {
                 foreach(['source_name','source_type','source_url'] as $k)$data[$k]=$before[$k];
             }
             $columns=['title','destination','language','tags_json','days_json','included_text','excluded_text','terms_text','source_text','source_name','source_type','source_url','status'];
-            $values=[];foreach($columns as $k)$values[]=$k==='tags_json'?self::json($data['tags']):($k==='days_json'?self::json($data['days']):$data[$k]);
+            $values=[];foreach($columns as $k)$values[]=$k==='tags_json'?self::json($data['tags']):($k==='days_json'?self::json($data['days']):($k==='source_text'?self::documentSource($data[$k],$data['document']??null):$data[$k]));
             if(!$id&&$key!==''){$columns[]='creation_key';$values[]=$key;$columns[]='creation_hash';$values[]=$digest;}
             if($original){foreach(['source_storage_path'=>'storage_path','source_mime'=>'mime_type','source_sha256'=>'source_sha256','source_size'=>'source_size'] as $k=>$from){$columns[]=$k;$values[]=$original[$from];}}
             if($id)self::q($db,'UPDATE tour_library_programs SET '.implode(',',array_map(fn($k)=>$k.'=?',$columns)).',updated_by=? WHERE company_id=? AND id=?',[...$values,$user,$company,$id]);
@@ -239,8 +289,15 @@ final class TourLibrary {
             $v=self::q($db,'SELECT v.*,q.company_id,q.status quote_status,q.quote_ref FROM quotes q JOIN quote_versions v ON v.quote_id=q.id AND v.version_no=q.current_version_no WHERE q.company_id=? AND q.id=? FOR UPDATE',[$company,$quote])->fetch(PDO::FETCH_ASSOC);
             if(!$v)throw new OutOfBoundsException('Target quote not found');$version=(int)$v['id'];
             self::assertEmptyDraft($v,(bool)self::q($db,'SELECT 1 FROM quote_cost_items WHERE quote_version_id=? LIMIT 1',[$version])->fetchColumn(),(bool)self::q($db,'SELECT 1 FROM quote_options WHERE quote_version_id=? LIMIT 1',[$version])->fetchColumn(),(bool)self::q($db,'SELECT 1 FROM quote_sent_bundles WHERE quote_version_id=? LIMIT 1',[$version])->fetchColumn());
-            $days=self::copyDays(json_decode($program['days_json'],true,512,JSON_THROW_ON_ERROR),$v['start_date'],$v['end_date']);
-            self::q($db,'UPDATE quote_versions SET tour_name=?,schedule_json=?,included_text=?,excluded_text=?,terms_text=?,document_language=? WHERE id=?',[$program['title'],self::json($days),$program['included_text'],$program['excluded_text'],$program['terms_text'],in_array($program['language'],['en','vi'],true)?$program['language']:'en',$version]);
+            $content=self::readDocumentSource($program['source_text']);$storedDays=json_decode($program['days_json'],true,512,JSON_THROW_ON_ERROR);
+            $days=$storedDays?self::copyDays($storedDays,$v['start_date'],$v['end_date']):[];
+            if(!$days&&empty($content['document']))throw new DomainException('The program has no editable content');
+            $proposal=$v['proposal_json'];
+            if(isset($content['document'])){
+                Auth::requirePermission($db,$u,'proposal.edit');$settings=QuoteProposal::settings([]);$settings['document']=$content['document'];$proposal=self::json($settings);$bytes=0;
+                foreach(FreeformDocument::imageIds($content['document']) as $order=>$assetId){Auth::requirePermission($db,$u,'media.view');$a=MediaLibrary::asset($db,$u,$assetId);if($a['status']==='ARCHIVED'||!empty($a['quote_id']))throw new DomainException('Review reusable document images first');$bytes+=(int)$a['byte_size'];if($bytes>25165824)throw new InvalidArgumentException('Document images exceed 24 MB');self::q($db,'INSERT INTO media_assignments(quote_version_id,asset_id,role,day_key,reference_key,caption,sort_order) VALUES(?,?,?,?,?,?,?)',[$version,$assetId,'SERVICE','','FREEFORM',$a['title'],$order]);}
+            }
+            self::q($db,'UPDATE quote_versions SET tour_name=?,schedule_json=?,included_text=?,excluded_text=?,terms_text=?,document_language=?,proposal_json=?,costing_revision=costing_revision+1 WHERE id=?',[$program['title'],self::json($days),$program['included_text'],$program['excluded_text'],$program['terms_text'],in_array($program['language'],['en','vi'],true)?$program['language']:'en',$proposal,$version]);
             $snapshot=self::publicProgram($program);$snapshot['source_sha256']=$program['source_sha256'];$snapshot['source_storage_path']=$program['source_storage_path'];$snapshot['source_mime']=$program['source_mime'];
             self::q($db,'INSERT INTO tour_library_quote_sources(company_id,quote_version_id,program_id,snapshot_json,created_by) VALUES(?,?,?,?,?)',[$company,$version,$id,self::json($snapshot),$user]);
             self::q($db,'UPDATE quotes SET updated_by=? WHERE company_id=? AND id=?',[$user,$company,$quote]);
@@ -255,6 +312,8 @@ final class TourLibrary {
     public static function handle(string $route,string $method,PDO $db,array $config,array $u): void {
         if($route!=='tour-library'&&!str_starts_with($route,'tour-library/'))return;
         try {
+            if($route==='tour-library/document-import'&&$method==='POST'){self::permission($db,$u,true);Http::json(['ok'=>true]+FreeformDocument::upload($_FILES['file']??[]));}
+            if($route==='tour-library/prepare-document'&&$method==='POST'){self::permission($db,$u,true);$body=Http::body();if(!is_array($body['document']??null))throw new InvalidArgumentException('Document required');Http::json(['ok'=>true,'document'=>self::reusableDocument($db,$config,$u,$body['document'])]);}
             if($route==='tour-library/preview'&&$method==='POST'){self::permission($db,$u,true);$b=isset($_FILES['file'])?$_POST:Http::body();Http::json(['ok'=>true]+self::preview($db,$config,$u,$b,$_FILES['file']??null));}
             if($route==='tour-library'&&$method==='GET') {
                 self::permission($db,$u);$limit=filter_var($_GET['limit']??100,FILTER_VALIDATE_INT);$offset=filter_var($_GET['offset']??0,FILTER_VALIDATE_INT);
@@ -264,14 +323,22 @@ final class TourLibrary {
                 if($status!=='ALL'){$where.=' AND status=?';$args[]=$status;}
                 $search=self::text($_GET['q']??'',190,'search');if($search!==''){$where.=' AND (title LIKE ? OR destination LIKE ?)';$args[]='%'.$search.'%';$args[]='%'.$search.'%';}
                 $total=(int)self::q($db,'SELECT COUNT(*) FROM tour_library_programs WHERE '.$where,$args)->fetchColumn();
-                $rows=self::q($db,'SELECT * FROM tour_library_programs WHERE '.$where.' ORDER BY updated_at DESC,id DESC LIMIT '.(int)$limit.' OFFSET '.(int)$offset,$args)->fetchAll(PDO::FETCH_ASSOC);
+                $columns='id,title,destination,language,source_name,source_type,source_url,status,updated_at,tags_json,JSON_LENGTH(days_json) day_count,(source_storage_path IS NOT NULL AND source_storage_path<>\'\') has_source,LEFT(source_text,'.strlen(self::DOCUMENT_PREFIX).') source_text';
+                $rows=self::q($db,'SELECT '.$columns.' FROM tour_library_programs WHERE '.$where.' ORDER BY updated_at DESC,id DESC LIMIT '.(int)$limit.' OFFSET '.(int)$offset,$args)->fetchAll(PDO::FETCH_ASSOC);
                 Http::json(['ok'=>true,'items'=>array_map(fn($r)=>self::publicProgram($r,false),$rows),'total'=>$total,'limit'=>$limit,'offset'=>$offset]);
             }
             if($route==='tour-library'&&$method==='POST'){self::permission($db,$u,true);Http::json(['ok'=>true]+self::save($db,$u,Http::body()),201);}
-            if(preg_match('#^tour-library/(\d+)(?:/(archive|source|copy-to-quote))?$#D',$route,$m)) {
+            if(preg_match('#^tour-library/(\d+)(?:/(archive|source|copy-to-quote|html|docx|pdf))?$#D',$route,$m)) {
                 $id=(int)$m[1];$action=$m[2]??'';$company=(int)$u['company_id'];
                 if($action===''&&$method==='GET'){self::permission($db,$u);Http::json(['ok'=>true,'program'=>self::publicProgram(self::program($db,$company,$id))]);}
                 if($action===''&&$method==='PUT'){self::permission($db,$u,true);Http::json(['ok'=>true]+self::save($db,$u,Http::body(),$id));}
+                if(in_array($action,['html','docx','pdf'],true)&&$method==='GET'){
+                    self::permission($db,$u);$p=self::publicProgram(self::program($db,$company,$id));
+                    if(empty($p['document']))throw new DomainException('Open and save this program in Studio before exporting.');
+                    $media=[];$assets=[];foreach(FreeformDocument::imageIds($p['document']) as $assetId){Auth::requirePermission($db,$u,'media.view');$a=MediaLibrary::asset($db,$u,$assetId);if($a['status']==='ARCHIVED')throw new DomainException('A document image was archived. Review before exporting.');$assets[$assetId]=$a;$media[]=['asset_id'=>$assetId,'width'=>(int)$a['width'],'height'=>(int)$a['height']];}
+                    $snapshot=['quote_ref'=>'PROGRAM-'.$id,'tour_name'=>$p['title'],'presentation'=>['settings'=>['document'=>$p['document']],'media'=>$media]];
+                    ProposalOutput::respond($action,$snapshot,$config,fn($asset)=>'index.php?route=media/'.$asset.'/image',fn($asset)=>MediaLibrary::path($config,$assets[$asset]),true);
+                }
                 if($action==='archive'&&$method==='POST'){self::permission($db,$u,true);$before=self::program($db,$company,$id);self::q($db,"UPDATE tour_library_programs SET status='ARCHIVED',updated_by=? WHERE company_id=? AND id=?",[(int)$u['id'],$company,$id]);Audit::log($db,$company,(int)$u['id'],'TOUR_LIBRARY_ARCHIVED','tour_library',$id,['status'=>$before['status']],['status'=>'ARCHIVED']);Http::json(['ok'=>true,'id'=>$id]);}
                 if($action==='source'&&$method==='GET'){self::permission($db,$u);$p=self::program($db,$company,$id);if(empty($p['source_storage_path']))throw new OutOfBoundsException('Original file is not available');Storage::stream($config,['storage_driver'=>'LOCAL','storage_path'=>$p['source_storage_path'],'mime_type'=>$p['source_mime'],'original_filename'=>$p['source_name']]);}
                 if($action==='copy-to-quote'&&$method==='POST'){self::permission($db,$u);Auth::requirePermission($db,$u,'quote.edit');$b=Http::body();$quote=filter_var($b['quote_id']??null,FILTER_VALIDATE_INT);if($quote===false||$quote===null||$quote<1)throw new InvalidArgumentException('Select a target draft quote');Http::json(['ok'=>true]+self::copyToQuote($db,$u,$id,$quote));}
