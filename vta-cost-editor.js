@@ -188,6 +188,44 @@
         '<div class="vta-option-stays">'+stays.map(r=>optionStay(r,p,i)).join('')+'</div>' +
         '</article>';
     }
+    // Read-only private pax-group matrix. Scenario math and resource counts remain server-owned.
+    async function loadGroupMatrix() {
+      const target=host.querySelector('[data-pax-matrix-body]');
+      if(!target)return;
+      const requested=ids();
+      const initial=[2,4,6,8,10,12,16].map(n=>String(n));
+      try {
+        const matrix=await api.request(base+'/price-matrix');
+        if(!target.isConnected)return;
+        const source=(matrix.cells||[]).filter(c=>c.result?.mode==='PRIVATE');
+        const configured=(matrix.config?.bands||[]).map(b=>b.min===b.max?String(b.min):String(b.min)+'–'+String(b.max));
+        const bands=[...new Set([...configured,...source.map(c=>String(c.band_key))])];
+        const list=bands.length?bands:initial;
+        const selectCell=(band,variant)=>source.filter(c=>
+          String(c.band_key)===String(band) && Number(c.variant_id)===Number(variant))
+          .sort((a,b)=>['B2B_AGENT','B2C_DIRECT'].indexOf(a.channel)-['B2B_AGENT','B2C_DIRECT'].indexOf(b.channel))[0];
+        const rows=list.sort((a,b)=>(parseInt(a,10)||0)-(parseInt(b,10)||0));
+        target.innerHTML=rows.map(band=>'<div class="vta-group-row">' +
+          '<div class="vta-group-size"><b>'+escapeHTML(band)+'</b><small>paying pax / group</small></div>' +
+          requested.map(id=>{
+            const cell=selectCell(band,id),scenarios=cell?.result?.scenarios||[];
+            const cost=scenarios[0]?.pricing?.cost_per_paying_pax_vnd;
+            const valid=cost!==undefined&&cost!==null&&cost!=='';
+            return '<div class="vta-group-value"><strong>'+ (valid?money(cost):'—') +'</strong>' +
+              '<small>'+ (cell?escapeHTML(cell.channel||'Private')+' · '+escapeHTML(cell.status||'Review required'):'Chưa có kịch bản')+'</small></div>';
+          }).join('')+'</div>').join('');
+        const note=host.querySelector('[data-group-status]');
+        if(note)note.textContent=source.length?'Dữ liệu Pricing Matrix hiện có · rà soát trạng thái từng kịch bản trước báo giá':
+          'Chưa tạo Pricing Matrix cho Private Tour. Hãy cấu hình từng nhóm khách trong phần Price.';
+      }catch(_error){
+        if(!target.isConnected)return;
+        target.innerHTML=initial.map(n=>'<div class="vta-group-row">' +
+          '<div class="vta-group-size"><b>'+n+'</b><small>paying pax / group</small></div>' +
+          requested.map(()=>'<div class="vta-group-value"><strong>—</strong><small>Chưa có giá xác nhận</small></div>').join('') + '</div>').join('');
+        const note=host.querySelector('[data-group-status]');
+        if(note)note.textContent='Chưa truy cập được Pricing Matrix. Không sử dụng giá từ quy mô nhóm hiện tại để ngoại suy.';
+      }
+    }
     function render() {
       packages=getPackages();
       const rows=visible(),common=rows.filter(r=>!isStay(r)),stays=rows.filter(isStay);
@@ -220,6 +258,16 @@
         '</label><small>Guest composition is managed in Info. FOC costs stay included; cost/pax uses Paying Pax.</small></div>' +
         '<div class="vta-summary-title"><span>Three live costing options</span><small>All costs are calculated by the server · VND</small></div>' +
         '<div class="vta-cost-summaries">' + packages.map(buildSummary).join('') + '</div>' +
+        '<section class="vta-cost-section vta-private-groups" data-private-groups>' +
+        '<header><div><small class="vta-group-label">PRIVATE TOUR · GROUP SIZE COMPARISON</small>' +
+        '<h2>Tour riêng theo từng nhóm khách</h2><p>So sánh chi phí mỗi khách theo số lượng người trả tiền</p></div>' +
+        '<button type="button" class="btn" data-open-group-price>Mở Price →</button></header>' +
+        '<div class="vta-group-columns"><span>Nhóm khách</span>' +
+        packages.map((p,i)=>'<span>Option '+String.fromCharCode(65+i)+' · H'+escapeHTML(parseInt(p.hotel_level,10))+'★ / C'+escapeHTML(p.cruise_level??'—')+'★</span>').join('')+'</div>' +
+        '<div class="vta-group-data" data-pax-matrix-body role="status">Đang tải báo giá theo quy mô đoàn…</div>' +
+        '<p class="vta-group-footnote">Chỉ hiển thị chi phí do Pricing Matrix tính trên dữ liệu đã lưu. Chưa có kịch bản thì để trống, không tự suy diễn giá xe/guide hoặc tỷ lệ FOC. Đơn vị: VND / paying pax.</p>' +
+        '<p class="vta-group-status" data-group-status role="status"></p>' +
+        '</section>' +
         '<div class="vta-add-bar">' +
         (edit?selectHTML(options,'HOTEL','data-new-service aria-label="Service to add"') +
           '<button type="button" class="btn primary" data-add>+ Add Service</button>':'') +
@@ -237,6 +285,7 @@
         'Missing supplier rates remain unresolved, never zero. Supplier approval and pricing validation are enforced by the server.</p>' +
         '</div>';
       bind();
+      loadGroupMatrix();
     }
     function saveRate(row, index) {
       const r=context.requirements.find(x=>String(x.id)===row.dataset.vtaRow),p=packages[index],
@@ -300,6 +349,7 @@
       };
     }
     function bind() {
+      host.querySelector('[data-open-group-price]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
       host.querySelector('[data-sales]').onclick=()=>navigate('sales-list',{salesTab:'quotes'});
       host.querySelector('[data-info]').onclick=()=>{
         if(typeof env.modal!=='function')return;

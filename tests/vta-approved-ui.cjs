@@ -15,11 +15,16 @@ assert(sw.includes("const CACHE='vta-RC62-APPROVED1'"),'PWA cache version change
 assert(sw.includes("'./vta-approved-ui.css?v=APPROVED1'"),'PWA precaches approved stylesheet');
 assert(sw.includes("'./vta-cost-editor.js?v=RC6-APPROVED-1'"),'PWA precaches new costing code');
 for(const feature of ['data-vta-option-stay','data-option-rate','data-option-property','data-mix-hotel','data-mix-cruise','vta-advanced-stays','data-vta-summary','data-add','data-remove','data-undo','data-vta-status'])assert(js.includes(feature),'preserve '+feature);
+assert(js.includes("base+'/price-matrix'"),'pax groups use server pricing matrix');
+assert(js.includes('data-private-groups'),'private tour groups always visible');
+assert(js.includes('Chưa có giá xác nhận'),'unknown private group costs must remain missing');
+assert(js.includes('cost_per_paying_pax_vnd'),'server cost per paying pax is displayed');
 assert(js.includes('supplier_id:Number(supplier)'),'supplier identity required');
 assert(js.includes('manual_contract:{evidence:reason,tax_basis:'),'supplier evidence required');
 assert(js.includes('expected_revision:revision'),'protect concurrent edits');
 assert(!js.includes('localStorage'),'rates never persisted in localStorage');
 assert(css.includes('.vta-approved-cost'),'screen styling is scoped');
+assert(css.includes('.vta-group-row'),'private group responsive matrix present');
 assert(css.includes('.vtps .vtps-paper'),'itinerary paper styling');
 assert(css.includes('@media screen and (max-width:430px)'),'phone breakpoint');
 assert(!css.includes('@media print'),'does not alter printed exports');

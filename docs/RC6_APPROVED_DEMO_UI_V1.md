@@ -28,3 +28,10 @@ Not deployed. No changes to backend prices, approval rules, supplier data, API e
 ### Known limitations
 - Hotel class remains per OPTION across destinations; per-destination mixed-star hotels require a domain/schema change.
 - This is a first integrated UI implementation, not a browser-verified staging build. Keep PR as **Draft** until VTA owner signs off.
+
+## Private Tour — theo quy mô đoàn (increment #42)
+- Bổ sung bảng nhóm khách Private 2, 4, 6, 8, 10, 12, 16 PAX dưới 3 thẻ Option A/B/C.
+- Nhóm đã cấu hình trong VS2.3 Pricing Matrix được hiển thị đúng pax band/option đã lưu, lấy `cost_per_paying_pax_vnd` từ server.
+- Không tự tạo các giả định chi phí xe, hướng dẫn, FOC, markup hoặc giá bán cho nhóm chưa lập kịch bản.
+- Không gọi mutate API từ phần hiển thị; mở Price để cấu hình Review/Generate Matrix.
+- Kiểm thử staging bắt buộc: band theo nhóm (ví dụ 2/4/6/8/10/12/16), mix Hotel/Cruise, dữ liệu thiếu, trạng thái review, thay PAX và Cost/Price đồng bộ.

@@ -163,3 +163,29 @@
  .vta-approved-cost .vta-add-bar select{flex:1}
  .vta-approved-cost .vta-mix-selectors select{font-size:11px}
 }
+
+@media screen {
+.vta-approved-cost .vta-private-groups{margin-top:16px}
+.vta-approved-cost .vta-private-groups>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px}
+.vta-approved-cost .vta-private-groups h2{font-size:16px;margin:4px 0;color:#183d46}
+.vta-approved-cost .vta-private-groups>header p{font-size:11px;color:#67838e;margin:5px 0 0}
+.vta-approved-cost .vta-group-label{letter-spacing:1px;color:#078676;font-size:10px;font-weight:850}
+.vta-approved-cost .vta-private-groups [data-open-group-price]{white-space:nowrap;border-color:#a6d6cc;color:#087567}
+.vta-approved-cost .vta-group-columns,.vta-approved-cost .vta-group-row{display:grid;grid-template-columns:minmax(110px,.7fr) repeat(3,minmax(0,1fr));gap:10px;align-items:center}
+.vta-approved-cost .vta-group-columns{padding:11px 14px;background:#f2f7f8;font-size:10px;font-weight:800;color:#5b7888}
+.vta-approved-cost .vta-group-row{padding:12px 14px;border-top:1px solid #eaf0f2}
+.vta-approved-cost .vta-group-row:hover{background:#f8fcfa}
+.vta-approved-cost .vta-group-size b{font-size:13px;font-variant-numeric:tabular-nums;color:#123b4f}
+.vta-approved-cost .vta-group-size small,.vta-approved-cost .vta-group-value small{display:block;font-size:10px;color:#7c8b94;line-height:1.6;overflow-wrap:anywhere}
+.vta-approved-cost .vta-group-value{min-width:0}
+.vta-approved-cost .vta-group-value strong{font-size:15px;color:#08766b;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.vta-approved-cost .vta-group-footnote,.vta-approved-cost .vta-group-status{font-size:10px;color:#627e8e;margin:10px 14px;line-height:1.7}
+}
+@media screen and (max-width:800px){
+.vta-approved-cost .vta-group-columns{display:none}
+.vta-approved-cost .vta-group-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;padding:13px;border-top:1px solid #eaf0f2}
+.vta-approved-cost .vta-group-size{grid-column:1/-1}
+.vta-approved-cost .vta-group-value{padding:7px 8px;background:#f5faf8;border-radius:7px}
+.vta-approved-cost .vta-group-value strong{font-size:13px}
+.vta-approved-cost .vta-group-value small{font-size:9px}
+}
