@@ -9,12 +9,13 @@ const preview = fs.readFileSync(root + '/preview.html', 'utf8');
 const editor = fs.readFileSync(root + '/document-editor.js', 'utf8');
 const studio = fs.readFileSync(root + '/tour-proposal-studio.js', 'utf8');
 const sales = fs.readFileSync(root + '/workspace-centers.js', 'utf8');
+const marketing = fs.readFileSync(root + '/marketing-studio.js', 'utf8');
 const sw = fs.readFileSync(root + '/service-worker.js', 'utf8');
 const sandbox = {window: {}};
 vm.runInNewContext(script, sandbox, {filename:'vta-plus-assist.js'});
 const assist = sandbox.window.VTAPlusAssist;
 assert.equal(typeof assist.open, 'function');
-for (const mode of ['itinerary','sales','document']) {
+for (const mode of ['itinerary','sales','document','marketing','marketing-base']) {
   const prompt = assist.buildPrompt(mode);
   assert.ok(prompt.includes('Vietnam Travel Advisor'));
   assert.ok(prompt.includes('[') && prompt.length > 100);
@@ -22,11 +23,18 @@ for (const mode of ['itinerary','sales','document']) {
 }
 assert.equal(assist.buildPrompt('unknown'), assist.buildPrompt('itinerary'));
 assert.match(assist.buildPrompt('sales'), /B2B/);
+assert.match(assist.buildPrompt('marketing'), /Facebook/);
+assert.match(assist.buildPrompt('marketing-base'), /ONE polished/);
+assert.ok(assist.buildPrompt('marketing').includes('\n'),'Marketing prompt is readable multiline text');
+assert.ok(assist.buildPrompt('marketing-base').includes('\n'),'Marketing base prompt is readable multiline text');
 assert.match(script, /window\.open\(CHATGPT_URL/);
 assert.doesNotMatch(script, /fetch\s*\(|localStorage|sessionStorage|api\.request\s*\(/);
 assert.match(editor, /btn\('plus','ChatGPT Plus'\)/);
 assert.match(studio, /data-action="plus"/);
 assert.match(sales, /ChatGPT Plus/);
+assert.match(marketing,/plus-marketing/);
+assert.match(marketing,/data-plus-compose/);
+assert.match(marketing,/marketing-base/);
 for (const page of [markup, preview]) {
   assert.match(page, /vta-plus-assist\.js\?v=PLUS1/);
   assert.match(page, /vta-plus-assist\.css\?v=PLUS1/);
