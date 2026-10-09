@@ -75,10 +75,8 @@ window.VTATourProposalStudio={
     toast('Đã lưu bản mẫu độc lập vào Template Center.');
    }catch(e){toast(e?.message||'Không lưu được mẫu.',true);}finally{pending=false;}
   }
-  function pasteFromChatGPT(){
-   if(!canEdit)return;
-   const content=window.prompt('Dán lịch trình từ ChatGPT (Day 1 / Ngày 1 ...) để thêm vào bản nháp.');
-   if(!content||!content.trim())return;
+  function pasteFromChatGPT(content){
+   if(!canEdit||typeof content!=='string'||!content.trim())return;
    read();
    const source=content.replace(/\r\n?/g,'\n');
    const matches=[...source.matchAll(/^(?:day|ngày)\s*0*\d{1,3}\s*[:.\-–—]?\s*([^\n]*)/gim)];
@@ -90,6 +88,15 @@ window.VTATourProposalStudio={
     }
    }else{p.overview=[p.overview,source.trim()].filter(Boolean).join('\n\n');}
    screen();toast(matches.length?'Đã thêm '+matches.length+' ngày; hãy kiểm tra lại nội dung.':'Đã thêm văn bản vào Tour Overview.');
+  }
+  function openPasteDialog(){
+   if(!canEdit||preview)return;
+   const backdrop=document.createElement('div');
+   backdrop.className='vtps-paste-backdrop';
+   backdrop.setAttribute('role','presentation');
+   backdrop.innerHTML='<div class="vtps-paste-dialog" role="dialog" aria-modal="true" aria-label="Dán chương trình từ ChatGPT"><h3>Dán chương trình từ ChatGPT</h3><p>Dán toàn bộ nội dung vào ô dưới đây. Chúng tôi nhận diện các dòng Day 1 / Ngày 1; nếu không có, nội dung sẽ được thêm vào Tour Overview. Không thay đổi bảng giá.</p><textarea data-vtps-paste-text rows="12" placeholder="Day 1: Arrival in Hanoi\nAirport transfer...\nDay 2: Ha Long Bay..."></textarea><div class="vtps-paste-actions"><button data-action="paste-cancel">Hủy</button><button data-action="paste-apply" class="vtps-save">Thêm vào chương trình</button></div></div>';
+   container.appendChild(backdrop);
+   backdrop.querySelector('textarea').focus();
   }
   function addDay(){
    if(current.days.length>=90){toast('Tối đa 90 ngày tour.',true);return;}
@@ -115,7 +122,28 @@ window.VTATourProposalStudio={
    finally{pending=false;}
   }
   screen();
-  container.addEventListener('input',e=>{if(container.querySelector('[data-vtps-state]'))container.querySelector('[data-vtps-state]').textContent='Chưa lưu thay đổi';},{signal:controller.signal});
+  container.addEventListener('input',e=>{
+   const state=container.querySelector('[data-vtps-state]');
+   if(state&&!preview&&canEdit)state.textContent='Chưa lưu thay đổi';
+   const dayNode=e.target.closest('[data-day-index]');
+   if(dayNode){
+    const index=Number(dayNode.dataset.dayIndex);
+    const key=e.target.dataset.dayField;
+    const column={title:1,meals:2,overnight:3}[key];
+    if(column!==undefined){
+     const row=container.querySelectorAll('#vtps-summary tbody tr')[index];
+     if(row)row.children[column].textContent=e.target.hasAttribute('contenteditable')?(e.target.innerText??e.target.textContent??''):e.target.value;
+    }
+   }
+   if(e.target.closest('[data-private-row]')){
+    const bands=[...container.querySelectorAll('[data-private-row]')].map(row=>{
+     const v=k=>row.querySelector('[data-field="'+k+'"]').value;
+     return {min:v('min'),max:v('max'),three:v('three'),four:v('four'),five:v('five')};
+    });
+    const warning=container.querySelector('[data-pricing-warnings]');
+    if(warning)warning.textContent=validatePrices(bands).join(' ');
+   }
+  },{signal:controller.signal});
   container.addEventListener('click',async e=>{
    const scroll=e.target.closest('[data-scroll]');if(scroll){container.querySelector('#'+scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});return;}
    const b=e.target.closest('button');if(!b||!container.contains(b)||b.disabled)return;
@@ -123,7 +151,9 @@ window.VTATourProposalStudio={
    if(b.dataset.action==='save'){await save();return;}
    if(b.dataset.action==='save-template'){await saveAsTemplate();return;}
    if(b.dataset.action==='import'){if(!confirm('Chuyển sang nhập Word/PDF? Các thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');if(onImport)await onImport();return;}
-   if(b.dataset.action==='paste'){pasteFromChatGPT();return;}
+   if(b.dataset.action==='paste'){openPasteDialog();return;}
+   if(b.dataset.action==='paste-cancel'){b.closest('.vtps-paste-backdrop')?.remove();return;}
+   if(b.dataset.action==='paste-apply'){const dialog=b.closest('.vtps-paste-backdrop');const pasted=dialog?.querySelector('[data-vtps-paste-text]')?.value||'';if(!pasted.trim()){toast('Hãy dán nội dung chương trình trước.',true);return;}pasteFromChatGPT(pasted);return;}
    if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');await onBack();return;}
    if(b.dataset.action==='preview'){read();preview=!preview;screen();return;}
    if(b.dataset.mode){if(!preview)read();displayMode=b.dataset.mode;screen();return;}
