@@ -69,3 +69,14 @@
 .vtps .vtps-paper{min-width:0}
 .vtps .vtps-paper table{max-width:100%}
 @media(max-width:720px){.vtps .vtps-top-actions{width:100%}.vtps .vtps-top-actions button{flex:1 1 auto}.vtps .vtps-paper{overflow-x:auto;max-width:100%}.vtps .vtps-paper table{min-width:480px}.vtps .vtps-modes{gap:6px}.vtps .vtps-modes button{flex:1 1 auto}}
+
+/* Multiline ChatGPT paste dialog — part of approved VTA Studio interaction */
+.vtps-paste-backdrop{position:fixed;inset:0;z-index:12000;background:#0b233f99;display:flex;align-items:center;justify-content:center;padding:18px}
+.vtps-paste-dialog{width:min(740px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:#fff;border-radius:14px;box-shadow:0 24px 75px #0003;padding:26px}
+.vtps-paste-dialog h3{font-size:19px!important;font-weight:750!important;color:#0a2854!important;margin:0 0 10px!important;border:0!important}
+.vtps-paste-dialog p{font-size:13px;line-height:1.65;color:#516c81;margin:0 0 13px}
+.vtps-paste-dialog textarea{width:100%;height:min(44vh,360px);font-size:13px;white-space:pre-wrap;resize:vertical}
+.vtps-paste-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:14px}
+.vtps-paste-actions button{border:1px solid #dae5ef;padding:10px 15px;background:#fff;color:#12385a;font-size:12px;font-weight:700}
+.vtps-paste-actions .vtps-save{background:#0a2854;border-color:#0a2854;color:#fff}
+@media(max-width:540px){.vtps-paste-dialog{padding:17px}.vtps-paste-actions button{flex:1 1 0;padding:10px 7px}}
