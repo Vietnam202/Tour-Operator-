@@ -24,7 +24,7 @@ assert.equal(assist.buildPrompt('unknown'), assist.buildPrompt('itinerary'));
 assert.match(assist.buildPrompt('sales'), /B2B/);
 assert.match(script, /window\.open\(CHATGPT_URL/);
 assert.doesNotMatch(script, /fetch\s*\(|localStorage|sessionStorage|api\.request\s*\(/);
-assert.match(editor, /data-wd.*plus/);
+assert.match(editor, /btn\('plus','ChatGPT Plus'\)/);
 assert.match(studio, /data-action="plus"/);
 assert.match(sales, /ChatGPT Plus/);
 for (const page of [markup, preview]) {
