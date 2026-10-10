@@ -45,12 +45,12 @@ async function render(){
 }
 async function library(){
  if(!selectedAgency&&!portal.admin){shell('Tour Library','Published VTA itineraries',noAgency());return;}
- if(view?.type==='library'){const detail=await request('b2b/tours/'+view.id);return tourDetail(detail.publication);}
- const r=await request('b2b/tours');tours=r.items||[];
+ if(view?.type==='library'){const detail=await request('b2b/tours/'+view.id+'?agency_id='+selectedAgency);return tourDetail(detail.publication);}
+ const r=await request('b2b/tours?agency_id='+selectedAgency);tours=r.items||[];
  shell('Tour Library','Browse approved Master Tours published from VTA Template Builder V5',
  '<div class="hub-toolbar"><label class="hub-label">Search<input id="tourSearch" type="search" placeholder="Tour name or destination"></label>'+agencyFilter()+'</div><div class="hub-grid" id="tourCards"></div>');
  const draw=()=>{const q=(app.querySelector('#tourSearch')?.value||'').toLocaleLowerCase();app.querySelector('#tourCards').innerHTML=tours.filter(x=>(x.title+' '+x.destination).toLocaleLowerCase().includes(q)).map(t=>'<article class="hub-card"><div class="visual">VIETNAM TOUR</div><h3>'+esc(t.title)+'</h3><p>'+esc(t.destination)+' · '+t.days+' days</p><div><span class="hub-pill">'+esc(t.tour_type)+'</span> <span class="hub-pill '+(t.has_approved_net?'ok':'warn')+'">'+(t.has_approved_net?'Approved NET':'NET on request')+'</span></div><div class="actions"><button class="hub-btn primary" data-open="'+t.id+'">View & Customize</button></div></article>').join('')||'<div class="hub-empty">No published tour matches your search.</div>';app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{view={type:'library',id:Number(b.dataset.open)};render();});};
- app.querySelector('#tourSearch').oninput=draw;app.querySelector('#hubAgency').onchange=e=>{selectedAgency=Number(e.target.value);};draw();
+ app.querySelector('#tourSearch').oninput=draw;app.querySelector('#hubAgency').onchange=e=>{selectedAgency=Number(e.target.value);view=null;render();};draw();
 }
 function dayMarkup(day,i,editable){
  return '<section class="day" data-day="'+i+'"><h2>Day '+(i+1)+' – <span class="hub-editable" data-day-title contenteditable="'+editable+'">'+esc(day.title)+'</span></h2><p class="hub-editable" data-day-description contenteditable="'+editable+'">'+esc(day.description)+'</p><small>Meals: <span class="hub-editable" data-day-meals contenteditable="'+editable+'">'+esc(day.meals)+'</span> · Overnight: <span class="hub-editable" data-day-overnight contenteditable="'+editable+'">'+esc(day.overnight)+'</span></small>'+(editable?'<div><button class="hub-btn" data-remove-day="'+i+'">Remove day</button></div>':'')+'</section>';
