@@ -1,0 +1,59 @@
+name: RC6 Smart Cost direct-edit checks
+on:
+  pull_request:
+    branches:
+      - 'codex/Vietnam/rc62-vta-proposal-studio-v5'
+    paths:
+      - 'vta-cost-editor.js'
+      - 'vta-cost-editor.css'
+      - 'cost-sheet.js'
+      - 'api/lib/QuoteVs2.php'
+      - 'index.html'
+      - 'service-worker.js'
+      - 'tests/vta-cost-editor-ui.cjs'
+      - 'tests/rc6-smart-cost-native.php'
+      - 'docs/RC6_SMART_COST_UAT_VI.md'
+      - '.github/workflows/cost-editor.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cost-editor:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: rc6-disposable-integration-only
+        ports:
+          - 33317:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated UI test dependencies
+        run: npm ci --prefix tests
+      - name: Parse JavaScript and PHP
+        run: |
+          node --check vta-cost-editor.js
+          node --check cost-sheet.js
+          node --check tests/vta-cost-editor-ui.cjs
+          php -l api/lib/QuoteVs2.php
+      - name: Direct cost editor and backwards-compatibility tests
+        run: |
+          node tests/vta-cost-editor-ui.cjs
+          node tests/document-cost-ui.cjs
+          node tests/vs21-ui.cjs
+      - name: Install MariaDB PHP driver
+        run: |
+          php -m | grep -qi pdo_mysql || (sudo apt-get update -qq && sudo apt-get install -y php-mysql)
+      - name: Disposable MariaDB backend acceptance
+        env:
+          VTA_TEST_DB_PASSWORD: rc6-disposable-integration-only
+        run: |
+          php -l tests/rc6-smart-cost-native.php
+          php tests/rc6-smart-cost-native.php
