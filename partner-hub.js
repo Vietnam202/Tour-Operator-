@@ -2,7 +2,7 @@
 const app=document.getElementById('hub'), account=document.getElementById('account'),logout=document.getElementById('logout');
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>JSON.parse(JSON.stringify(x));
-let user=null,portal=null,tab=['library','my','agency','admin','requests'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
+let user=null,portal=null,tab=['library','my','agency','admin','net','requests'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
 const status=(msg,error=false)=>{const el=document.querySelector('[data-hub-status]');if(el){el.textContent=msg;el.className='hub-status '+(error?'error':'success');}else if(error)alert(msg);};
 async function request(route,opt={}){
  const method=opt.method||'GET',headers={'Accept':'application/json'};let body;
@@ -15,7 +15,7 @@ async function request(route,opt={}){
  return data;
 }
 function shell(title,description,content){
- const options=[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],...(portal?.admin?[['admin','VTA Publishing'],['requests','Booking Requests']]:[])];
+ const options=[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],...(portal?.admin?[['admin','VTA Publishing'],['net','NET Requests'],['requests','Booking Requests']]:[])];
  app.innerHTML='<header class="hub-intro"><div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div></header><nav class="hub-tabs" aria-label="Partner workspace">'+options.map(([k,n])=>'<button data-tab="'+k+'" class="'+(tab===k?'current':'')+'">'+esc(n)+'</button>').join('')+'</nav>'+content+'<p data-hub-status class="hub-status" role="status"></p>';
  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;draft=null;activeQuote=null;render();});
 }
@@ -40,6 +40,7 @@ async function render(){
  if(tab==='agency')return await agencyScreen();
  if(tab==='admin'&&portal.admin)return await adminScreen();
  if(tab==='requests'&&portal.admin)return await requestsScreen();
+ if(tab==='net'&&portal.admin)return await netRequestsScreen();
  tab='library';await library();
  }catch(e){shell('Workspace unavailable','Please check your connection','<div class="hub-box"><p class="hub-status error">'+esc(e.message)+'</p><button class="hub-btn" id="hubRetry">Retry</button></div>');app.querySelector('#hubRetry').onclick=render;}
 }
@@ -166,6 +167,13 @@ async function adminScreen(){
  app.querySelector('#agencyCreate').onsubmit=async e=>{e.preventDefault();try{await request('b2b/admin/agencies',{method:'POST',body:Object.fromEntries(new FormData(e.target).entries())});portal=await request('b2b/me');status('Agency created');setTimeout(render,700);}catch(e){status(e.message,true);}};
  app.querySelector('#memberForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.target).entries());await request('b2b/admin/agencies/'+Number(b.agency_id)+'/members',{method:'POST',body:{user_id:Number(b.user_id)}});status('Agency member assigned');}catch(e){status(e.message,true);}};
  app.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{if(!confirm('Revoke this published version? Existing agency drafts retain their historical snapshots but cannot quote or book.'))return;try{await request('b2b/admin/publications/'+Number(b.dataset.revoke)+'/revoke',{method:'POST',body:{}});render();}catch(e){status(e.message,true);}});
+}
+async function netRequestsScreen(){
+ const r=await request('b2b/net-requests');
+ const rows=(r.items||[]).map(t=>'<tr><td>#'+t.id+'</td><td>'+t.agency_id+'</td><td>'+esc(t.departure_date)+'</td><td>'+Number(t.paying_pax)+' + '+Number(t.foc_pax)+' FOC</td><td>'+esc(t.mode)+' · H'+esc(t.hotel_level)+'★ · C'+esc(t.cruise_level||'-')+'</td><td>'+esc(t.status)+'</td><td>'+(t.status==='CLOSED'?'Closed':'<button class="hub-btn" data-net="'+t.id+'">Mark In Review</button>')+'</td></tr>').join('');
+ shell('NET Requests','Sales B2B queue · Approved NET must originate from reviewed quotations',
+ '<div class="hub-box"><div style="overflow:auto"><table class="hub-table"><thead><tr><th>ID</th><th>Agency</th><th>Departure</th><th>PAX</th><th>Options</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>');
+ app.querySelectorAll('[data-net]').forEach(b=>b.onclick=async()=>{try{await request('b2b/admin/net-requests/'+b.dataset.net+'/status',{method:'POST',body:{status:'IN_REVIEW'}});await netRequestsScreen();status('Request marked In Review');}catch(e){status(e.message,true);}});
 }
 async function requestsScreen(){
  const r=await request('b2b/admin/requests');
