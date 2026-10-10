@@ -340,6 +340,43 @@ final class PartnerHub {
                     Http::json(['ok'=>true,'id'=>$id,'status'=>'REQUESTED','message'=>'Awaiting VTA Operations confirmation'],201);
                 }
             }
+            if($route==='b2b/net-requests'&&$method==='POST'){
+                $b=Http::body();
+                $work=self::working($db,$u,self::id($b['partner_tour_id']??0));
+                $agency=self::agency($db,$u,(int)$work['agency_id']);
+                $pub=self::q($db,'SELECT * FROM b2b_publications WHERE company_id=? AND id=?',[$company,$work['publication_id']])->fetch(PDO::FETCH_ASSOC);
+                if(!$pub||$pub['status']!=='PUBLISHED')throw new DomainException('Publication unavailable');
+                self::allowPublication($db,$u,$pub,(int)$agency['id']);
+                $date=self::field((string)($b['departure_date']??''),10);
+                if(!preg_match('/^20\d\d-\d\d-\d\d$/D',$date)||!checkdate((int)substr($date,5,2),(int)substr($date,8,2),(int)substr($date,0,4))||$date<date('Y-m-d'))
+                    throw new InvalidArgumentException('Valid future departure required');
+                $paying=self::id($b['pax']??0);$foc=(int)($b['foc']??0);
+                if($paying>1000||$foc<0||$foc>100)throw new InvalidArgumentException('Invalid PAX/FOC');
+                $mode=strtoupper(self::field((string)($b['mode']??''),10));
+                $hotel=self::field((string)($b['hotel']??''),1);
+                $cruise=self::field((string)($b['cruise']??''),1);
+                if(!in_array($mode,['PRIVATE','SIC'],true)||!in_array($hotel,['3','4','5'],true)||!in_array($cruise,['','3','4','5'],true))
+                    throw new InvalidArgumentException('Invalid configuration');
+                $notes=self::field((string)($b['notes']??''),5000);
+                self::q($db,'INSERT INTO b2b_net_requests(company_id,agency_id,partner_tour_id,publication_id,requested_by,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                    [$company,$agency['id'],$work['id'],$pub['id'],$user,$date,$paying,$foc,$mode,$hotel,$cruise,$notes]);
+                $id=(int)$db->lastInsertId();Audit::log($db,$company,$user,'B2B_NET_REQUESTED','b2b_net_request',$id);
+                Http::json(['ok'=>true,'id'=>$id,'status'=>'REQUESTED'],201);
+            }
+            if($route==='b2b/net-requests'&&$method==='GET'){
+                $rows=$admin?
+                    self::q($db,'SELECT id,agency_id,partner_tour_id,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,status,created_at FROM b2b_net_requests WHERE company_id=? ORDER BY id DESC LIMIT 200',[$company]):
+                    self::q($db,'SELECT n.id,n.agency_id,n.partner_tour_id,n.departure_date,n.paying_pax,n.foc_pax,n.mode,n.hotel_level,n.cruise_level,n.status,n.created_at FROM b2b_net_requests n JOIN b2b_agency_members m ON m.company_id=n.company_id AND m.agency_id=n.agency_id AND m.user_id=? WHERE n.company_id=? ORDER BY n.id DESC LIMIT 200',[$user,$company]);
+                Http::json(['ok'=>true,'items'=>$rows->fetchAll(PDO::FETCH_ASSOC)]);
+            }
+            if(preg_match('#^b2b/admin/net-requests/(\d+)/status$#D',$route,$n)&&$method==='POST'){
+                self::requireAdmin($db,$u);$status=strtoupper(self::field((string)(Http::body()['status']??''),12));
+                if(!in_array($status,['IN_REVIEW','CLOSED'],true))throw new InvalidArgumentException('Invalid NET request status');
+                $updated=self::q($db,'UPDATE b2b_net_requests SET status=? WHERE id=? AND company_id=? AND status<>?',[$status,$n[1],$company,'CLOSED']);
+                if($updated->rowCount()!==1)throw new OutOfBoundsException('NET request unavailable or closed');
+                Audit::log($db,$company,$user,'B2B_NET_REQUEST_STATUS','b2b_net_request',(int)$n[1],null,['status'=>$status]);
+                Http::json(['ok'=>true,'status'=>$status]);
+            }
             if($route==='b2b/admin/requests'&&$method==='GET'){
                 self::requireAdmin($db,$u);Http::json(['ok'=>true,'items'=>self::q($db,'SELECT r.id,r.agency_id,a.agency_name,r.partner_tour_id,r.departure_date,r.paying_pax,r.guest_name,r.status,r.created_at FROM b2b_booking_requests r JOIN b2b_agencies a ON a.company_id=r.company_id AND a.id=r.agency_id WHERE r.company_id=? ORDER BY r.id DESC LIMIT 200',[$company])->fetchAll(PDO::FETCH_ASSOC)]);
             }
