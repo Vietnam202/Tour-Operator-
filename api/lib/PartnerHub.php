@@ -42,14 +42,25 @@ final class PartnerHub {
             'brand_color'=>$a['brand_color'],'email'=>$a['email'],'whatsapp'=>$a['whatsapp'],
             'has_logo'=>!empty($a['logo_path'])];
     }
-    private static function publication(PDO $db,array $u,int $id):array {
+    private static function publication(PDO $db,array $u,int $id,?int $agencyId=null):array {
         $r=self::q($db,"SELECT * FROM b2b_publications WHERE id=? AND company_id=? AND status='PUBLISHED'",[$id,$u['company_id']])->fetch(PDO::FETCH_ASSOC);
-        if(!$r)throw new OutOfBoundsException('Published tour unavailable');return $r;
+        if(!$r)throw new OutOfBoundsException('Published tour unavailable');self::allowPublication($db,$u,$r,$agencyId);return $r;
+    }
+    private static function allowPublication(PDO $db,array $u,array $pub,?int $agencyId):void {
+        if(Auth::can($db,(int)$u['id'],'b2b.admin'))return;
+        if(!$agencyId)throw new OutOfBoundsException('Tour unavailable');
+        self::agency($db,$u,$agencyId);
+        if(($pub['distribution_scope']??'COMMON')==='COMMON')return;
+        if(($pub['distribution_scope']??'')!=='EXCLUSIVE'||(int)($pub['exclusive_agency_id']??0)!==$agencyId)
+            throw new OutOfBoundsException('Tour unavailable');
     }
     private static function working(PDO $db,array $u,int $id):array {
         $r=self::q($db,'SELECT * FROM b2b_partner_tours WHERE id=? AND company_id=?',[$id,$u['company_id']])->fetch(PDO::FETCH_ASSOC);
         if(!$r)throw new OutOfBoundsException('Tour draft unavailable');
-        self::agency($db,$u,(int)$r['agency_id']);return $r;
+        self::agency($db,$u,(int)$r['agency_id']);
+        $pub=self::q($db,'SELECT * FROM b2b_publications WHERE company_id=? AND id=?',[$u['company_id'],$r['publication_id']])->fetch(PDO::FETCH_ASSOC);
+        if(!$pub||$pub['status']!=='PUBLISHED')throw new OutOfBoundsException('Tour unavailable');
+        self::allowPublication($db,$u,$pub,(int)$r['agency_id']);return $r;
     }
     /** Explicit public content allow-list. Imported proposal price tables are NOT approved net prices. */
     private static function publicContent(array $p):array {
@@ -236,6 +247,14 @@ final class PartnerHub {
             }
             if($route==='b2b/admin/publish'&&$method==='POST'){
                 self::requireAdmin($db,$u);$b=Http::body();$programId=self::id($b['program_id']??0);
+                $scope=strtoupper(self::field((string)($b['distribution_scope']??'COMMON'),12));
+                if(!in_array($scope,['COMMON','EXCLUSIVE'],true))throw new InvalidArgumentException('Invalid distribution scope');
+                $exclusiveAgency=null;
+                if($scope==='EXCLUSIVE'){
+                    $exclusiveAgency=self::id($b['exclusive_agency_id']??0);
+                    $target=self::q($db,"SELECT 1 FROM b2b_agencies WHERE id=? AND company_id=? AND status='ACTIVE'",[$exclusiveAgency,$company])->fetchColumn();
+                    if(!$target)throw new DomainException('Exclusive agency must be active in this company');
+                }
                 $master=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND id=?',[$company,$programId])->fetch(PDO::FETCH_ASSOC);
                 if(!$master||$master['status']!=='ACTIVE')throw new DomainException('Approve and activate the Master Tour in V5 first');
                 $program=TourLibrary::publicProgram($master,true);$snapshot=self::normalizeCopy(self::publicContent($program));
@@ -244,7 +263,7 @@ final class PartnerHub {
                 $db->beginTransaction();
                 try {
                     $next=(int)self::q($db,'SELECT COALESCE(MAX(version_no),0)+1 FROM b2b_publications WHERE company_id=? AND program_id=? FOR UPDATE',[$company,$programId])->fetchColumn();
-                    self::q($db,'INSERT INTO b2b_publications(company_id,program_id,version_no,content_json,rate_json,source_quote_version_id,created_by) VALUES(?,?,?,?,?,?,?)',[$company,$programId,$next,self::json($snapshot),self::json($rates),$source,$user]);
+                    self::q($db,'INSERT INTO b2b_publications(company_id,program_id,version_no,content_json,rate_json,source_quote_version_id,created_by,distribution_scope,exclusive_agency_id) VALUES(?,?,?,?,?,?,?,?,?)',[$company,$programId,$next,self::json($snapshot),self::json($rates),$source,$user,$scope,$exclusiveAgency]);
                     $id=(int)$db->lastInsertId();
                     Audit::log($db,$company,$user,'B2B_TOUR_PUBLISHED','b2b_publication',$id,null,['program_id'=>$programId,'version'=>$next,'approved_rate_source'=>$source]);
                     $db->commit();Http::json(['ok'=>true,'id'=>$id,'version'=>$next],201);
@@ -255,15 +274,20 @@ final class PartnerHub {
                 Audit::log($db,$company,$user,'B2B_PUBLICATION_REVOKED','b2b_publication',(int)$m[1]);Http::json(['ok'=>true]);
             }
             if($route==='b2b/tours'&&$method==='GET'){
-                $rows=self::q($db,"SELECT p.id,p.program_id,p.version_no,p.content_json,p.rate_json,p.created_at FROM b2b_publications p JOIN (SELECT program_id,MAX(version_no) version_no FROM b2b_publications WHERE company_id=? GROUP BY program_id) latest ON latest.program_id=p.program_id AND latest.version_no=p.version_no WHERE p.company_id=? AND p.status='PUBLISHED' ORDER BY p.created_at DESC LIMIT 200",[$company,$company])->fetchAll(PDO::FETCH_ASSOC);
-                $items=[];foreach($rows as $r){$d=self::parse($r['content_json']);$rates=self::parse($r['rate_json']);$items[]=['id'=>(int)$r['id'],'program_id'=>(int)$r['program_id'],'version'=>(int)$r['version_no'],'title'=>$d['title'],'destination'=>$d['destination'],'days'=>count($d['days']),'tour_type'=>$d['tour_type'],'has_approved_net'=>!empty($rates['cells'])&&($rates['valid_until']??'')>=date('Y-m-d')];}
+                $agencyId=isset($_GET['agency_id'])?self::id($_GET['agency_id']):null;
+                if(!$admin){if(!$agencyId)throw new InvalidArgumentException('Select agency');self::agency($db,$u,$agencyId);}
+                $rows=self::q($db,"SELECT p.id,p.program_id,p.version_no,p.content_json,p.rate_json,p.created_at,p.distribution_scope,p.exclusive_agency_id FROM b2b_publications p JOIN (SELECT program_id,MAX(version_no) version_no FROM b2b_publications WHERE company_id=? GROUP BY program_id) latest ON latest.program_id=p.program_id AND latest.version_no=p.version_no WHERE p.company_id=? AND p.status='PUBLISHED' ORDER BY p.created_at DESC LIMIT 200",[$company,$company])->fetchAll(PDO::FETCH_ASSOC);
+                $items=[];foreach($rows as $r){
+                    if(!$admin&&$r['distribution_scope']==='EXCLUSIVE'&&(int)$r['exclusive_agency_id']!==$agencyId)continue;
+                    $d=self::parse($r['content_json']);$rates=self::parse($r['rate_json']);$items[]=['id'=>(int)$r['id'],'program_id'=>(int)$r['program_id'],'version'=>(int)$r['version_no'],'title'=>$d['title'],'destination'=>$d['destination'],'days'=>count($d['days']),'tour_type'=>$d['tour_type'],'has_approved_net'=>!empty($rates['cells'])&&($rates['valid_until']??'')>=date('Y-m-d'),'distribution_scope'=>$r['distribution_scope']];}
                 Http::json(['ok'=>true,'items'=>$items]);
             }
             if(preg_match('#^b2b/tours/(\d+)$#D',$route,$m)&&$method==='GET'){
-                $p=self::publication($db,$u,(int)$m[1]);$data=self::parse($p['content_json']);Http::json(['ok'=>true,'publication'=>['id'=>(int)$p['id'],'version'=>(int)$p['version_no'],'content'=>$data,'has_rates'=>!empty(self::parse($p['rate_json'])['cells'])]]);
+                $p=self::publication($db,$u,(int)$m[1],isset($_GET['agency_id'])?self::id($_GET['agency_id']):null);$data=self::parse($p['content_json']);Http::json(['ok'=>true,'publication'=>['id'=>(int)$p['id'],'version'=>(int)$p['version_no'],'content'=>$data,'has_rates'=>!empty(self::parse($p['rate_json'])['cells'])]]);
             }
             if(preg_match('#^b2b/tours/(\d+)/copy$#D',$route,$m)&&$method==='POST'){
-                $pub=self::publication($db,$u,(int)$m[1]);$agency=self::agency($db,$u,self::id(Http::body()['agency_id']??0));
+                $agency=self::agency($db,$u,self::id(Http::body()['agency_id']??0));
+                $pub=self::publication($db,$u,(int)$m[1],(int)$agency['id']);
                 self::q($db,'INSERT INTO b2b_partner_tours(company_id,agency_id,publication_id,content_json,created_by) VALUES(?,?,?,?,?)',[$company,$agency['id'],$pub['id'],$pub['content_json'],$user]);
                 $id=(int)$db->lastInsertId();Audit::log($db,$company,$user,'B2B_TOUR_COPIED','b2b_partner_tour',$id,null,['publication_id'=>(int)$pub['id'],'agency_id'=>(int)$agency['id']]);
                 Http::json(['ok'=>true,'id'=>$id],201);
