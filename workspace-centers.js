@@ -183,9 +183,9 @@
  window.mountLeadHandover=async function(host,options={}){
   const c=mounted(host,options);if(!c)return;const {t,can,alive}=c,marketing=options.mode==='marketing';
   const allowed=can('lead.view'),queues=marketing?['NEW','PENDING','RETURNED','ACCEPTED']:['PENDING','ACCEPTED','RETURNED','CONVERTED'];
-  const names={NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Returned to Marketing','Trả về Marketing'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
+  const names={NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Needs lead review','Cần xem lại lead'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
   let selected=queues.includes(options.initialStatus)?options.initialStatus:queues[0],offset=0,ticket=0,data=null,counts={},command=null;
-  const title=marketing?t('Marketing → Sales handover','Bàn giao Marketing → Sales'):t('Sales handover queue','Hàng chờ bàn giao Sales');
+  const title=marketing?t('Inbound leads → Sales handover','Bàn giao lead đầu vào → Sales'):t('Sales handover queue','Hàng chờ bàn giao Sales');
   function rowHTML(row,index){
    const state=selected==='NEW'?'NEW':row.handover_status,version=selected==='NEW'?row.version_no:row.handover_version;
    const valid=id(row.id)&&id(version),actions=[];
@@ -273,7 +273,7 @@
  };
  window.mountCustomer360=async function(host,options={}){
   const c=mounted(host,options);if(!c)return;const {t,can,alive}=c;let ticket=0;
-  const definitions=[['leads',t('Marketing & lead source','Marketing & nguồn lead'),'lead.view'],['inquiries',t('Inquiries / opportunities','Inquiry / cơ hội'),'sales.view'],['quotes',t('Quote history','Lịch sử báo giá'),'sales.view'],['bookings',t('Booking history','Lịch sử booking'),'booking.view'],['tasks',t('Shared next actions','Việc tiếp theo'),'task.view'],['documents',t('Travel document metadata','Thông tin tài liệu tour'),'travel_document.view'],['finance',t('Issued invoice balances by currency','Số dư hóa đơn phát hành theo tiền tệ'),'finance.view'],['activity',t('Activity timeline','Dòng thời gian hoạt động'),null]];
+  const definitions=[['leads',t('Lead source','Nguồn lead'),'lead.view'],['inquiries',t('Inquiries / opportunities','Inquiry / cơ hội'),'sales.view'],['quotes',t('Quote history','Lịch sử báo giá'),'sales.view'],['bookings',t('Booking history','Lịch sử booking'),'booking.view'],['tasks',t('Shared next actions','Việc tiếp theo'),'task.view'],['documents',t('Travel document metadata','Thông tin tài liệu tour'),'travel_document.view'],['finance',t('Issued invoice balances by currency','Số dư hóa đơn phát hành theo tiền tệ'),'finance.view'],['activity',t('Activity timeline','Dòng thời gian hoạt động'),null]];
   function itemHTML(item,key,index){
    if(key==='finance')return '<article class="wsc-record"><div><strong>'+esc(item.currency||'—')+'</strong><p>'+esc(t('Invoiced: ','Đã lập hóa đơn: ')+(item.total??item.invoice_total??'—'))+' · '+esc(t('Paid: ','Đã trả: ')+(item.paid??item.paid_total??'—'))+' · '+esc(t('Balance: ','Còn lại: ')+(item.balance??item.balance_total??'—'))+'</p></div></article>';
    const eventNames={LEAD_QUALIFIED:t('Lead qualified','Lead đã đánh giá'),INQUIRY_CREATED:t('Inquiry created','Đã tạo inquiry'),QUOTE_CREATED:t('Quote created','Đã tạo báo giá'),BOOKING_CREATED:t('Booking created','Đã tạo booking')};
