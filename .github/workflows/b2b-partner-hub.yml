@@ -8,6 +8,11 @@ on:
       - 'api/index.php'
       - 'api/bootstrap.php'
       - 'api/migrations/037_b2b_partner_hub.sql'
+      - 'api/migrations/038_b2b_hybrid_distribution.sql'
+      - 'api/lib/Migrations.php'
+      - 'tests/b2b-hybrid-isolation-unit.php'
+      - 'tests/b2b-hybrid-schema-ci.php'
+      - 'docs/RC62_B2B_HYBRID_RELEASE_GATE.md'
       - 'partner.html'
       - 'partner-hub.js'
       - 'partner-hub.css'
@@ -23,7 +28,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, zip, gd, dom
+          extensions: mbstring, zip, gd, dom, pdo_sqlite
           coverage: none
       - name: PHP syntax checks
         run: |
@@ -32,6 +37,8 @@ jobs:
           php -l api/bootstrap.php
           php -l api/index.php
           php -l tests/b2b-partner-hub-unit.php
+          php -l tests/b2b-hybrid-isolation-unit.php
+          php -l tests/b2b-hybrid-schema-ci.php
       - name: JavaScript syntax check
         run: |
           node --check partner-hub.js
@@ -39,4 +46,37 @@ jobs:
       - name: B2B domain tests
         run: |
           php tests/b2b-partner-hub-unit.php
+          php tests/b2b-hybrid-isolation-unit.php
           php tests/tour-library.php
+  disposable-mariadb-hybrid-migration:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: vta_p12_clone_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, pdo_mysql
+          coverage: none
+      - name: Rehearse full core + marketing migrations on fresh disposable DB
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_p12_clone_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          php tests/marketing-staging-schema-p12-db-test.php
+          php tests/b2b-hybrid-schema-ci.php
