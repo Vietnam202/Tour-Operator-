@@ -62,6 +62,14 @@ final class PartnerHub {
         if(!$pub||$pub['status']!=='PUBLISHED')throw new OutOfBoundsException('Tour unavailable');
         self::allowPublication($db,$u,$pub,(int)$r['agency_id']);return $r;
     }
+    /** Keep the partner catalog restricted before any draft title or metadata is serialized. */
+    private static function listWorking(PDO $db,array $u):PDOStatement {
+        $company=(int)$u['company_id'];$user=(int)$u['id'];
+        $admin=Auth::can($db,$user,'b2b.admin');
+        $allowed=$admin?self::q($db,'SELECT w.*,p.version_no,p.status publication_status,a.brand_name FROM b2b_partner_tours w JOIN b2b_publications p ON p.id=w.publication_id AND p.company_id=w.company_id JOIN b2b_agencies a ON a.id=w.agency_id AND a.company_id=w.company_id WHERE w.company_id=? ORDER BY w.updated_at DESC LIMIT 200',[$company]):
+                self::q($db,'SELECT w.*,p.version_no,p.status publication_status,a.brand_name FROM b2b_partner_tours w JOIN b2b_publications p ON p.id=w.publication_id AND p.company_id=w.company_id JOIN b2b_agencies a ON a.id=w.agency_id AND a.company_id=w.company_id JOIN b2b_agency_members m ON m.agency_id=w.agency_id AND m.company_id=w.company_id AND m.user_id=? WHERE w.company_id=? AND a.status='ACTIVE' AND p.status='PUBLISHED' AND (p.distribution_scope='COMMON' OR (p.distribution_scope='EXCLUSIVE' AND p.exclusive_agency_id=w.agency_id)) ORDER BY w.updated_at DESC LIMIT 200',[$user,$company]);
+        return $allowed;
+    }
     /** Explicit public content allow-list. Imported proposal price tables are NOT approved net prices. */
     private static function publicContent(array $p):array {
         $proposal=$p['proposal']??[];
@@ -293,8 +301,7 @@ final class PartnerHub {
                 Http::json(['ok'=>true,'id'=>$id],201);
             }
             if($route==='b2b/my-tours'&&$method==='GET'){
-                $allowed=$admin?self::q($db,'SELECT w.*,p.version_no,p.status publication_status,a.brand_name FROM b2b_partner_tours w JOIN b2b_publications p ON p.id=w.publication_id AND p.company_id=w.company_id JOIN b2b_agencies a ON a.id=w.agency_id AND a.company_id=w.company_id WHERE w.company_id=? ORDER BY w.updated_at DESC LIMIT 200',[$company]):
-                self::q($db,'SELECT w.*,p.version_no,p.status publication_status,a.brand_name FROM b2b_partner_tours w JOIN b2b_publications p ON p.id=w.publication_id AND p.company_id=w.company_id JOIN b2b_agencies a ON a.id=w.agency_id AND a.company_id=w.company_id JOIN b2b_agency_members m ON m.agency_id=w.agency_id AND m.company_id=w.company_id AND m.user_id=? WHERE w.company_id=? AND a.status='ACTIVE' AND p.status='PUBLISHED' AND (p.distribution_scope='COMMON' OR (p.distribution_scope='EXCLUSIVE' AND p.exclusive_agency_id=w.agency_id)) ORDER BY w.updated_at DESC LIMIT 200',[$user,$company]);
+                $allowed=self::listWorking($db,$u);
                 $rows=[];foreach($allowed->fetchAll(PDO::FETCH_ASSOC) as $r){$d=self::parse($r['content_json']);$rows[]=['id'=>(int)$r['id'],'title'=>$d['title'],'agency'=>$r['brand_name'],'agency_id'=>(int)$r['agency_id'],'publication_version'=>(int)$r['version_no'],'publication_status'=>$r['publication_status'],'revision'=>(int)$r['revision']];}
                 Http::json(['ok'=>true,'items'=>$rows]);
             }
