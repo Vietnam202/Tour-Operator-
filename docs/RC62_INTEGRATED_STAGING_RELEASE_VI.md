@@ -44,10 +44,15 @@ Tệp CLI **được đóng gói trong runtime**: `api/bin/rc62-release-readines
 - Chạy từ CLI PHP 8.3 có các extension bắt buộc, tốt nhất dùng user database **SELECT-only**:
 
 ```bash
+# Lấy SHA từ phê duyệt RC độc lập, KHÔNG sao chép từ manifest cần kiểm chứng.
+APPROVED_SHA='157261336e6b999a33bded252ad92144caee05d2'
 VTA_CONFIG_FILE=/path/to/private/staging-config.php \
 php runtime/api/bin/rc62-release-readiness.php \
-  --manifest=/path/to/private/rc62-manifest.json
+  --manifest=/path/to/private/rc62-manifest.json \
+  --expected-sha="$APPROVED_SHA"
 ```
+
+**Lưu ý cho bản hardening VIE-6:** cú pháp `--expected-sha` là thay đổi đề xuất trên nhánh review riêng, **chưa có trong artifact PR #52 đã đóng gói**. Chỉ sử dụng sau khi CI, reviewer và artifact mới được duyệt; không thay thế hoặc vá trực tiếp PHP trong gói RC1 đã khóa. SHA ví dụ ở trên là RC1 ngày 11/10/2026, phải cập nhật bằng SHA của artifact thực sự được chọn nếu tạo candidate khác. Lỗi preflight chỉ được in mã an toàn, không được ghi tên database, DSN, mật khẩu hoặc chi tiết private config.
 
 - Script chỉ thực hiện kiểm tra SHA-256 tất cả file runtime, extensions, base URL/origin, DB identity, toàn bộ `schema_migrations` & `migration_checksums`; **không chạy DDL/DML, baseline, migration, đổi cấu hình hay backup**. Output chỉ có số lượng, commit và trạng thái không chứa secret. Mọi mismatch trả mã lỗi `RELEASE_BLOCKED` (exit 2).
 - `READ_ONLY_PREFLIGHT_PASS` chỉ là một gate nguồn/ledger; **không đồng nghĩa staging UAT, backup restore hay production release PASS**.
