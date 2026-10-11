@@ -19,7 +19,8 @@
     const bell=document.getElementById('notifyBtn');
     if (!input || !results || !bell || !api?.user) return;
     let alive=true, timer=null, serial=0, active=-1, rows=[];
-    const allowed=permission=>Boolean(can(permission));
+    const partnerOnly=Boolean(can('b2b.portal') && !can('b2b.admin'));
+    const allowed=permission=>!partnerOnly && Boolean(can(permission));
     const button=document.createElement('button');
     button.type='button';button.id='vtaQuickSend';
     button.className='btn vta-smart-send';
