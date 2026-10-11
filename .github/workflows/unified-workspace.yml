@@ -8,6 +8,7 @@ on:
       - 'document-editor.js'
       - 'tour-program-workspace.*'
       - 'tour-library*.js'
+      - 'tour-proposal-studio.*'
       - 'api/lib/Tour*.php'
       - 'api/lib/FreeformDocument.php'
       - 'editor-build/**'
@@ -24,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -52,6 +56,7 @@ jobs:
         run: |
           npm run test:unified:browser --prefix tests
           node tests/tour-program-workspace-browser.cjs
+          node tests/v5-parity-browser.cjs
           npm run test:marketing:browser --prefix tests
           node tests/marketing-ui.cjs
           node tests/vta-smart-enhancements-browser.cjs
@@ -64,6 +69,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -97,6 +105,9 @@ jobs:
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
