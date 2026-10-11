@@ -24,7 +24,7 @@ final class SmartEnhancements {
     }
 
     private static function search(PDO $db, array $user): array {
-        $groups = ['quotes'=>[], 'bookings'=>[], 'customers'=>[], 'suppliers'=>[]];
+        $groups = ['tours'=>[], 'quotes'=>[], 'bookings'=>[], 'customers'=>[], 'suppliers'=>[]];
         // Partner portal users never enter internal customer/quote search, even if a role is misconfigured.
         if (self::allowed($db,$user,'b2b.portal') && !self::allowed($db,$user,'b2b.admin')) return $groups;
         $q = self::term();
@@ -32,6 +32,15 @@ final class SmartEnhancements {
         $like = '%'.$q.'%';
         $company = (int)$user['company_id'];
 
+        if (self::allowed($db,$user,'tour_library.view')
+            || self::allowed($db,$user,'product.view')
+            || self::allowed($db,$user,'supplier.view')) {
+            // Canonical Word-style Master Tour library. Return metadata ONLY.
+            $groups['tours'] = self::rows($db, "SELECT id, CONCAT('TOUR-',id) ref, title, destination detail, status
+                FROM tour_library_programs WHERE company_id=? AND status<>'ARCHIVED'
+                  AND (title LIKE ? OR destination LIKE ?)
+                ORDER BY updated_at DESC LIMIT 8", [$company,$like,$like]);
+        }
         // Quotes and tours: only approved sales users; NEVER select cost, profit or NET fields.
         if (self::allowed($db,$user,'sales.view')) {
             $groups['quotes'] = self::rows($db, "SELECT q.id, q.quote_ref ref, t.title title, t.lead_contact_name detail, qv.version_status status
