@@ -1,6 +1,6 @@
 # RC6.2 — End-to-End Workflow Continuity Acceptance
 
-Date: 2026-10-11. **Candidate base:** PR #52 at `157261336e6b999a33bded252ad92144caee05d2`. This document belongs to a **separate Draft test PR**, not an approved RC1 deployment.
+Date: 2026-10-11. **Original candidate base:** PR #52 at `157261336e6b999a33bded252ad92144caee05d2`. **Integrated verification branch:** the tested Golden Path from PR #53 is combined with the staging fail-closed CLI from PR #54 on a new Draft branch. The combined branch has a distinct HEAD and distinct CI/package artifact. It is **not** an approved RC1 deployment or production release.
 
 ## 1. Fixed business chain
 
@@ -53,3 +53,11 @@ Status vocabulary: `PASS_CI_FIXTURE`, `PASS_STAGING_REAL_AUTH`, `FAIL`, `BLOCKED
 | E2E-01 through E2E-08 | To be recorded | To be recorded | To be recorded | NOT_TESTED | Pending |
 
 **Current release decision: NO-GO for CyberPanel production.** PR #52 remains Draft and is not merged or deployed by this test branch.
+
+## 6. Combined verification provenance
+
+- PR #53 contributes the disposable MariaDB Golden Path native test, UI/native workflow wiring and this matrix; its earlier CI is upstream evidence only.
+- PR #54 contributes the read-only staging readiness CLI requiring independently approved `--expected-sha` and `--expected-db`, restricted safe error codes, symlink containment and corresponding unit tests. These controls do **not** run a backup, restore or migration.
+- The combined Draft branch must demonstrate **its own exact-HEAD** Integrated Runtime package, Unified Workspace QA and Marketing UI Sync workflows. It may not inherit green status from either parent PR.
+- The runtime release artifact's `source_commit` is the **combined HEAD**, not PR #52 or the prior PR #53/#54 HEAD. Any old RC1 manifest or ZIP does not attest the combined candidate.
+- Because the staging controller still pins `codex/Vietnam/rc6.2-testing`, no automatic CyberPanel upload is authorized. The operator must independently choose and approve an isolated deployment plan and backing DB clone.
