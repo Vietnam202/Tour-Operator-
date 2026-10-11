@@ -37,8 +37,7 @@ final class RC62ReleaseReadiness
             self::reject('INVALID_RELEASE_MANIFEST');
 
         $items = $manifest['sha256'] ?? null;
-        if (!is_array($items) || !array_is_list($items) && count($items) < 100
-            || is_array($items) && count($items) < 100
+        if (!is_array($items) || array_is_list($items) || count($items) < 100
             || count($items) !== ($manifest['file_count'] ?? null))
             self::reject('INCOMPLETE_RELEASE_MANIFEST');
         $root = realpath($root);
@@ -76,6 +75,7 @@ final class RC62ReleaseReadiness
     public static function ledger(array $expected, array $versions, array $ledger): array
     {
         if (!$expected || count($expected) < 30) self::reject('INCOMPLETE_SQL_STACK');
+        if (count($versions) !== count(array_unique($versions))) self::reject('DUPLICATE_SCHEMA_VERSION');
         $versions = array_values(array_unique($versions));
         $applied = array_fill_keys($versions, true);
         $checks = [];
