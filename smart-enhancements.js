@@ -111,7 +111,7 @@
     const onInput=()=> {
       clear();
       const q=input.value.trim();
-      if(q.length<2)return;
+      if(partnerOnly || q.length<2)return;
       const current=++serial;
       timer=setTimeout(async()=>{
         try{
