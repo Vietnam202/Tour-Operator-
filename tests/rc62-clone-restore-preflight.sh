@@ -65,6 +65,15 @@ diff -u "$PRIVATE_DIR/$SOURCE_DB.counts" "$PRIVATE_DIR/$CLONE_DB.counts" >/dev/n
 diff -u "$PRIVATE_DIR/$SOURCE_DB.schema-ledger" "$PRIVATE_DIR/$CLONE_DB.schema-ledger" >/dev/null || fail "RESTORE_SCHEMA_LEDGER_MISMATCH"
 diff -u "$PRIVATE_DIR/$SOURCE_DB.checksum-ledger" "$PRIVATE_DIR/$CLONE_DB.checksum-ledger" >/dev/null || fail "RESTORE_CHECKSUM_LEDGER_MISMATCH"
 [[ "$(wc -l <"$PRIVATE_DIR/$CLONE_DB.checksum-ledger" | tr -d ' ')" == "$EXPECTED_MIGRATIONS" ]] || fail "RESTORE_MIGRATION_COUNT_MISMATCH"
+for migration in api/migrations/*.sql; do
+  version="$(basename "$migration" .sql)"
+  expected_hash="$(sha256sum "$migration" | awk '{print $1}')"
+  recorded="$(awk -v version="$version" '$1 == version { print $2, $3 }' "$PRIVATE_DIR/$CLONE_DB.checksum-ledger")"
+  applied="$(awk -v version="$version" '$1 == version { print "yes" }' "$PRIVATE_DIR/$CLONE_DB.schema-ledger")"
+  if [[ -n "$applied" && "$recorded" != "$expected_hash APPLIED" ]]; then
+    printf 'BLOCKING_LEDGER_ENTRY version=%s applied=yes checksum_matches=%s status=%s\n' "$version" "$([[ "$recorded" == "$expected_hash APPLIED" ]] && echo yes || echo no)" "$(printf '%s' "$recorded" | awk '{print $2}')"
+  fi
+done
 pass "synthetic backup/restore clone reconciles table row counts and migration ledgers"
 
 root_sql "CREATE USER '$RO_USER'@'%' IDENTIFIED BY '$RO_PASSWORD'"
