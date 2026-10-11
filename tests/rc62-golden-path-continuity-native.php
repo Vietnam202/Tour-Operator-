@@ -79,6 +79,79 @@ check(v2q('SELECT * FROM booking_quote_snapshots WHERE booking_id=?',[$bookingId
     && v2q('SELECT * FROM quote_sent_bundles WHERE quote_version_id=?',[$versionId])->fetch()===$sentBundle,
     'Golden path: retry and template operations preserve issued snapshot bytes');
 
+// The original fixture began with one idempotent public Lead request, a qualified
+// Sales handover and a customer/inquiry conversion. The SAME trip reaches Booking.
+check((int)$chain['inquiry_id']===(int)$conversion['inquiry_id']
+    && (int)$chain['booking_trip_id']===(int)$conversion['trip_id'],
+    'Golden path: qualified Lead conversion reaches this exact Inquiry and Booking');
+check((int)v2q('SELECT COUNT(*) FROM lead_requests WHERE company_id=?',
+    [(int)$user['company_id']])->fetchColumn()===1,
+    'Golden path: inbound Lead submission retry did not create another lead request');
+
+// Exercise the real handover state machine against this Booking's accepted
+// immutable snapshot. This does NOT assert supplier availability/confirmation.
+$handoverCreated=SalesHandover::create($db,$user,$bookingId);
+$handover=SalesHandover::context($db,$user,$bookingId);
+check((int)$handover['handover']['booking_id']===$bookingId
+    && count($handover['services'])>0
+    && (int)$handoverCreated['booking_id']===$bookingId,
+    'Golden path: Sales handover is linked to this Booking and its services');
+$handoverAgain=SalesHandover::create($db,$user,$bookingId);
+check((int)$handoverAgain['id']===(int)$handoverCreated['id']
+    && (int)v2q('SELECT COUNT(*) FROM booking_handovers WHERE booking_id=?',
+        [$bookingId])->fetchColumn()===1,
+    'Golden path: repeated Sales handover remains idempotent');
+$handoverChecklist=array_fill_keys(SalesHandover::CHECKLIST,true);
+$handoverChecklist['flights']='NOT_PROVIDED';
+$handover=SalesHandover::transition($db,$user,$bookingId,'prepare',[
+    'expected_revision'=>(int)$handover['handover']['revision'],
+    'checklist'=>$handoverChecklist
+]);
+$handover=SalesHandover::transition($db,$user,$bookingId,'submit',[
+    'expected_revision'=>(int)$handover['handover']['revision']
+]);
+check($handover['handover']['intake_status']==='NEW_HANDOVER',
+    'Golden path: submitted Sales handover enters Operations intake');
+$handover=SalesHandover::transition($db,$user,$bookingId,'accept',[
+    'expected_revision'=>(int)$handover['handover']['revision']
+]);
+check($handover['handover']['intake_status']==='READY_TO_BOOK'
+    && (int)$handover['booking']['id']===$bookingId,
+    'Golden path: Operations accepts the same Booking without creating another');
+rejects(fn()=>SalesHandover::transition($db,$user,$bookingId,'accept',[
+    'expected_revision'=>(int)$handover['handover']['revision']
+]),DomainException::class,'Golden path: duplicate Operations acceptance is rejected');
+
+// Draft commercial/proforma invoice only: no fake supplier invoice, real
+// customer payment, e-invoice, or final profit is created by this test.
+require_once __DIR__.'/../api/lib/FinanceLedger.php';
+$invoice=FinanceLedger::createInvoice($db,$user,$bookingId,[
+    'invoice_type'=>'PROFORMA',
+    'subtotal'=>(string)$chain['confirmed_selling'],
+    'issue_date'=>'2027-01-01',
+    'due_date'=>'2027-01-02'
+]);
+$storedInvoice=v2q('SELECT * FROM customer_invoices WHERE id=? AND company_id=?',
+    [(int)$invoice['id'],(int)$user['company_id']])->fetch();
+check((bool)$storedInvoice
+    && (int)$storedInvoice['booking_id']===$bookingId
+    && $storedInvoice['status']==='DRAFT'
+    && $storedInvoice['currency']===$selected['snapshot']['selling_currency']
+    && FinanceLedger::cents($storedInvoice['total'])===FinanceLedger::cents($chain['confirmed_selling']),
+    'Golden path: draft Finance document matches Booking selling value/currency');
+rejects(fn()=>FinanceLedger::createInvoice($db,$user,$bookingId,[
+    'invoice_type'=>'PROFORMA','subtotal'=>(string)$chain['confirmed_selling'],
+    'issue_date'=>'2027-01-01'
+]),DomainException::class,'Golden path: duplicate full-value billing is denied');
+$finance=FinanceLedger::profit($db,(int)$user['company_id'],$bookingId);
+check(abs((float)$finance['selling']-(float)$chain['confirmed_selling'])<0.01
+    && (float)$finance['allocated_payments']===0.0
+    && $finance['actual_final']===false,
+    'Golden path: Finance recognizes confirmed selling but no invented receipts/final profit');
+check(v2q('SELECT * FROM booking_quote_snapshots WHERE booking_id=?',[$bookingId])->fetch()===$bookingSnapshot
+    && v2q('SELECT * FROM quote_sent_bundles WHERE quote_version_id=?',[$versionId])->fetch()===$sentBundle,
+    'Golden path: Operations handover and draft Finance preserve issued snapshots');
+
 // No fake PASS for WordPress inbound, real supplier confirmation, Operations
 // acceptance, posting Finance entries or real browser/agency staging sessions.
 echo "RC6.2 fixture-only cross-module continuity acceptance complete.\n";
