@@ -16,7 +16,7 @@
     "test:document:native": "php document-freeform-native.php",
     "test:document:browser": "node document-freeform-browser.cjs",
     "test:marketing:browser": "node marketing-browser.cjs",
-    "test:unified": "node unified-workspace.cjs && node ui-refresh.cjs && node library-approved-ui.cjs && node vta-approved-ui.cjs && node vta-cost-editor-ui.cjs && node rc6-group-pricing-ui.cjs && node tour-proposal-studio.cjs && node v5-template-gallery-ui.cjs",
+    "test:unified": "node unified-workspace.cjs && node ui-refresh.cjs && node library-approved-ui.cjs && node vta-approved-ui.cjs && node vta-cost-editor-ui.cjs && node rc6-group-pricing-ui.cjs && node tour-proposal-studio.cjs && node v5-template-gallery-ui.cjs && node v5-parity-recovery.cjs",
     "test:unified:browser": "node unified-browser.cjs",
     "test:program": "node tour-program-workspace.cjs",
     "test:program:browser": "node tour-program-workspace-browser.cjs",

@@ -1,5 +1,7 @@
 # VTA RC6.2 — Tour Program Library → Proposal Studio V5 (integration stage 1)
 
+> Historical Stage 1 scope. The combined RC6.2 branch inherits newer document/export modules. V5 restoration and recovery are tracked in `docs/RC62_V5_RECOVERY_VERIFICATION.md`; this document is not evidence of current staging or client-ready exports.
+
 ## Scope delivered
 
 - **Tour Program Library:** a new "Tạo chương trình" action and direct edit/open integration with a document-style Studio. Existing search, import, archive, copy-to-quote and inventory navigation remain intact.

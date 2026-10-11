@@ -69,6 +69,7 @@ $templateBody['source_type']='MANUAL';
 $templateBody['source_url']='';
 unset($templateBody['id'],$templateBody['creation_key'],$templateBody['import_token'],
     $templateBody['has_source']);
+$templateBody['creation_key']='v5-native-fixture-creation-key';
 $templateSaved=TourLibrary::save($db,$user,$templateBody);
 $templateId=(int)$templateSaved['id'];
 check($templateId>0 && $templateId!==$sourceId
@@ -76,6 +77,13 @@ check($templateId>0 && $templateId!==$sourceId
         ===$beforeCount+2,
     'V5 template: real MariaDB creates one independent new program instead of updating master');
 
+$replayed=TourLibrary::save($db,$user,$templateBody);
+check((int)$replayed['id']===$templateId && !empty($replayed['replayed'])
+    && (int)v2q('SELECT COUNT(*) FROM tour_library_programs WHERE company_id=?',[$company])->fetchColumn()===$beforeCount+2,
+    'V5 template: same creation key replays confirmed create without adding a duplicate row');
+$changedRetry=$templateBody;$changedRetry['title']='Different retry content';
+rejects(fn()=>TourLibrary::save($db,$user,$changedRetry),DomainException::class,
+    'V5 template: creation key cannot silently create or overwrite different content');
 $templateReopened=TourLibrary::publicProgram(TourProgramWorkspace::program($db,$user,$templateId));
 check($templateReopened['id']===$templateId
     && $templateReopened['status']==='DRAFT'

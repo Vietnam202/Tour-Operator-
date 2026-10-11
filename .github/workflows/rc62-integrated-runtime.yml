@@ -16,6 +16,8 @@ on:
       - 'tour-proposal-studio.*'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
+      - 'tests/v5-parity-recovery.cjs'
+      - 'tests/v5-parity-browser.cjs'
       - 'docs/RC62_E2E_WORKFLOW_ACCEPTANCE.md'
       - 'docs/RC62_OPERATOR_STAGING_EVIDENCE_HANDOFF.md'
       - '.github/workflows/unified-workspace.yml'
@@ -24,6 +26,7 @@ on:
       - 'index.html'
       - 'preview.html'
       - 'service-worker.js'
+      - 'tests/pwa-cache-upgrade.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -58,12 +61,14 @@ jobs:
           node --check tour-proposal-studio.js
           node --check smart-enhancements.js
           node --check service-worker.js
+          node tests/pwa-cache-upgrade.cjs
           npm ci --prefix tests
           node tests/vta-smart-enhancements-check.js
           node tests/vta-smart-enhancements-ui.cjs
           node tests/vta-approved-ui.cjs
           node tests/tour-proposal-studio.cjs
           node tests/v5-template-gallery-ui.cjs
+          node tests/v5-parity-recovery.cjs
       - name: Package real RC6.2 PHP/MariaDB runtime with SHA256 manifest
         run: |
           set -euo pipefail
