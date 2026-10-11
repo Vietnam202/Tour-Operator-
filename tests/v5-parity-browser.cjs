@@ -5,9 +5,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const base=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
- if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/tour-proposal-studio.css"></head><body><main id="host"></main><script src="/tour-proposal-studio.js"></script></body></html>');}
+ if(url.pathname==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/tour-proposal-studio.css"></head><body><main id="host"></main><script src="/tour-proposal-studio.js"></script></body></html>');}
  if(!['/tour-proposal-studio.js','/tour-proposal-studio.css'].includes(url.pathname)){res.writeHead(404);return res.end();}
- res.setHeader('Content-Type',url.pathname.endsWith('.js')?'text/javascript':'text/css');res.end(fs.readFileSync(path.join(base,url.pathname)));
+ res.setHeader('Content-Type',url.pathname.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');res.end(fs.readFileSync(path.join(base,url.pathname)));
 });
 let browser;
 (async()=>{
