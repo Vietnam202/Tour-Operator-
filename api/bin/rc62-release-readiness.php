@@ -5,7 +5,7 @@ declare(strict_types=1);
  * RC6.2 read-only candidate readiness gate.
  * CLI only; no DDL, DML, migration execution, document writes or external requests.
  *
- * php api/bin/rc62-release-readiness.php --manifest=/private/manifest.json --expected-sha=<operator-approved-40-hex>
+ * php api/bin/rc62-release-readiness.php --manifest=/private/manifest.json --expected-sha=<operator-approved-40-hex> --expected-db=<operator-approved-clone>
  */
 final class RC62ReleaseReadiness
 {
@@ -15,7 +15,8 @@ final class RC62ReleaseReadiness
     // Emit only codes explicitly authored here; database and configuration
     // exceptions can contain private connection details and must stay opaque.
     private const SAFE_ERRORS = [
-        'CLI_MANIFEST_AND_PIN_REQUIRED', 'RELEASE_SHA_MISMATCH',
+        'CLI_MANIFEST_SHA_DB_PIN_REQUIRED', 'RELEASE_SHA_MISMATCH',
+        'CLONE_DATABASE_MISMATCH',
         'INVALID_RELEASE_MANIFEST', 'INCOMPLETE_RELEASE_MANIFEST',
         'MISSING_RUNTIME_ROOT', 'UNSAFE_MANIFEST_ENTRY',
         'RUNTIME_HASH_MISMATCH', 'INCOMPLETE_RUNTIME',
@@ -44,6 +45,19 @@ final class RC62ReleaseReadiness
             || !preg_match('/^[a-f0-9]{40}$/D', $expectedSha)
             || !hash_equals($expectedSha, $manifestSha))
             self::reject('RELEASE_SHA_MISMATCH');
+    }
+
+    /** Enforce a second independent operator pin for the isolated DB clone. */
+    public static function assertCloneDatabase(
+        string $configured, string $operatorPinned, ?string $connected = null
+    ): void {
+        if (!preg_match('/^[A-Za-z0-9_]{6,64}$/D', $configured)
+            || !preg_match('/(?:^|_)(?:staging|stage|clone|sandbox|test|rc62)(?:_|$)/i', $configured)
+            || preg_match('/(?:^|_)(?:prod|production|live)(?:_|$)/i', $configured)
+            || str_starts_with(strtolower($configured), 'v2qu_v2qu_vtaos')
+            || !hash_equals($configured, $operatorPinned)
+            || ($connected !== null && !hash_equals($configured, $connected)))
+            self::reject('CLONE_DATABASE_MISMATCH');
     }
 
     private static function reject(string $reason): void
@@ -144,12 +158,14 @@ final class RC62ReleaseReadiness
 
     public static function run(array $argv): void
     {
-        if (PHP_SAPI !== 'cli' || count($argv) !== 3
+        if (PHP_SAPI !== 'cli' || count($argv) !== 4
             || !str_starts_with($argv[1], '--manifest=')
-            || !str_starts_with($argv[2], '--expected-sha='))
-            self::reject('CLI_MANIFEST_AND_PIN_REQUIRED');
+            || !str_starts_with($argv[2], '--expected-sha=')
+            || !str_starts_with($argv[3], '--expected-db='))
+            self::reject('CLI_MANIFEST_SHA_DB_PIN_REQUIRED');
         $manifestPath = substr($argv[1], strlen('--manifest='));
         $expectedSha = substr($argv[2], strlen('--expected-sha='));
+        $expectedDb = substr($argv[3], strlen('--expected-db='));
         $appRoot = dirname(__DIR__, 2);
         require_once dirname(__DIR__) . '/lib/RuntimeGuard.php';
         // The candidate manifest and config must be private, not web-accessible.
@@ -172,9 +188,9 @@ final class RC62ReleaseReadiness
         if ($origin !== $base) self::reject('ORIGIN_MISMATCH');
         $cfg = $config['db'] ?? [];
         $dbName = (string)($cfg['database'] ?? '');
-        // This tool is exclusively for a disposable *clone*, never the historical CyberPanel DB.
-        if ($dbName === 'v2qu_v2qu_vtaos' || !preg_match('/(?:staging|stage|clone|sandbox|test|rc62)/i', $dbName))
-            self::reject('ISOLATED_DB_NAME_REQUIRED');
+        // Match the operator-approved, isolated clone name BEFORE connecting.
+        // A mere 'test' substring inside a production DB name is not sufficient.
+        self::assertCloneDatabase($dbName, $expectedDb);
         foreach (['pdo_mysql', 'mbstring', 'dom', 'zip', 'gd', 'curl'] as $extension) {
             if (!extension_loaded($extension)) self::reject('PHP_EXTENSION_MISSING');
         }
@@ -193,6 +209,9 @@ final class RC62ReleaseReadiness
                 PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES=>false
             ]);
+        self::assertCloneDatabase(
+            $dbName, $expectedDb, (string)$db->query('SELECT DATABASE()')->fetchColumn()
+        );
         $versions = $db->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
         $ledger = $db->query('SELECT version,sha256,status FROM migration_checksums')->fetchAll(PDO::FETCH_ASSOC);
         $result = self::ledger($expected, $versions, $ledger);
