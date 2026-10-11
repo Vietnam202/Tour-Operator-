@@ -33,6 +33,7 @@ test('Vietnamese empty heading preserves body; leading whitespace and CRLF parse
  assert.equal(s.host.querySelector('[data-day-index="1"] [data-day-field="title"]').textContent,'Tour Day');
  assert.equal(s.host.querySelector('[data-day-index="1"] [data-day-field="description"]').textContent,'Nội dung ngày hai');
  assert.equal(s.host.querySelector('[data-day-index="2"] [data-day-field="title"]').textContent,'Ha Long');
+ s.paste('Day4: Compact heading\nBody');assert.equal(s.host.querySelector('[data-day-index="3"] [data-day-field="title"]').textContent,'Compact heading');
  }finally{s.dom.window.close();}
 });
 test('no-heading paste, 90-day rejection and cancel preserve unsaved data',async()=>{

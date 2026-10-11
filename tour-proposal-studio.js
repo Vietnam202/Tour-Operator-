@@ -112,7 +112,7 @@ window.VTATourProposalStudio={
    if(!canEdit||typeof content!=='string'||!content.trim())return;
    read();
    const source=content.replace(/\r\n?/g,'\n');
-   const matches=[...source.matchAll(/^[ \t]*(?:day|ngày)[ \t]+0*\d{1,3}(?!\d)[ \t]*[:.\-–—]?[ \t]*([^\n]*)/gim)];
+   const matches=[...source.matchAll(/^[ \t]*(?:day|ngày)[ \t]*0*\d{1,3}(?!\d)[ \t]*[:.\-–—]?[ \t]*([^\n]*)/gim)];
    if(matches.length){
     if(current.days.length+matches.length>90){toast('Vượt giới hạn 90 ngày tour.',true);return;}
     for(let i=0;i<matches.length;i++){
