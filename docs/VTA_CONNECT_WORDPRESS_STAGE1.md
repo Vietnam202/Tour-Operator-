@@ -42,6 +42,8 @@
    
    The secret values on WordPress and RC6 must match; configure separately in each server's private environment. Do not embed them in frontend JS, WordPress content, git or HTML.
 5. Zip **only** the `vta-connect` folder (not the entire repository). WordPress → Plugins → Add New → Upload Plugin → Activate. Add `[vta_chat]` to a staging page. Settings → VTA Connect reports *configured*, not end-to-end verified.
+   The PR CI also generates the installable **vta-connect.zip** as the `vta-connect-installable-plugin` workflow artifact after tests pass. Download it from GitHub Actions for staging installation.
+   Optionally set `VTA_CONNECT_WHATSAPP_URL` (HTTPS wa.me link), `VTA_CONNECT_MESSENGER_URL` (HTTPS m.me/Facebook Page link) and `VTA_CONNECT_TIKTOK_URL` (HTTPS TikTok profile) in private wp-config.php to expose free **manual click-to-contact links**. These do not automatically send messages and do not provide API sync.
 6. Login to RC6 staging with VTA staff `lead.manage`; verify visitor website messages arrive under the expected VTA company. Staff can queue website replies through `marketing/website-chat/send` or the authorized inbox UI. Confirm the visitor sees replies after poll and a relay ACK.
 7. Share a tour: staff approves its marketing-safe metadata, generates a time-limited outline link in RC6 via `marketing/tour-share/create`, then sends that URL in the website chat. Links must be revoked or expire and must not include net/supplier pricing.
 
@@ -58,7 +60,7 @@
 
 - `integrations/wordpress/vta-connect/vta-connect.php` — WP shortcode, REST endpoints, server relay, private settings and security.
 - `integrations/wordpress/vta-connect/includes/class-vta-connect-protocol.php` — exact RC6 schema-compatible signed payloads.
-- `integrations/wordpress/vta-connect/assets/widget.js`, `widget.css` — accessible responsive visitor widget.
+- `integrations/wordpress/vta-connect/assets/widget.js`, `widget.css` — accessible responsive visitor widget with optional free provider deep links.
 - `tests/vta-wordpress-connect-unit.php` — isolated WP stubs validate signing, source, chat/lead/relay, origin.
 - `.github/workflows/vta-connect.yml` — syntax and contract CI.
 
