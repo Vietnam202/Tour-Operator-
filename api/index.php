@@ -130,6 +130,7 @@ try {
     $companyId=(int)$user['company_id'];
     $userId=(int)$user['id'];
     Auth::checkCsrf();
+    SmartEnhancements::handle($route,$method,$db,$user);
 
     // VTA v2.4 complete core routes (Sales → Booking → Operations → Finance → TODAY)
     LeadHub::handle($route,$method,$db,$user);
