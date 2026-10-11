@@ -46,16 +46,23 @@ Tệp CLI **được đóng gói trong runtime**: `api/bin/rc62-release-readines
 ```bash
 # Lấy SHA từ phê duyệt RC độc lập, KHÔNG sao chép từ manifest cần kiểm chứng.
 APPROVED_SHA='157261336e6b999a33bded252ad92144caee05d2'
+APPROVED_DB='vta_rc62_clone'  # operator đã đối chiếu với MariaDB clone riêng
 VTA_CONFIG_FILE=/path/to/private/staging-config.php \
 php runtime/api/bin/rc62-release-readiness.php \
   --manifest=/path/to/private/rc62-manifest.json \
-  --expected-sha="$APPROVED_SHA"
+  --expected-sha="$APPROVED_SHA" \
+  --expected-db="$APPROVED_DB"
 ```
 
-**Lưu ý cho bản hardening VIE-6:** cú pháp `--expected-sha` là thay đổi đề xuất trên nhánh review riêng, **chưa có trong artifact PR #52 đã đóng gói**. Chỉ sử dụng sau khi CI, reviewer và artifact mới được duyệt; không thay thế hoặc vá trực tiếp PHP trong gói RC1 đã khóa. SHA ví dụ ở trên là RC1 ngày 11/10/2026, phải cập nhật bằng SHA của artifact thực sự được chọn nếu tạo candidate khác. Lỗi preflight chỉ được in mã an toàn, không được ghi tên database, DSN, mật khẩu hoặc chi tiết private config.
+**Lưu ý cho bản hardening VIE-6:** cú pháp `--expected-sha` và `--expected-db` là thay đổi đề xuất trên nhánh review riêng, **chưa có trong artifact PR #52 đã đóng gói**. Chỉ sử dụng sau khi CI, reviewer và artifact mới được duyệt; không thay thế hoặc vá trực tiếp PHP trong gói RC1 đã khóa. SHA ví dụ ở trên là RC1 ngày 11/10/2026, phải cập nhật bằng SHA của artifact thực sự được chọn nếu tạo candidate khác. Lỗi preflight chỉ được in mã an toàn, không được ghi tên database, DSN, mật khẩu hoặc chi tiết private config.
 
 - Script chỉ thực hiện kiểm tra SHA-256 tất cả file runtime, extensions, base URL/origin, DB identity, toàn bộ `schema_migrations` & `migration_checksums`; **không chạy DDL/DML, baseline, migration, đổi cấu hình hay backup**. Output chỉ có số lượng, commit và trạng thái không chứa secret. Mọi mismatch trả mã lỗi `RELEASE_BLOCKED` (exit 2).
 - `READ_ONLY_PREFLIGHT_PASS` chỉ là một gate nguồn/ledger; **không đồng nghĩa staging UAT, backup restore hay production release PASS**.
+
+- `--expected-db` phải là **tên clone MariaDB đã được operator đối chiếu độc lập** (không sao chép mù quáng từ private config). Preflight từ chối tên có marker production/live, tên DB lịch sử CyberPanel và kết nối thực tế `SELECT DATABASE()` không trùng cả config lẫn giá trị pin. Giữ account PDO quyền SELECT-only; không ghi DSN/mật khẩu vào GitHub.
+- Nếu còn migration pending trên clone, readiness **fail-closed** với mã `MIGRATIONS_PENDING_ON_CLONE`; không tự động nâng cấp. Operator phải có phê duyệt riêng trước khi rehearsal forward-only trên clone đã khôi phục.
+- **Hồ sơ VIE-6 phải có trước khi đóng issue:** (a) exact SHA và artifact checksum, (b) host/docroot staging tách biệt, (c) backup được mã hóa và checksum (không đính kèm dữ liệu thật), (d) restore thử vào database clone và row-count/schema kiểm đối chiếu, (e) migration ledger trước/sau + core-first rồi Marketing + B2B riêng, (f) read-only preflight exit code và log đã che dữ liệu riêng, (g) PHP/API real-auth/HTTPS, (h) rollback phương án code/database được operator ký. Không sửa production, không bypass controller `rc6.2-testing`.
+
 - CI đã được mở rộng bằng unit guard test, MariaDB P12 full core+Marketing rehearsal, B2B 038 schema, unit group pricing và staging deploy safety fixture. Phải đối chiếu exact-head CI cuối cùng trên PR #52; artifact SHA cũ không dùng lại sau commit mới.
 
 ## 4. Những gì đã chứng minh / chưa chứng minh
