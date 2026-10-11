@@ -70,7 +70,7 @@
       if(!positive(record.id))return;
       if(record.kind==='quotes')navigate('quote',{quoteId:positive(record.id),quoteTool:'visual'});
       if(record.kind==='bookings')navigate('booking',{bookingId:positive(record.id),bookingTab:'overview'});
-      if(record.kind==='customers')navigate('crm',{crmTab:'customers'});
+      if(record.kind==='customers')navigate('customer-360',{customerId:positive(record.id)});
       if(record.kind==='suppliers')navigate('suppliers',{productTab:'suppliers'});
       input.value='';
     }
