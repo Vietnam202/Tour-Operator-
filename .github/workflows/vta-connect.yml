@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -25,6 +28,8 @@ jobs:
           php -l integrations/wordpress/vta-connect/vta-connect.php
           php -l integrations/wordpress/vta-connect/includes/class-vta-connect-protocol.php
           php -l tests/vta-wordpress-connect-unit.php
+          php -l integrations/wordpress/vta-connect/includes/class-vta-b2c-publications.php
+          node --check integrations/wordpress/vta-connect/assets/b2c-inquiry.js
           node --check integrations/wordpress/vta-connect/assets/widget.js
       - name: Signed webhook/relay integration contract (no live provider)
         run: php tests/vta-wordpress-connect-unit.php
@@ -34,9 +39,11 @@ jobs:
           cd integrations/wordpress
           zip -qr ../../dist/vta-connect.zip vta-connect
           unzip -t ../../dist/vta-connect.zip
+          cd ../../dist
+          sha256sum vta-connect.zip > vta-connect.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: vta-connect-installable-plugin
-          path: dist/vta-connect.zip
+          path: dist/vta-connect.zip*
           retention-days: 14
           if-no-files-found: error

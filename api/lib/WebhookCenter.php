@@ -48,7 +48,9 @@ final class WebhookCenter {
    $q->execute([$token]);$form=$q->fetch(PDO::FETCH_ASSOC);
    if(!$form)Http::json(['ok'=>false,'error'=>'SOURCE_NOT_READY'],503);
    $cid=(int)$form['company_id'];
-   $lead=$event['lead'];unset($lead['submission_key'],$lead['website']);
+   $lead=$event['lead'];$publication=null;
+   if(isset($lead['b2c_publication_id'])){$pid=filter_var($lead['b2c_publication_id'],FILTER_VALIDATE_INT);if(!$pid)throw new InvalidArgumentException('Invalid publication');$publication=B2CStudio::publication($db,$cid,(int)$pid);$public=json_decode($publication['snapshot_json'],true,512,JSON_THROW_ON_ERROR);$lead['destination']=$public['destination'];$lead['message']='B2C: '.$public['title'].' [publication '.$pid.']\n'.(string)($lead['message']??'');unset($lead['b2c_publication_id']);}
+   unset($lead['submission_key'],$lead['website']);
    $lead['submission_key']=$submission;
    $fingerprint=hash('sha256',json_encode($lead,JSON_THROW_ON_ERROR));
    $q=$db->prepare('SELECT payload_hash FROM marketing_webhook_events WHERE company_id=? AND source_code=? AND event_key=?');
@@ -61,10 +63,12 @@ final class WebhookCenter {
    $q=$db->prepare('SELECT id FROM lead_requests WHERE company_id=? AND form_id=? AND submission_key=?');
    $q->execute([$cid,(int)$form['id'],$submission]);$leadId=(int)$q->fetchColumn();
    if(!$leadId)throw new RuntimeException('Accepted lead missing');
+   if($publication){$db->prepare('INSERT IGNORE INTO b2c_lead_links(company_id,lead_request_id,publication_event_id) VALUES(?,?,?)')->execute([$cid,$leadId,$publication['id']]);}
    $q=$db->prepare("INSERT IGNORE INTO marketing_webhook_events(company_id,source_code,event_key,payload_hash,event_type,lead_request_id,status) VALUES(?,?,?,?,'lead.created',?,'ACCEPTED')");
    $q->execute([$cid,$source,$key,$fingerprint,$leadId]);
    Http::json(['ok'=>true,'accepted'=>true]);
-  }catch(OverflowException $e){Http::json(['ok'=>false,'error'=>'RATE_LIMITED'],429);}
+  }catch(OutOfBoundsException $e){Http::json(['ok'=>false,'error'=>'PUBLICATION_UNAVAILABLE'],409);}
+   catch(OverflowException $e){Http::json(['ok'=>false,'error'=>'RATE_LIMITED'],429);}
    catch(DomainException $e){Http::json(['ok'=>false,'error'=>'EVENT_ID_REUSED'],409);}
    catch(InvalidArgumentException $e){Http::json(['ok'=>false,'error'=>'INVALID_PAYLOAD'],422);}
    catch(Throwable $e){error_log('VTA website webhook failed: '.get_class($e));Http::json(['ok'=>false,'error'=>'PROCESSING_FAILED'],503);}

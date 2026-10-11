@@ -86,6 +86,7 @@ final class VTA_Connect_Protocol {
             'destination'=>self::clean($input['destination']??'',500,'destination'),
             'message'=>self::clean($input['message']??'',8000,'message')
         ] + self::attribution(is_array($input['attribution']??null)?$input['attribution']:[]);
+        if(isset($input['b2c_publication_id'])){$id=filter_var($input['b2c_publication_id'],FILTER_VALIDATE_INT);if(!$id||$id<1)throw new InvalidArgumentException('Invalid publication');$lead['b2c_publication_id']=$id;}
         return [
             'event_type'=>'lead.created',
             'event_id'=>hash('sha256',$external.':lead:'.$request),

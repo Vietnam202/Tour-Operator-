@@ -16,7 +16,6 @@
       ...(any(can, ['sales.view','quote.confirm','booking.view','operations.view','task.view']) ? [{id:'tours',label:'Tour Workspace',icon:'▣',group:'WORKSPACES'}] : []),
       ...(any(can, ['tour_library.view','product.view','supplier.view']) ? [{id:'product',label:'Tour Library',icon:'▤',group:'WORKSPACES'}] : []),
       ...(any(can, ['supplier.view','rate.view','document.view']) ? [{id:'suppliers',label:'Suppliers',icon:'◇',group:'WORKSPACES'}] : []),
-      ...(can('lead.view') ? [{id:'marketing',label:'Marketing',icon:'◈',group:'WORKSPACES'}] : []),
       ...(any(can, ['report.view','finance.view','customer_ar.view','supplier_ap.view','profit.view']) ? [{id:'reports',label:'Reports',icon:'▥',group:'MANAGEMENT'}] : []),
       {id:'settings',label:'Settings',icon:'⚙',group:'MANAGEMENT'}
     ];
@@ -206,7 +205,7 @@
   function requestTable(rows){return table([t('Agency','Đại lý'),t('Departure','Ngày khởi hành'),t('Paying guests','Khách trả tiền'),t('Status','Trạng thái')],rows.map(r=>'<tr><td>'+safe(r.agency_name)+'</td><td>'+safe(r.departure_date)+'</td><td>'+safe(r.paying_pax)+'</td><td><span class="uw-status">'+safe(r.status)+'</span></td></tr>'));}
 
   function renderSettingsHub(root,{can,navigate}) {
-    const cards=[{title:t('Apps & connections','Ứng dụng & kết nối'),description:t('Install PWA, integrations and sign out.','Cài PWA, kết nối dùng chung và đăng xuất.'),route:'modules',icon:'▦'},...(any(can,['settings.manage','user.manage'])?[{title:t('Company & permissions','Doanh nghiệp & phân quyền'),description:t('Business defaults and authorized user management.','Thiết lập doanh nghiệp và quản lý người dùng được cấp quyền.'),route:'settings-admin',icon:'⚙'}]:[]),...(can('lead.view')?[{title:t('Marketing connections','Kết nối Marketing'),description:t('Social accounts, verified publishing and inbox.','Tài khoản mạng xã hội, phát hành đã kiểm tra và inbox.'),route:'marketing',params:{marketingTab:'channels'},icon:'◈'}]:[])];
+    const cards=[{title:t('Apps & connections','Ứng dụng & kết nối'),description:t('Install PWA, integrations and sign out.','Cài PWA, kết nối dùng chung và đăng xuất.'),route:'modules',icon:'▦'},...(any(can,['settings.manage','user.manage'])?[{title:t('Company & permissions','Doanh nghiệp & phân quyền'),description:t('Business defaults and authorized user management.','Thiết lập doanh nghiệp và quản lý người dùng được cấp quyền.'),route:'settings-admin',icon:'⚙'}]:[])];
     root.innerHTML='<div class="page uw-settings" data-no-translate><header class="uw-heading"><div><span class="uw-kicker">VTA WORKSPACE</span><h1>'+t('Settings','Cài đặt')+'</h1><p>'+t('Only authorized settings are available to your account.','Chỉ hiển thị thiết lập tài khoản của bạn được phép sử dụng.')+'</p></div></header><div class="uw-card-grid">'+cards.map((c,i)=>'<button class="uw-link-card" data-uw-settings="'+i+'"><span class="uw-card-icon">'+c.icon+'</span><strong>'+safe(c.title)+'</strong><small>'+safe(c.description)+'</small><span class="uw-card-arrow">→</span></button>').join('')+'</div></div>';
     root.querySelectorAll('[data-uw-settings]').forEach(b=>b.onclick=()=>{const c=cards[Number(b.dataset.uwSettings)];navigate(c.route,c.params||{});});
   }

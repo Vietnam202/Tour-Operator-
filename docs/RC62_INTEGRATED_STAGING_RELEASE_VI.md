@@ -1,3 +1,7 @@
+# Candidate bổ sung 11/10/2026
+
+Nền mới: PR #61 tại `d203ed67db55af025d77a22275f2d6d4f84a6af3`. B2C/WordPress/Companion và checklist hiện hành: [RC62_B2C_COMPLETION_GATE_VI.md](RC62_B2C_COMPLETION_GATE_VI.md). SHA, package và CI của candidate bổ sung phải lấy từ HEAD PR mới. Các SHA/PR52 hoặc RC1 bên dưới là mốc lịch sử, không dùng làm bằng chứng cho candidate mới. Không đổi pin của deploy controller hoặc bypass gate staging.
+
 # VTA RC6.2 — Bản tổng hợp chuẩn / Staging Release Candidate RC1
 
 **Ngày:** 11/10/2026 · **Loại:** Mã PHP/MariaDB chạy thật, gói staging có checksum · **KHÔNG PHẢI bản cài lên production hoặc demo HTML.**

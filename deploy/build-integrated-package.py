@@ -31,6 +31,9 @@ REQUIRED = {
     "api/lib/SmartEnhancements.php", "api/lib/PartnerHub.php",
     "api/bin/rc62-release-readiness.php",
     "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
+    "api/lib/B2CStudio.php", "api/lib/B2CPublicationBridge.php",
+    "api/migrations/044_b2c_publications.sql", "b2c-studio.js", "b2c-demo.js",
+    "vta-plus-assist.js", "vta-plus-assist.css",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
     "smart-enhancements.js", "smart-enhancements.css", "service-worker.js",
@@ -165,7 +168,7 @@ def verify(package: Path, manifest_file: Path) -> None:
                 if path.lstrip("./") not in entries:
                     raise RuntimeError("HTML reference missing from payload: " + path)
         sw = archive.read("runtime/service-worker.js").decode()
-        if "smart-enhancements.js" not in sw or "vta-RC62-V5-5-PWA" not in sw:
+        if "smart-enhancements.js" not in sw or "vta-RC62-B2C-1-PWA" not in sw:
             raise RuntimeError("PWA version/assets missing")
         forbidden = {"integrations/", "tests/", "verification/", "docs/", "deploy/", ".git/", "api/config.php"}
         for name in names:
