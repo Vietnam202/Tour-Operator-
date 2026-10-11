@@ -29,6 +29,7 @@ REQUIRED = {
     "api/index.php", "api/bootstrap.php", "api/bin/healthcheck.php",
     "api/lib/RuntimeGuard.php", "api/lib/Migrations.php",
     "api/lib/SmartEnhancements.php", "api/lib/PartnerHub.php",
+    "api/bin/rc62-release-readiness.php",
     "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
