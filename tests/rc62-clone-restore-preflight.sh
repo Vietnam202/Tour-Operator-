@@ -81,7 +81,12 @@ export VTA_CONFIG_FILE="$PRIVATE_DIR/config.php"
 run_preflight() {
   php api/bin/rc62-release-readiness.php "--manifest=$PRIVATE_DIR/manifest.json" "--expected-sha=$1" "--expected-db=$2"
 }
-run_preflight "$EXPECTED_SHA" "$CLONE_DB" >"$PRIVATE_DIR/pass.json" 2>&1 || fail "EXACT_SHA_READ_ONLY_PREFLIGHT_FAILED"
+if run_preflight "$EXPECTED_SHA" "$CLONE_DB" >"$PRIVATE_DIR/pass.json" 2>&1; then
+  :
+else
+  cat "$PRIVATE_DIR/pass.json" >&2
+  fail "EXACT_SHA_READ_ONLY_PREFLIGHT_FAILED"
+fi
 grep -F '"status":"READ_ONLY_PREFLIGHT_PASS"' "$PRIVATE_DIR/pass.json" >/dev/null || fail "READ_ONLY_PREFLIGHT_STATUS_MISSING"
 grep -F '"release_authorized":false' "$PRIVATE_DIR/pass.json" >/dev/null || fail "CI_MUST_NOT_AUTHORIZE_RELEASE"
 grep -F '"migrations_checked":' "$PRIVATE_DIR/pass.json" >/dev/null || fail "MIGRATION_LEDGER_NOT_CHECKED"
