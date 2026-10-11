@@ -10,16 +10,19 @@ The same company, customer, inquiry, trip, quote, sent version, accepted option 
 
 ## 2. Automated evidence and limitations
 
-Existing `Unified VTA Workspace QA` runs PHP 8.3, disposable MariaDB and browser fixture checks. The additive `tests/rc62-golden-path-continuity-native.php` calls the existing `tour-program-workspace-native.php` once and verifies in the **same disposable database**:
+Existing `Unified VTA Workspace QA` runs PHP 8.3, disposable MariaDB and browser fixture checks. The additive `tests/rc62-golden-path-continuity-native.php` calls the existing `tour-program-workspace-native.php` once and verifies in the **same disposable database**. It additionally checks the inherited Lead→Sales conversion, Sales handover→Operations acceptance and an **unissued PROFORMA draft** linked to Booking (not customer payment or completed supplier reconciliation):
 
 - Booking joins exactly to the owning company, Quote, Trip, Inquiry and confirmed Quote Version.
 - Paying PAX, FOC and Total Guests persist from the confirmed version into Booking.
 - SENT bundle / acceptance / Booking snapshot IDs and SHA content hashes match.
 - Booking selling total matches the accepted option's snapshot total; Booking service row count matches the accepted snapshot's lines.
 - Retrying booking does **not** create a duplicate and does **not** alter issued/booking snapshots.
+- The qualified fixture Lead maps to the same Inquiry and Trip as Booking; submitting Lead again does not produce duplicate requests.
+- Sales handover is idempotent, Operations accepts the same Booking, repeat acceptance is denied, and source snapshots remain byte-stable.
+- A PROFORMA **DRAFT** references the exact Booking currency/selling amount, double billing is rejected, and Finance reports zero receipt allocation with `actual_final=false`.
 - The inherited Tour Program native checks cover template copy, editing, save/reopen, image permissions, idempotent Save-as-Template and export/reimport of a DOCX plus PDF creation.
 
-**Only claim automated PASS after this PR's exact-HEAD CI runs successfully.** This is fixture continuity, **not** production/staging, real-user login, external provider or supplier evidence. It does not cover Website→CRM or Operations→Finance end to end; those still require authentic staging UAT.
+**Only claim automated PASS after this PR's exact-HEAD CI runs successfully.** This is fixture continuity, **not** production/staging, real-user login, external provider or supplier evidence. It does not prove real WordPress webhook delivery, real agency role sessions, supplier confirmation, Finance settlement/AP reconciliation or the full browser-operated workflow; those still require authentic staging UAT.
 
 ## 3. Mandatory authentic staging scenarios
 
