@@ -86,10 +86,17 @@ async function expected(route,method,body,session,status,csrf=session?.csrf){
     tags:[...new Set([...(source.tags||[]),'VTA_TEMPLATE'])],
     status:'DRAFT',source_text:'',source_name:'',source_type:'MANUAL',source_url:''};
   delete clone.id;delete clone.creation_key;delete clone.import_token;delete clone.has_source;
+  clone.creation_key='v5-http-fixture-creation-key';
   const made=await expected('tour-library','POST',clone,owner,201);
   const templateId=Number(made.id);
   check(templateId>0 && templateId!==sourceId,
       'Save-as-Template creates an independent program through HTTP POST');
+  const replay=await expected('tour-library','POST',clone,owner,201);
+  check(Number(replay.id)===templateId && replay.replayed===true,
+      'retrying template POST with same creation key replays the same program ID');
+  const ownerList=await expected('tour-library','GET',undefined,owner,200);
+  check(ownerList.items.filter(p=>p.title===clone.title).length===1,
+      'template POST retry creates no duplicate library row');
   const template=(await expected('tour-library/'+templateId,'GET',undefined,owner,200)).program;
   check(template.status==='DRAFT' && template.tags.includes('VTA_TEMPLATE') &&
         template.source_name==='' && template.source_text==='' &&
