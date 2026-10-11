@@ -24,3 +24,13 @@ Date: 11 October 2026. Status: **DRAFT / NO-GO FOR CYBERPANEL**.
 - Current CyberPanel controller branch pin remains unchanged. Do not merge, upload, alter production or run production migrations as a side effect of this PR.
 
 Outcome is only a combined **code/CI candidate** until the above evidence is recorded.
+
+## Post-merge candidate PWA forensic finding (11 October 2026)
+
+The combined PR #61 had V5-4-RECOVERY asset query versions, but its Service Worker still opened the historical `vta-RC62-SMART-P1-1` cache. A new worker could add assets into the same cache, leaving old entries behind. Worse, `caches.match()` searched all caches on the same origin, potentially serving an unrelated/older response under an identical URL.
+
+**Fix:** rotate only the VTA PWA cache to `vta-RC62-V5-5-PWA`, read cached assets and offline fallback exclusively through `caches.open(CACHE).match()`, and use explicit HTTP 503 if the offline fallback is missing. Keep online navigation network-first/no-store; never cache API, exports, uploads, arbitrary origins or non-GET methods. Bump package verifier and Smart P1 contract to the same cache version.
+
+**Automated regression:** `node tests/pwa-cache-upgrade.cjs` in exact-HEAD runtime package and unified UI CI tests cache rotation, old/foreign cache isolation, activation/claim, offline fallback 503, and no API/private resource interception. These checks use mock Cache API in Node, not physical Android/PWA UAT. No RuntimeGuard allowlist, SQL schema or staging controller changes.
+
+**Release:** still DRAFT / NO-GO: before installation, independently verify artifact SHA and the CyberPanel stage hostname/docroot, HTTPS/private config, existing-data clone/rollback, real user/session ACL, and real-device PWA clear/update/offline recovery. Never use CI-only synthetic MariaDB scripts on existing data.

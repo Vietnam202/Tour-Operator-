@@ -26,6 +26,7 @@ on:
       - 'index.html'
       - 'preview.html'
       - 'service-worker.js'
+      - 'tests/pwa-cache-upgrade.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -60,6 +61,7 @@ jobs:
           node --check tour-proposal-studio.js
           node --check smart-enhancements.js
           node --check service-worker.js
+          node tests/pwa-cache-upgrade.cjs
           npm ci --prefix tests
           node tests/vta-smart-enhancements-check.js
           node tests/vta-smart-enhancements-ui.cjs

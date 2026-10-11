@@ -165,7 +165,7 @@ def verify(package: Path, manifest_file: Path) -> None:
                 if path.lstrip("./") not in entries:
                     raise RuntimeError("HTML reference missing from payload: " + path)
         sw = archive.read("runtime/service-worker.js").decode()
-        if "smart-enhancements.js" not in sw or "vta-RC62-SMART-P1-1" not in sw:
+        if "smart-enhancements.js" not in sw or "vta-RC62-V5-5-PWA" not in sw:
             raise RuntimeError("PWA version/assets missing")
         forbidden = {"integrations/", "tests/", "verification/", "docs/", "deploy/", ".git/", "api/config.php"}
         for name in names:
