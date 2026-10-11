@@ -25,3 +25,7 @@
 .vta-connect__notice--error{color:#9a2830}
 .vta-connect__trap{position:absolute!important;left:-99999px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none}
 @media(max-width:540px){.vta-connect{border-radius:12px;margin:8px 0}.vta-connect__header{padding:15px}.vta-connect__messages{padding:12px;min-height:140px}.vta-connect__quick,.vta-connect__form{padding-left:12px;padding-right:12px}.vta-connect__bubble{max-width:96%}}
+
+.vta-connect__channels{display:flex;flex-wrap:wrap;gap:8px;padding:8px 18px 14px}
+.vta-connect__channels a{font-size:.82rem;font-weight:650;color:var(--vta-navy);background:#edf7f7;border:1px solid var(--vta-line);padding:7px 10px;border-radius:8px;text-decoration:none}
+.vta-connect__channels a:hover{border-color:var(--vta-teal)}
