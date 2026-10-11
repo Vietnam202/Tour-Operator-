@@ -33,6 +33,6 @@ The implementation intentionally retains the existing navigation and editor mark
 - Four visual-only layout previews: Professional Detailed, Photo-rich Brochure (typography emphasis; no new image engine), Quick Itinerary and B2B Tour Proposal.
 - Selection updates CSS presentation without rerendering or replacing editable fields. It survives V5 preview toggle in the current mount, and does not mutate itinerary, price or supplier records.
 - Gallery is responsive; existing library actions, blank Word editor and Smart Cost remain intact.
-- **Explicit limitations:** template selection is session-only, not stored in Tour Library; "My Templates" is labeled unavailable; no new full DOCX/PDF export engine or image-import fidelity is implied.
+- **Explicit limitations:** template selection is session-only, not stored in Tour Library; persistent Save-as-Template is a separate user action in the Library; the gallery itself never saves a template; no new full DOCX/PDF export engine or image-import fidelity is implied.
 - Regression: `tests/v5-template-gallery-ui.cjs` checks selection, unsaved day text, overview, rates, read-only behaviour and no extra server writes.
 - Manual visual checks: all four gallery thumbnails at 1440/1024/390 widths, expanding/collapsing gallery, preview toggle, existing day operations and focus order; verify no output/PDF/print changes.
