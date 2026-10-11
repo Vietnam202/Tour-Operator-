@@ -37,6 +37,16 @@ final class VTA_Connect {
         return defined('VTA_CONNECT_SOURCE') ? (string)VTA_CONNECT_SOURCE : 'wordpress_vta';
     }
 
+    private static function contactLink(string $constant,array $hosts): string {
+        $value=defined($constant)?(string)constant($constant):'';
+        if ($value==='') return '';
+        $p=wp_parse_url($value);
+        if (!is_array($p) || ($p['scheme']??'')!=='https'
+            || !in_array(strtolower((string)($p['host']??'')),$hosts,true)
+            || isset($p['user']) || isset($p['pass']) || isset($p['port'])) return '';
+        return $value;
+    }
+
     private static function originAllowed(): bool {
         $site=wp_parse_url(home_url('/'));
         $origin=$_SERVER['HTTP_ORIGIN']??'';
@@ -207,6 +217,20 @@ final class VTA_Connect {
               <button type="submit" <?php disabled(!$ready); ?>>Send request to VTA</button>
             </form>
           </details>
+          <?php
+          $channels=[
+              'WhatsApp'=>self::contactLink('VTA_CONNECT_WHATSAPP_URL',['wa.me','api.whatsapp.com']),
+              'Facebook Messenger'=>self::contactLink('VTA_CONNECT_MESSENGER_URL',['m.me','www.facebook.com','facebook.com']),
+              'TikTok'=>self::contactLink('VTA_CONNECT_TIKTOK_URL',['www.tiktok.com','tiktok.com'])
+          ];
+          if (count(array_filter($channels))>0) {
+              echo '<nav class="vta-connect__channels" aria-label="Other contact channels">';
+              foreach ($channels as $label=>$url) if ($url!=='') {
+                  echo '<a href="'.esc_url($url).'" target="_blank" rel="noopener noreferrer">'.esc_html($label).'</a>';
+              }
+              echo '</nav>';
+          }
+          ?>
           <p class="vta-connect__notice" data-notice aria-live="polite"><?php
             echo $ready ? esc_html__('FAQ replies are automated; quotations and final prices require staff confirmation.','vta-connect')
                         : esc_html__('Website chat is not yet connected.','vta-connect');
