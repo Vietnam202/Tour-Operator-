@@ -6,6 +6,7 @@ on:
       - 'docs/RC62_INTEGRATED_STAGING_RELEASE_VI.md'
       - '.github/workflows/rc62-integrated-runtime.yml'
       - 'api/**'
+      - 'tests/rc62-release-readiness-unit.php'
       - 'app.js'
       - 'smart-enhancements.*'
       - 'index.html'
@@ -39,6 +40,8 @@ jobs:
           php -l api/lib/PartnerHub.php
           php -l api/lib/TourLibrary.php
           php -l api/lib/SmartEnhancements.php
+          php -l api/bin/rc62-release-readiness.php
+          php tests/rc62-release-readiness-unit.php
           node --check app.js
           node --check smart-enhancements.js
           node --check service-worker.js
@@ -86,3 +89,48 @@ jobs:
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
+  disposable-full-schema-acceptance:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: vta_p12_clone_ci
+          MARIADB_USER: vta
+          MARIADB_PASSWORD: vta_ci_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, zip, gd, curl, pdo_mysql, pdo_sqlite
+          coverage: none
+      - name: Real core + marketing MariaDB upgrade rehearsal and B2B 038 schema
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_p12_clone_ci;charset=utf8mb4
+          VTA_TEST_USER: vta
+          VTA_TEST_PASSWORD: vta_ci_pw
+        run: |
+          set -euo pipefail
+          php tests/marketing-staging-schema-p12-db-test.php
+          php tests/b2b-hybrid-schema-ci.php
+      - name: Domain regression, pricing and official staging safety rules
+        run: |
+          set -euo pipefail
+          php tests/b2b-partner-hub-unit.php
+          php tests/b2b-hybrid-isolation-unit.php
+          php tests/rc6-group-pricing-unit.php
+          php tests/rc6-group-pricing-manual-unit.php
+          php tests/staging_deploy_safety.php
+          php tests/rc62-release-readiness-unit.php
