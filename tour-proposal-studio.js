@@ -37,7 +37,7 @@ window.VTATourProposalStudio={
    {id:'b2b',name:'B2B Tour Proposal',detail:'Ưu tiên bảng giá và điều kiện'}
   ];
   let selectedLayout='detailed',templatesOpen=false;
-  const templateGallery=()=>'<section class="vtps-template-gallery" id="vtps-template-gallery" aria-label="Chọn bố cục xem thử"'+(templatesOpen?'':' hidden')+'><div class="vtps-template-intro"><div><h2>Itinerary templates</h2><p>Chỉ đổi cách hiển thị trong phiên chỉnh sửa. Không thay dữ liệu, không lưu lựa chọn mẫu và không thay file Word/PDF.</p></div><span>UI Preview</span></div><div class="vtps-template-grid">'+templateChoices.map(t=>'<button type="button" class="vtps-template-card'+(t.id===selectedLayout?' selected':'')+'" data-vtps-template="'+t.id+'" aria-pressed="'+(t.id===selectedLayout?'true':'false')+'"><span class="vtps-template-thumbnail vtps-template-thumbnail--'+t.id+'" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>'+t.name+'</strong><small>'+t.detail+'</small><em>'+(t.id===selectedLayout?'Đang xem':'Xem mẫu')+'</em></button>').join('')+'</div><div class="vtps-template-unavailable" aria-disabled="true">My Templates · Chưa hỗ trợ lưu mẫu cá nhân trong giai đoạn UI Refresh</div></section>';
+  const templateGallery=()=>'<section class="vtps-template-gallery" id="vtps-template-gallery" aria-label="Chọn bố cục xem thử"'+(templatesOpen?'':' hidden')+'><div class="vtps-template-intro"><div><h2>Itinerary templates</h2><p>Chỉ đổi cách hiển thị trong phiên chỉnh sửa. Không thay dữ liệu, không lưu lựa chọn mẫu và không thay file Word/PDF.</p></div><span>UI Preview</span></div><div class="vtps-template-grid">'+templateChoices.map(t=>'<button type="button" class="vtps-template-card'+(t.id===selectedLayout?' selected':'')+'" data-vtps-template="'+t.id+'" aria-pressed="'+(t.id===selectedLayout?'true':'false')+'"><span class="vtps-template-thumbnail vtps-template-thumbnail--'+t.id+'" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>'+t.name+'</strong><small>'+t.detail+'</small><em>'+(t.id===selectedLayout?'Đang xem':'Xem mẫu')+'</em></button>').join('')+'</div><div class="vtps-template-unavailable" aria-disabled="true">Mẫu đã lưu nằm trong Kho chương trình. Bộ chọn này chỉ thay đổi bố cục xem thử.</div></section>';
   function reflectTemplate(){
    const surface=container.querySelector('.vtps');
    if(!surface)return;
@@ -55,13 +55,13 @@ window.VTATourProposalStudio={
   const title=()=>clean(current.title)||'Chương trình tour mới';
   const daysNav=()=>current.days.map((_,i)=>'<button data-scroll="vtps-day-'+i+'">Day '+(i+1)+'</button>').join('');
   function screen(){
-   container.innerHTML='<section class="vtps" aria-label="VTA Proposal Studio"><header class="vtps-top"><div><small>VIETNAM TRAVEL ADVISOR / TOUR PROGRAM LIBRARY</small><h1>Itinerary & Proposal Studio</h1></div><div class="vtps-top-actions"><span data-vtps-state>Chưa lưu thay đổi</span><button data-action="back">← Kho chương trình</button><button data-action="templates" type="button" aria-expanded="'+(templatesOpen?'true':'false')+'" aria-controls="vtps-template-gallery">Chọn mẫu</button><button data-action="preview">Xem trước</button><button class="vtps-save" data-action="save">Lưu vào Library</button></div></header>'+templateGallery()+'<div class="vtps-main"><aside class="vtps-sidebar"><p>DOCUMENT OUTLINE</p>'+[['overview','Tour Overview'],['summary','Summary Schedule'],['prices','Best Price Offer'],['hotels','Hotels & Cruise'],['itinerary','Detailed Itinerary'],['included','Included / Excluded'],['policies','Policies & Terms']].map(([id,name])=>'<button data-scroll="vtps-'+id+'">'+name+'</button>').join('')+'<div data-day-outline>'+daysNav()+'</div></aside><div class="vtps-paper"><div class="vtps-brand">VIETNAM TRAVEL ADVISOR</div><h2 class="vtps-paper-title" id="vtps-overview">TOUR PROGRAM & QUOTATION</h2><div class="vtps-meta">'+text('Tên chương trình',current.title,'data-meta="title" maxlength="190"')+text('Điểm đến',current.destination,'data-meta="destination" maxlength="190"')+text('Mã tour',p.tour_code,'data-proposal="tour_code" maxlength="50"')+'<label>Tour Type<select data-proposal="tour_type"><option value="PRIVATE" '+(p.tour_type==='PRIVATE'?'selected':'')+'>Private</option><option value="SIC" '+(p.tour_type==='SIC'?'selected':'')+'>Group / SIC</option><option value="BOTH" '+(p.tour_type==='BOTH'?'selected':'')+'>Private + Group</option></select></label><label>Ngôn ngữ<select data-meta="language"><option value="en" '+(current.language==='en'?'selected':'')+'>English</option><option value="vi" '+(current.language==='vi'?'selected':'')+'>Tiếng Việt</option></select></label><label>Trạng thái<select data-meta="status"><option value="DRAFT" '+(current.status==='DRAFT'?'selected':'')+'>Draft</option><option value="ACTIVE" '+(current.status==='ACTIVE'?'selected':'')+'>Active</option></select></label></div><h3>Tour Overview</h3>'+paragraph(p.overview,'overview',4)+'<h3>Tour Highlights</h3>'+paragraph((p.highlights||[]).join('\n'),'highlights',4)+'<section id="vtps-summary"><h3>Summary Itinerary</h3><p class="vtps-help">Tự động lấy từ Detailed Itinerary. Không cần nhập hai lần.</p><table><thead><tr><th>Day</th><th>Schedule</th><th>Meals</th><th>Overnight</th></tr></thead><tbody>'+current.days.map((d,i)=>'<tr><td>Day '+(i+1)+'</td><td>'+esc(d.title)+'</td><td>'+esc(d.meals)+'</td><td>'+esc(d.overnight)+'</td></tr>').join('')+'</tbody></table></section><section id="vtps-prices"><h3>Best Price Offer · Group / SIC</h3><p class="vtps-help">Đơn giá bán USD/khách, chưa được phê duyệt khi nhập mới.</p><table data-table="group"><thead><tr><th>Hotel</th><th>Twin / Double · USD/Pax</th><th>Single supplement</th></tr></thead><tbody>'+p.group_prices.map((r,i)=>'<tr data-group-row="'+i+'"><th>'+esc(r.hotel)+'★</th><td>'+cell(r.price,'price')+'</td><td>'+cell(r.single,'single')+'</td></tr>').join('')+'</tbody></table><h3>Private Tour · Price per person in USD</h3><table data-table="private"><thead><tr><th>Group Size</th><th>3★ Hotel</th><th>4★ Hotel</th><th>5★ Hotel</th><th></th></tr></thead><tbody>'+p.private_prices.map((r,i)=>'<tr data-private-row="'+i+'"><td><div class="vtps-range">'+cell(r.min,'min')+' – '+cell(r.max,'max')+'</div></td>'+['three','four','five'].map(k=>'<td>'+cell(r[k],k)+'</td>').join('')+'<td><button data-remove-private="'+i+'" aria-label="Xóa dòng giá">×</button></td></tr>').join('')+'</tbody></table><button data-action="add-private" class="vtps-subaction">+ Thêm nhóm khách</button><p class="vtps-warning" data-pricing-warnings></p></section><section id="vtps-hotels"><h3>Hotels & Cruise</h3><table data-table="hotels"><thead><tr><th>Destination</th><th>3★</th><th>4★</th><th>5★</th><th></th></tr></thead><tbody>'+p.hotels.map((r,i)=>'<tr data-hotel-row="'+i+'">'+['destination','three','four','five'].map(k=>'<td>'+cell(r[k],k)+'</td>').join('')+'<td><button data-remove-hotel="'+i+' aria-label="Xóa dòng khách sạn">×</button></td></tr>').join('')+'</tbody></table><button class="vtps-subaction" data-action="add-hotel">+ Thêm khách sạn / cruise</button></section><section id="vtps-itinerary"><div class="vtps-section-bar"><h3>Detailed Itinerary</h3><button class="vtps-subaction" data-action="add-day">+ Add Day</button></div><div data-day-list>'+current.days.map(dayHTML).join('')+'</div></section><section id="vtps-included"><h3>Included</h3><textarea rows="5" data-meta="included_text">'+esc(current.included_text)+'</textarea><h3>Excluded</h3><textarea rows="5" data-meta="excluded_text">'+esc(current.excluded_text)+'</textarea></section><section id="vtps-policies"><h3>Children Policy</h3>'+paragraph(p.policies.children,'children',3)+'<h3>Payment Terms</h3>'+paragraph(p.policies.payment,'payment',3)+'<h3>Cancellation Policy</h3>'+paragraph(p.policies.cancellation,'cancellation',3)+'<h3>Important Notes</h3>'+paragraph(p.policies.notes,'notes',3)+'<h3>Other Terms & Conditions</h3><textarea rows="5" data-meta="terms_text">'+esc(current.terms_text)+'</textarea></section><p class="vtps-footer">VIETNAM TRAVEL ADVISOR · For draft review only. Rates and services subject to confirmation.</p></div></div></section>';
+   container.innerHTML='<section class="vtps" aria-label="VTA Proposal Studio"><header class="vtps-top"><div><small>VIETNAM TRAVEL ADVISOR / TOUR PROGRAM LIBRARY</small><h1>Itinerary & Proposal Studio</h1></div><div class="vtps-top-actions"><span data-vtps-state>Chưa lưu thay đổi</span><button data-action="back">← Kho chương trình</button><button data-action="templates" type="button" aria-expanded="'+(templatesOpen?'true':'false')+'" aria-controls="vtps-template-gallery">Chọn mẫu</button><button data-action="paste">Dán ChatGPT</button><button data-action="save-template">Lưu thành mẫu</button><button data-action="preview">Xem trước</button><button class="vtps-save" data-action="save">Lưu vào Library</button></div></header>'+templateGallery()+'<div class="vtps-main"><aside class="vtps-sidebar"><p>DOCUMENT OUTLINE</p>'+[['overview','Tour Overview'],['summary','Summary Schedule'],['prices','Best Price Offer'],['hotels','Hotels & Cruise'],['itinerary','Detailed Itinerary'],['included','Included / Excluded'],['policies','Policies & Terms']].map(([id,name])=>'<button data-scroll="vtps-'+id+'">'+name+'</button>').join('')+'<div data-day-outline>'+daysNav()+'</div></aside><div class="vtps-paper"><div class="vtps-brand">VIETNAM TRAVEL ADVISOR</div><h2 class="vtps-paper-title" id="vtps-overview">TOUR PROGRAM & QUOTATION</h2><div class="vtps-meta">'+text('Tên chương trình',current.title,'data-meta="title" maxlength="190"')+text('Điểm đến',current.destination,'data-meta="destination" maxlength="190"')+text('Mã tour',p.tour_code,'data-proposal="tour_code" maxlength="50"')+'<label>Tour Type<select data-proposal="tour_type"><option value="PRIVATE" '+(p.tour_type==='PRIVATE'?'selected':'')+'>Private</option><option value="SIC" '+(p.tour_type==='SIC'?'selected':'')+'>Group / SIC</option><option value="BOTH" '+(p.tour_type==='BOTH'?'selected':'')+'>Private + Group</option></select></label><label>Ngôn ngữ<select data-meta="language"><option value="en" '+(current.language==='en'?'selected':'')+'>English</option><option value="vi" '+(current.language==='vi'?'selected':'')+'>Tiếng Việt</option></select></label><label>Trạng thái<select data-meta="status"><option value="DRAFT" '+(current.status==='DRAFT'?'selected':'')+'>Draft</option><option value="ACTIVE" '+(current.status==='ACTIVE'?'selected':'')+'>Active</option></select></label></div><h3>Tour Overview</h3>'+paragraph(p.overview,'overview',4)+'<h3>Tour Highlights</h3>'+paragraph((p.highlights||[]).join('\n'),'highlights',4)+'<section id="vtps-summary"><h3>Summary Itinerary</h3><p class="vtps-help">Tự động lấy từ Detailed Itinerary. Không cần nhập hai lần.</p><table><thead><tr><th>Day</th><th>Schedule</th><th>Meals</th><th>Overnight</th></tr></thead><tbody>'+current.days.map((d,i)=>'<tr><td>Day '+(i+1)+'</td><td>'+esc(d.title)+'</td><td>'+esc(d.meals)+'</td><td>'+esc(d.overnight)+'</td></tr>').join('')+'</tbody></table></section><section id="vtps-prices"><h3>Best Price Offer · Group / SIC</h3><p class="vtps-help">Đơn giá bán USD/khách, chưa được phê duyệt khi nhập mới.</p><table data-table="group"><thead><tr><th>Hotel</th><th>Twin / Double · USD/Pax</th><th>Single supplement</th></tr></thead><tbody>'+p.group_prices.map((r,i)=>'<tr data-group-row="'+i+'"><th>'+esc(r.hotel)+'★</th><td>'+cell(r.price,'price')+'</td><td>'+cell(r.single,'single')+'</td></tr>').join('')+'</tbody></table><h3>Private Tour · Price per person in USD</h3><table data-table="private"><thead><tr><th>Group Size</th><th>3★ Hotel</th><th>4★ Hotel</th><th>5★ Hotel</th><th></th></tr></thead><tbody>'+p.private_prices.map((r,i)=>'<tr data-private-row="'+i+'"><td><div class="vtps-range">'+cell(r.min,'min')+' – '+cell(r.max,'max')+'</div></td>'+['three','four','five'].map(k=>'<td>'+cell(r[k],k)+'</td>').join('')+'<td><button data-remove-private="'+i+'" aria-label="Xóa dòng giá">×</button></td></tr>').join('')+'</tbody></table><button data-action="add-private" class="vtps-subaction">+ Thêm nhóm khách</button><p class="vtps-warning" data-pricing-warnings></p></section><section id="vtps-hotels"><h3>Hotels & Cruise</h3><table data-table="hotels"><thead><tr><th>Destination</th><th>3★</th><th>4★</th><th>5★</th><th></th></tr></thead><tbody>'+p.hotels.map((r,i)=>'<tr data-hotel-row="'+i+'">'+['destination','three','four','five'].map(k=>'<td>'+cell(r[k],k)+'</td>').join('')+'<td><button data-remove-hotel="'+i+' aria-label="Xóa dòng khách sạn">×</button></td></tr>').join('')+'</tbody></table><button class="vtps-subaction" data-action="add-hotel">+ Thêm khách sạn / cruise</button></section><section id="vtps-itinerary"><div class="vtps-section-bar"><h3>Detailed Itinerary</h3><button class="vtps-subaction" data-action="add-day">+ Add Day</button></div><div data-day-list>'+current.days.map(dayHTML).join('')+'</div></section><section id="vtps-included"><h3>Included</h3><textarea rows="5" data-meta="included_text">'+esc(current.included_text)+'</textarea><h3>Excluded</h3><textarea rows="5" data-meta="excluded_text">'+esc(current.excluded_text)+'</textarea></section><section id="vtps-policies"><h3>Children Policy</h3>'+paragraph(p.policies.children,'children',3)+'<h3>Payment Terms</h3>'+paragraph(p.policies.payment,'payment',3)+'<h3>Cancellation Policy</h3>'+paragraph(p.policies.cancellation,'cancellation',3)+'<h3>Important Notes</h3>'+paragraph(p.policies.notes,'notes',3)+'<h3>Other Terms & Conditions</h3><textarea rows="5" data-meta="terms_text">'+esc(current.terms_text)+'</textarea></section><p class="vtps-footer">VIETNAM TRAVEL ADVISOR · For draft review only. Rates and services subject to confirmation.</p></div></div></section>';
    container.classList.add('vtps-host');
    container.querySelector('[data-pricing-warnings]').textContent=validatePrices(current.proposal.private_prices).join(' ');
    container.classList.toggle('vtps-preview',preview);
    reflectTemplate();
    if(!canEdit||preview){container.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);container.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));}
-   if(!canEdit){container.querySelectorAll('button[data-action="save"],button[data-action="add-day"],button[data-action="add-private"],button[data-action="add-hotel"],button[data-day-action],button[data-remove-private],button[data-remove-hotel]').forEach(el=>{el.disabled=true;el.hidden=true;});container.querySelector('[data-vtps-state]').textContent='Chỉ xem · Không có quyền sửa';}
+   if(!canEdit){container.querySelectorAll('button[data-action="save"],button[data-action="paste"],button[data-action="save-template"],button[data-action="add-day"],button[data-action="add-private"],button[data-action="add-hotel"],button[data-day-action],button[data-remove-private],button[data-remove-hotel]').forEach(el=>{el.disabled=true;el.hidden=true;});container.querySelector('[data-vtps-state]').textContent='Chỉ xem · Không có quyền sửa';}
   }
   function read(){
    const one=s=>container.querySelector(s);
@@ -80,6 +80,44 @@ window.VTATourProposalStudio={
      return {...d,day:i+1,...Object.fromEntries(['date','title','description','meals','overnight','notes'].map(k=>[k,val(k)]))};
    });
    current.proposal=p;
+  }
+  async function saveAsTemplate(){
+   if(!canEdit||pending)return;
+   read();
+   if(!clean(current.title)){toast('Đặt tên tour trước khi lưu mẫu.',true);return;}
+   const warnings=validatePrices(p.private_prices);
+   if(warnings.some(w=>w.includes('không hợp lệ')||w.includes('bị trùng'))){toast(warnings.join(' '),true);return;}
+   pending=true;
+   try{
+    const draft={...current,title:current.title+' (Template)',tags:[...new Set([...(current.tags||[]),'VTA_TEMPLATE'])],status:'DRAFT',source_text:'',source_name:'',source_type:'MANUAL',source_url:''};
+    delete draft.id;delete draft.creation_key;delete draft.import_token;delete draft.has_source;
+    const response=await api.request('tour-library',{method:'POST',body:draft});
+    if(!response?.id)throw Error('API chưa xác nhận lưu template.');
+    toast('Đã lưu bản mẫu độc lập vào Template Center.');
+   }catch(e){toast(e?.message||'Không lưu được mẫu.',true);}finally{pending=false;}
+  }
+  function pasteFromChatGPT(content){
+   if(!canEdit||typeof content!=='string'||!content.trim())return;
+   read();
+   const source=content.replace(/\r\n?/g,'\n');
+   const matches=[...source.matchAll(/^(?:day|ngày)\s*0*\d{1,3}\s*[:.\-–—]?\s*([^\n]*)/gim)];
+   if(matches.length){
+    if(current.days.length+matches.length>90){toast('Vượt giới hạn 90 ngày tour.',true);return;}
+    for(let i=0;i<matches.length;i++){
+     const m=matches[i],start=m.index+m[0].length,end=i+1<matches.length?matches[i+1].index:source.length;
+     current.days.push({day:current.days.length+1,date:'',title:m[1].trim()||'Tour Day',description:source.slice(start,end).trim(),meals:'',overnight:'',notes:''});
+    }
+   }else{p.overview=[p.overview,source.trim()].filter(Boolean).join('\n\n');}
+   screen();toast(matches.length?'Đã thêm '+matches.length+' ngày; hãy kiểm tra lại nội dung.':'Đã thêm văn bản vào Tour Overview.');
+  }
+  function openPasteDialog(){
+   if(!canEdit||preview)return;
+   const backdrop=document.createElement('div');
+   backdrop.className='vtps-paste-backdrop';
+   backdrop.setAttribute('role','presentation');
+   backdrop.innerHTML='<div class="vtps-paste-dialog" role="dialog" aria-modal="true" aria-label="Dán chương trình từ ChatGPT"><h3>Dán chương trình từ ChatGPT</h3><p>Dán toàn bộ nội dung vào ô dưới đây. Chúng tôi nhận diện các dòng Day 1 / Ngày 1; nếu không có, nội dung sẽ được thêm vào Tour Overview. Không thay đổi bảng giá.</p><textarea data-vtps-paste-text rows="12" placeholder="Day 1: Arrival in Hanoi\nAirport transfer...\nDay 2: Ha Long Bay..."></textarea><div class="vtps-paste-actions"><button data-action="paste-cancel">Hủy</button><button data-action="paste-apply" class="vtps-save">Thêm vào chương trình</button></div></div>';
+   container.appendChild(backdrop);
+   backdrop.querySelector('textarea').focus();
   }
   function addDay(){
    if(current.days.length>=90){toast('Tối đa 90 ngày tour.',true);return;}
@@ -105,7 +143,28 @@ window.VTATourProposalStudio={
    finally{pending=false;}
   }
   screen();
-  container.addEventListener('input',e=>{if(container.querySelector('[data-vtps-state]'))container.querySelector('[data-vtps-state]').textContent='Chưa lưu thay đổi';},{signal:controller.signal});
+  container.addEventListener('input',e=>{
+   const state=container.querySelector('[data-vtps-state]');
+   if(state&&!preview&&canEdit)state.textContent='Chưa lưu thay đổi';
+   const dayNode=e.target.closest('[data-day-index]');
+   if(dayNode){
+    const index=Number(dayNode.dataset.dayIndex);
+    const key=e.target.dataset.dayField;
+    const column={title:1,meals:2,overnight:3}[key];
+    if(column!==undefined){
+     const row=container.querySelectorAll('#vtps-summary tbody tr')[index];
+     if(row)row.children[column].textContent=e.target.hasAttribute('contenteditable')?(e.target.innerText??e.target.textContent??''):e.target.value;
+    }
+   }
+   if(e.target.closest('[data-private-row]')){
+    const bands=[...container.querySelectorAll('[data-private-row]')].map(row=>{
+     const v=k=>row.querySelector('[data-field="'+k+'"]').value;
+     return {min:v('min'),max:v('max'),three:v('three'),four:v('four'),five:v('five')};
+    });
+    const warning=container.querySelector('[data-pricing-warnings]');
+    if(warning)warning.textContent=validatePrices(bands).join(' ');
+   }
+  },{signal:controller.signal});
   container.addEventListener('click',async e=>{
    const scroll=e.target.closest('[data-scroll]');if(scroll){container.querySelector('#'+scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});return;}
    const b=e.target.closest('button');if(!b||!container.contains(b)||b.disabled)return;
@@ -125,6 +184,15 @@ window.VTATourProposalStudio={
     return;
    }
    if(b.dataset.action==='save'){await save();return;}
+   if(b.dataset.action==='save-template'){await saveAsTemplate();return;}
+   if(b.dataset.action==='paste'){openPasteDialog();return;}
+   if(b.dataset.action==='paste-cancel'){b.closest('.vtps-paste-backdrop')?.remove();return;}
+   if(b.dataset.action==='paste-apply'){
+    const dialog=b.closest('.vtps-paste-backdrop');
+    const pasted=dialog?.querySelector('[data-vtps-paste-text]')?.value||'';
+    if(!pasted.trim()){toast('Hãy dán nội dung chương trình trước.',true);return;}
+    pasteFromChatGPT(pasted);return;
+   }
    if(b.dataset.action==='back'){if(!confirm('Quay lại Kho chương trình? Những thay đổi chưa lưu sẽ mất.'))return;controller.abort();container.classList.remove('vtps-host');await onBack();return;}
    if(b.dataset.action==='preview'){read();preview=!preview;screen();return;}
    if(b.dataset.action==='add-day'){read();addDay();return;}
