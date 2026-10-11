@@ -12,7 +12,7 @@
   const allowedView=()=>['tour_library.view','product.view','supplier.view'].some(can);
   const allowedManage=()=>['tour_library.manage','product.manage','document.upload'].some(can);
   const alive=()=>root.dataset.view==='product'&&root.dataset.tourLibraryInstance===instance;
-  let items=[],batch=[],view='library',query='',destination='',language='',showArchived=false,ticket=0,busy=false,nextId=1;
+  let items=[],batch=[],view='library',query=String(options.searchQuery||'').slice(0,190),destination='',language='',showArchived=false,ticket=0,busy=false,nextId=1;
   const safe=x=>esc(x??'');
   const request=(route,opt)=>api.request(route,opt);
   const errorText=e=>String(e?.message||e||'Không thể thực hiện. Vui lòng thử lại.');

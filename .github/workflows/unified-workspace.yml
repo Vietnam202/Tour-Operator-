@@ -47,12 +47,14 @@ jobs:
         env:
           VTA_UNIFIED_SCREENSHOTS: test-results/unified
           VTA_MARKETING_SCREENSHOTS: test-results/marketing
+          VTA_SMART_SCREENSHOTS: tests/test-results/smart-p1
           VTA_PROGRAM_SCREENSHOTS: tests/test-results/program
         run: |
           npm run test:unified:browser --prefix tests
           node tests/tour-program-workspace-browser.cjs
           npm run test:marketing:browser --prefix tests
           node tests/marketing-ui.cjs
+          node tests/vta-smart-enhancements-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

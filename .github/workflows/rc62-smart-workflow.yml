@@ -1,0 +1,74 @@
+name: RC6.2 Smart Workflow P1 QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/SmartEnhancements.php'
+      - 'api/bootstrap.php'
+      - 'api/index.php'
+      - 'smart-enhancements.js'
+      - 'smart-enhancements.css'
+      - 'index.html'
+      - 'preview.html'
+      - 'app.js'
+      - 'service-worker.js'
+      - 'tests/vta-smart-enhancements-*.js'
+      - 'tests/vta-smart-enhancements-ui.cjs'
+      - 'tests/vta-smart-enhancements-native.php'
+      - '.github/workflows/rc62-smart-workflow.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint-and-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: PHP syntax on changed routes and bootstrap
+        run: |
+          php -l api/lib/SmartEnhancements.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+      - name: Install existing UI test dependencies
+        run: npm ci --prefix tests
+      - name: JavaScript syntax and P1 boundary contract
+        run: |
+          node --check smart-enhancements.js
+          node --check app.js
+          node --check service-worker.js
+          node --check tests/vta-smart-enhancements-check.js
+          node tests/vta-smart-enhancements-check.js
+          node tests/vta-smart-enhancements-ui.cjs
+  tenant-rbac-mariadb:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: vta-smart-fixture-only
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 33319:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql
+          coverage: none
+      - name: Native MariaDB tenant, RBAC and read-only alert contract
+        env:
+          VTA_SMART_TEST_ONLY: '1'
+          VTA_SMART_TEST_DB_PASSWORD: vta-smart-fixture-only
+        run: |
+          php -l tests/vta-smart-enhancements-native.php
+          php tests/vta-smart-enhancements-native.php
