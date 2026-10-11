@@ -33,6 +33,7 @@ require_once __DIR__ . '/lib/Storage.php';
 require_once __DIR__ . '/lib/DocumentParser.php';
 require_once __DIR__ . '/lib/RateRules.php';
 require_once __DIR__ . '/lib/CoreOS.php';
+require_once __DIR__ . '/lib/SmartEnhancements.php';
 require_once __DIR__ . '/lib/LeadHub.php';
 require_once __DIR__ . '/lib/DomainOutbox.php';
 require_once __DIR__ . '/lib/LeadSalesHandover.php';
