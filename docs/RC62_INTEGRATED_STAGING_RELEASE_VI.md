@@ -35,6 +35,24 @@ Build script: `deploy/build-integrated-package.py`. Dùng `git ls-files`, so byt
 6. UAT thật trên staging: 2 agency A/B, B2B Common/Exclusive copy/revoke/export/direct ID; internal Sales và read-only; Word itinerary save/reopen/undo, supplier evidence; mixed **6 paying + 1 FOC, Hotel 3★ + Cruise 5★**; Smart Cost → Price → Proposal → DOCX/PDF → Booking; lead/chat/Quick Send (link expire/revoke), PWA trên PC và điện thoại; không lộ NET/supplier cost.
 7. Chỉ sau **CI exact SHA xanh + MariaDB clone migration/restore + UAT ký duyệt + rollback rehearsal + operator approval** mới có thể chuyển PR khỏi Draft và duyệt triển khai production theo change window. Không chạy `migrate.php` trên database production trong bước chuẩn bị.
 
+### Read-only readiness preflight (thêm trong RC1)
+
+Tệp CLI **được đóng gói trong runtime**: `api/bin/rc62-release-readiness.php`. Chỉ chạy sau khi **giải nén vào docroot staging riêng** và cấu hình **database clone riêng**; không dùng trên CyberPanel production.
+
+- Đưa file manifest từ artifact ZIP vào thư mục PRIVATE ngoài webroot (ví dụ `/home/staging/vta_private/rc62-manifest.json`); giữ `SHA256SUMS.txt` bên ngoài public.
+- Sử dụng `VTA_CONFIG_FILE` trỏ đến config private có `app.env=staging/testing`, host thuộc RuntimeGuard allowlist, `security.allowed_origin` trùng `app.base_url` và DB đặt tên rõ `_staging` / `_clone` / `_test`. Tên DB CyberPanel cũ `v2qu_v2qu_vtaos` **bị chặn** cho preflight RC1.
+- Chạy từ CLI PHP 8.3 có các extension bắt buộc, tốt nhất dùng user database **SELECT-only**:
+
+```bash
+VTA_CONFIG_FILE=/path/to/private/staging-config.php \
+php runtime/api/bin/rc62-release-readiness.php \
+  --manifest=/path/to/private/rc62-manifest.json
+```
+
+- Script chỉ thực hiện kiểm tra SHA-256 tất cả file runtime, extensions, base URL/origin, DB identity, toàn bộ `schema_migrations` & `migration_checksums`; **không chạy DDL/DML, baseline, migration, đổi cấu hình hay backup**. Output chỉ có số lượng, commit và trạng thái không chứa secret. Mọi mismatch trả mã lỗi `RELEASE_BLOCKED` (exit 2).
+- `READ_ONLY_PREFLIGHT_PASS` chỉ là một gate nguồn/ledger; **không đồng nghĩa staging UAT, backup restore hay production release PASS**.
+- CI đã được mở rộng bằng unit guard test, MariaDB P12 full core+Marketing rehearsal, B2B 038 schema, unit group pricing và staging deploy safety fixture. Phải đối chiếu exact-head CI cuối cùng trên PR #52; artifact SHA cũ không dùng lại sau commit mới.
+
 ## 4. Những gì đã chứng minh / chưa chứng minh
 
 | Hạng mục | Bằng chứng |
