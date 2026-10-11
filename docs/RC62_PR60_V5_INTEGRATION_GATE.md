@@ -34,3 +34,7 @@ The combined PR #61 had V5-4-RECOVERY asset query versions, but its Service Work
 **Automated regression:** `node tests/pwa-cache-upgrade.cjs` in exact-HEAD runtime package and unified UI CI tests cache rotation, old/foreign cache isolation, activation/claim, offline fallback 503, and no API/private resource interception. These checks use mock Cache API in Node, not physical Android/PWA UAT. No RuntimeGuard allowlist, SQL schema or staging controller changes.
 
 **Release:** still DRAFT / NO-GO: before installation, independently verify artifact SHA and the CyberPanel stage hostname/docroot, HTTPS/private config, existing-data clone/rollback, real user/session ACL, and real-device PWA clear/update/offline recovery. Never use CI-only synthetic MariaDB scripts on existing data.
+
+### CI fixture compatibility correction
+
+The first cache-rotation commit deliberately failed existing Marketing/Unified tests because `tests/pwa.cjs` mocked `caches.open().addAll()` but omitted the standard per-cache `match()` method, and `tests/vta-approved-ui.cjs` still asserted the obsolete cache constant. Updated both existing tests to the real scoped Cache API contract; made global `caches.match()` throw in the test to prevent this regression. Retain the new behavioral test; do not claim PASS until a fresh exact-head run completes.
