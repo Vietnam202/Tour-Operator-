@@ -1,0 +1,54 @@
+// VTA RC6.2 P1 safety + wiring checks. Uses only Node.js built-ins.
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const read=file=>fs.readFileSync(file,'utf8');
+const php=read('api/lib/SmartEnhancements.php');
+const boot=read('api/bootstrap.php');
+const api=read('api/index.php');
+const js=read('smart-enhancements.js');
+const app=read('app.js');
+const preview=read('preview.html');
+const index=read('index.html');
+const sw=read('service-worker.js');
+
+assert.match(php,/final class SmartEnhancements/);
+assert.match(php,/\$route !== 'smart\/search'/);
+assert.match(php,/\$route !== 'smart\/alerts'/);
+assert.match(php,/\$method !== 'GET'/);
+assert.match(php,/Auth::can\(\$db, \(int\)\$user\['id'\], \$permission\)/);
+assert.match(php,/b2b\.portal/);
+assert.match(php,/!self::allowed\(\$db,\$user,'b2b\.admin'\)/);
+assert.match(php,/company_id=\?/);
+assert.match(php,/owner_user_id=\?/);
+assert.match(php,/sales\.view/);
+assert.match(php,/booking\.view/);
+assert.match(php,/supplier\.view/);
+assert.match(php,/operations\.view/);
+assert.match(php,/rate\.view/);
+assert.doesNotMatch(php,/SELECT\s+\*/i,'Smart routes must use explicit public/safe field lists');
+assert.doesNotMatch(php,/\bINSERT\b|\bUPDATE\b|\bDELETE\b/i,'Smart routes must be read only');
+assert.match(boot,/require_once __DIR__ \. '\/lib\/SmartEnhancements\.php';/);
+assert.ok(api.indexOf('SmartEnhancements::handle(')>api.indexOf('Auth::checkCsrf();'),'smart API must run after auth & CSRF');
+for(const html of [index,preview]){
+  assert.match(html,/smart-enhancements\.css\?v=P1-1/);
+  assert.match(html,/smart-enhancements\.js\?v=P1-1/);
+  assert.ok(html.indexOf('smart-enhancements.js')<html.indexOf('app.js?v=PROGRAM-1'),'P1 script must load before RC app boot');
+}
+assert.match(sw,/vta-RC62-SMART-P1-1/);
+assert.match(sw,/smart-enhancements\.css\?v=P1-1/);
+assert.match(sw,/smart-enhancements\.js\?v=P1-1/);
+assert.match(app,/VTASmartEnhancements\?\.mount/);
+assert.match(app,/if\(!window\.VTASmartEnhancements\)/);
+assert.match(js,/quote-versions\/.*?proposal\/links/);
+assert.match(js,/!sent\.length\|\|preview/);
+assert.match(js,/https:\\\/\\\//);
+assert.match(js,/navigator\.clipboard/);
+assert.match(js,/quote\.send/);
+assert.match(js,/proposal\.send/);
+assert.doesNotMatch(js,/fetch\s*\(.*(?:facebook|tiktok|graph\.facebook)/i,'no provider auto-send');
+const fakeWindow={};
+vm.runInNewContext(js,{window:fakeWindow,document:{},navigator:{},setTimeout,clearTimeout});
+assert.equal(typeof fakeWindow.VTASmartEnhancements.mount,'function');
+console.log('Smart P1 contracts PASS: safe read API, ACL, UI wiring, immutable public link, PWA assets');
