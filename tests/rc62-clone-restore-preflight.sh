@@ -94,6 +94,28 @@ if run_preflight "$EXPECTED_SHA" "$CLONE_DB" >"$PRIVATE_DIR/pass.json" 2>&1; the
   :
 else
   cat "$PRIVATE_DIR/pass.json" >&2
+  php -r '
+  require "api/lib/Migrations.php";
+  require "api/bin/rc62-release-readiness.php";
+  $config=require getenv("VTA_CONFIG_FILE");
+  $cfg=$config["db"];
+  $expected=[];
+  foreach (Migrations::orderedFiles(getcwd()."/api/migrations") as $file) {
+    $expected[basename($file,".sql")]=hash_file("sha256",$file);
+  }
+  $db=new PDO(sprintf("mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4",$cfg["host"],$cfg["port"],$cfg["database"]),$cfg["username"],$cfg["password"]);
+  $versions=array_map("strval",$db->query("SELECT version FROM schema_migrations")->fetchAll(PDO::FETCH_COLUMN));
+  $ledger=$db->query("SELECT version,sha256,status FROM migration_checksums")->fetchAll(PDO::FETCH_ASSOC);
+  $checks=[];
+  foreach($ledger as $row)$checks[$row["version"]]=$row;
+  $applied=array_fill_keys($versions,true);
+  foreach($expected as $version=>$hash) {
+    if(isset($applied[$version]) && (!isset($checks[$version]) || $checks[$version]["status"]!=="APPLIED" || !hash_equals($hash,(string)$checks[$version]["sha256"])))
+      fwrite(STDERR,"DIAG_LEDGER_MISMATCH version=".$version." status=".($checks[$version]["status"]??"MISSING")." hash_match=".(isset($checks[$version])&&hash_equals($hash,(string)$checks[$version]["sha256"])?"yes":"no")."\\n");
+  }
+  try { RC62ReleaseReadiness::ledger($expected,$versions,$ledger); fwrite(STDERR,"DIAG_PDO_LEDGER_ACCEPTED\\n"); }
+  catch(Throwable $e) { fwrite(STDERR,"DIAG_PDO_LEDGER_BLOCKED reason=".RC62ReleaseReadiness::safeFailure($e)."\\n"); }
+  ' >&2
   fail "EXACT_SHA_READ_ONLY_PREFLIGHT_FAILED"
 fi
 grep -F '"status":"READ_ONLY_PREFLIGHT_PASS"' "$PRIVATE_DIR/pass.json" >/dev/null || fail "READ_ONLY_PREFLIGHT_STATUS_MISSING"
