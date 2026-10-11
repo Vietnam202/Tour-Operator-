@@ -11,6 +11,8 @@ on:
       - 'tests/rc62-v5-template-persistence-native.php'
       - 'tests/rc62-v5-http-fixture-setup.php'
       - 'tests/rc62-v5-http-auth-api.cjs'
+      - 'tests/rc62-clone-restore-preflight.sh'
+      - 'tests/marketing-staging-schema-p12-db-test.php'
       - 'tour-proposal-studio.*'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
@@ -109,6 +111,7 @@ jobs:
         image: mariadb:11.4
         env:
           MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_ROOT_HOST: '%'
           MARIADB_DATABASE: vta_p12_clone_ci
           MARIADB_USER: vta
           MARIADB_PASSWORD: vta_ci_pw
@@ -138,6 +141,15 @@ jobs:
           set -euo pipefail
           php tests/marketing-staging-schema-p12-db-test.php
           php tests/b2b-hybrid-schema-ci.php
+      - name: Restore synthetic MariaDB fixture and run exact-SHA read-only preflight
+        env:
+          VTA_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=vta_p12_clone_ci;charset=utf8mb4
+          VTA_TEST_ROOT_PASSWORD: ci_root_password
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes mariadb-client
+          bash tests/rc62-clone-restore-preflight.sh
       - name: Domain regression, pricing and official staging safety rules
         run: |
           set -euo pipefail
