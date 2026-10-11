@@ -5,7 +5,7 @@ declare(strict_types=1);
  * RC6.2 read-only candidate readiness gate.
  * CLI only; no DDL, DML, migration execution, document writes or external requests.
  *
- * php api/bin/rc62-release-readiness.php --manifest=/path/outside/webroot/manifest.json
+ * php api/bin/rc62-release-readiness.php --manifest=/private/manifest.json --expected-sha=<operator-approved-40-hex>
  */
 final class RC62ReleaseReadiness
 {
