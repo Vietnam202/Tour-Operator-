@@ -1,0 +1,30 @@
+name: VTA Connect WordPress Bridge QA
+on:
+  pull_request:
+    paths:
+      - 'integrations/wordpress/vta-connect/**'
+      - 'tests/vta-wordpress-connect-unit.php'
+      - '.github/workflows/vta-connect.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-and-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: WordPress plugin PHP and JavaScript syntax
+        run: |
+          php -l integrations/wordpress/vta-connect/vta-connect.php
+          php -l integrations/wordpress/vta-connect/includes/class-vta-connect-protocol.php
+          php -l tests/vta-wordpress-connect-unit.php
+          node --check integrations/wordpress/vta-connect/assets/widget.js
+      - name: Signed webhook/relay integration contract (no live provider)
+        run: php tests/vta-wordpress-connect-unit.php
