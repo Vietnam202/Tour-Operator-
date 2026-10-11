@@ -44,8 +44,9 @@
     }
 
     async function searchPreview(q) {
-      const groups={quotes:[],bookings:[],customers:[],suppliers:[]};
+      const groups={tours:[],quotes:[],bookings:[],customers:[],suppliers:[]};
       const sources=[
+        ['tours','tour_library.view','tour-library',r=>[r.title,r.destination]],
         ['quotes','sales.view','quotes',r=>[r.quote_ref,r.title,r.tour_name,r.lead_contact_name]],
         ['bookings','booking.view','bookings',r=>[r.booking_ref,r.title,r.lead_guest_name]],
         ['customers','sales.view','customers',r=>[r.customer_ref,r.full_name,r.company_name,r.email,r.whatsapp]],
@@ -53,12 +54,12 @@
       ];
       const query=q.toLocaleLowerCase('vi');
       for(const [group,permission,route,parts] of sources){
-        if(!allowed(permission))continue;
+        if(!(group==='tours'?['tour_library.view','product.view','supplier.view'].some(allowed):allowed(permission)))continue;
         const response=await api.request(route);
         groups[group]=(response.items||[]).filter(r=>parts(r).join(' ').toLocaleLowerCase('vi').includes(query)).slice(0,8).map(r=>({
-          id:r.id,ref:r.quote_ref||r.booking_ref||r.customer_ref||r.supplier_ref||'',
+          id:r.id,ref:r.quote_ref||r.booking_ref||r.customer_ref||r.supplier_ref||(group==='tours'?'TOUR-'+r.id:'')||'',
           title:r.title||r.tour_name||r.full_name||r.name||'',
-          detail:r.lead_contact_name||r.lead_guest_name||r.company_name||r.city||'',
+          detail:r.lead_contact_name||r.lead_guest_name||r.company_name||r.destination||r.city||'',
           status:r.version_status||r.operations_status||r.status||''
         }));
       }
@@ -68,6 +69,7 @@
     function openResult(record) {
       clear();
       if(!positive(record.id))return;
+      if(record.kind==='tours')navigate('product',{searchQuery:String(record.title||'')});
       if(record.kind==='quotes')navigate('quote',{quoteId:positive(record.id),quoteTool:'visual'});
       if(record.kind==='bookings')navigate('booking',{bookingId:positive(record.id),bookingTab:'overview'});
       if(record.kind==='customers')navigate('customer-360',{customerId:positive(record.id)});
@@ -78,7 +80,7 @@
     function renderSearch(groups) {
       rows=[];
       results.replaceChildren();
-      const labels={quotes:'Tour & báo giá',bookings:'Booking',customers:'Khách hàng',suppliers:'Nhà cung cấp'};
+      const labels={tours:'Master Tour / Kho chương trình',quotes:'Tour & báo giá',bookings:'Booking',customers:'Khách hàng',suppliers:'Nhà cung cấp'};
       for(const kind of Object.keys(labels)) {
         const found=Array.isArray(groups?.[kind])?groups[kind]:[];
         if(!found.length)continue;
@@ -87,7 +89,7 @@
         const title=document.createElement('h4');title.textContent=labels[kind];section.append(title);
         for(const r of found) {
           if(!positive(r.id))continue;
-          const record={kind,id:r.id};
+          const record={kind,id:r.id,title:r.title||''};
           const action=document.createElement('button');
           action.type='button';action.className='search-item vta-smart-result';
           action.setAttribute('role','option');action.setAttribute('aria-selected','false');
