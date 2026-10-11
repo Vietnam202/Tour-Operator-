@@ -25,6 +25,8 @@ final class SmartEnhancements {
 
     private static function search(PDO $db, array $user): array {
         $groups = ['quotes'=>[], 'bookings'=>[], 'customers'=>[], 'suppliers'=>[]];
+        // Partner portal users never enter internal customer/quote search, even if a role is misconfigured.
+        if (self::allowed($db,$user,'b2b.portal') && !self::allowed($db,$user,'b2b.admin')) return $groups;
         $q = self::term();
         if ((function_exists('mb_strlen') ? mb_strlen($q, 'UTF-8') : strlen($q)) < 2) return $groups;
         $like = '%'.$q.'%';
@@ -59,6 +61,7 @@ final class SmartEnhancements {
 
     private static function alerts(PDO $db, array $user): array {
         $company=(int)$user['company_id'];$uid=(int)$user['id'];$alerts=[];
+        if (self::allowed($db,$user,'b2b.portal') && !self::allowed($db,$user,'b2b.admin')) return $alerts;
         if (self::allowed($db,$user,'task.view')) {
             $tasks = self::rows($db, "SELECT id,title,due_at,priority,
                 CASE WHEN due_at < NOW() THEN 'OVERDUE'
