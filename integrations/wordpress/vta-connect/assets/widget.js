@@ -44,7 +44,23 @@
     const p = document.createElement('p');
     p.className = 'vta-connect__bubble vta-connect__bubble--' + role;
     // Deliberately textContent: never insert customer/chat content as HTML.
-    p.textContent = text;
+    if (role === 'staff') {
+      // Approved RC6 share URLs become clickable without interpreting any HTML.
+      for (const segment of text.split(/(https:\/\/[^\s<>]+)/g)) {
+        if (!segment.startsWith('https://')) { p.appendChild(document.createTextNode(segment)); continue; }
+        try {
+          const url = new URL(segment);
+          if (url.protocol !== 'https:') throw new Error('Unsupported URL');
+          const a = document.createElement('a');
+          a.href = url.href;
+          a.textContent = segment;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.referrerPolicy = 'no-referrer';
+          p.appendChild(a);
+        } catch (_) { p.appendChild(document.createTextNode(segment)); }
+      }
+    } else p.textContent = text;
     box.appendChild(p);
     box.scrollTop = box.scrollHeight;
   };
@@ -57,6 +73,8 @@
     const chatForm = root.querySelector('[data-chat-form]');
     const leadForm = root.querySelector('[data-lead-form]');
     let busy = false;
+    let pendingChat = null;
+    let pendingLead = null;
     let cursor = 0;
     let live = true;
     const seen = new Set();
@@ -66,11 +84,15 @@
       if (busy || !text.trim()) return;
       busy = true;
       chatForm.querySelector('button[type="submit"]').disabled = true;
+      const message = text.trim();
+      const requestId = pendingChat && pendingChat.text === message ? pendingChat.id : randomId();
+      pendingChat = {text: message, id: requestId};
       try {
         await call(root, 'chat', {
-          request_id: randomId(), text: text.trim(), website: chatForm.elements.website.value,
+          request_id: requestId, text: message, website: chatForm.elements.website.value,
           attribution: attribution()
         });
+        pendingChat = null;
         bubble(root, text, 'visitor');
         chatForm.elements.text.value = '';
         const canned = faq(text);
@@ -95,13 +117,17 @@
       const button = leadForm.querySelector('button[type="submit"]');
       button.disabled = true;
       const data = Object.fromEntries(new FormData(leadForm));
+      const digest = JSON.stringify(data);
+      const leadId = pendingLead && pendingLead.digest === digest ? pendingLead.id : randomId();
+      pendingLead = {digest: digest, id: leadId};
       try {
         await call(root, 'lead', {
-          request_id: randomId(),
+          request_id: leadId,
           contact_name: data.contact_name, email: data.email,
           destination: data.destination, total_guests: Number(data.total_guests),
           message: data.message, website: data.website, attribution: attribution()
         });
+        pendingLead = null;
         bubble(root, 'Quotation request received. VTA Sales will review your details.', 'faq');
         say(root, 'Your quotation request was received by VTA.', false);
         leadForm.reset();
@@ -116,13 +142,16 @@
         const result = await call(root, 'poll', { after_id: cursor });
         const delivered = [];
         for (const msg of (result.messages || [])) {
-          if (!Number.isSafeInteger(msg.id) || msg.id < 1 || seen.has(msg.id)) continue;
-          bubble(root, String(msg.text), 'staff');
-          seen.add(msg.id);
+          if (!Number.isSafeInteger(msg.id) || msg.id < 1) continue;
           delivered.push(msg.id);
+          if (!seen.has(msg.id)) {
+            bubble(root, String(msg.text), 'staff');
+            seen.add(msg.id);
+          }
         }
         if (delivered.length) {
-          // Acknowledges relay to the website, NOT that the customer has read it.
+          // Retry ACK even for messages already displayed if the prior ACK failed.
+          // This confirms relay to the widget, NOT that the customer has read it.
           await call(root, 'ack', { message_ids: delivered });
           cursor = Math.max(cursor, ...delivered);
           try { sessionStorage.setItem('vta-connect-cursor', String(cursor)); } catch (_) {}
