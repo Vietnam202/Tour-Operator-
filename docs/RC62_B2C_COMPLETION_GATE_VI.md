@@ -31,8 +31,9 @@ Loại trừ `/journeys/*`, archive Journeys và mọi trang có shortcode khỏ
 
 | Nhóm | Kiểm tra bằng CI fixture | Gate thực tế còn thiếu |
 |---|---|---|
-| VIE-5 / release | Raw HEAD package, migration, checksum; SQLite/domain, MariaDB và HTTP synthetic; frontend/browser preview | Tải lại artifact độc lập đúng HEAD; rehearsal clone dữ liệu VTA; backup/rollback CyberPanel |
-| VIE-6 / functional | Master/B2C isolation, revision, approval, snapshot, HMAC, company/permission HTTP; B2B/cost regressions hiện có | HTTPS login từng role; B2C publish/withdraw/image/inquiry → customer/inquiry → quote; 50 chương trình thật; DOCX/PDF Unicode/ảnh thật |
+| VIE-5 / integration scope | Candidate nối PR #61; tích hợp core Companion #43, de-scope UI #47 và triển khai B2C #50; khóa diff/HEAD và kiểm tra regression | Reviewer/owner chốt integrate/defer các sibling còn lại, gồm #21; không đóng issue từ CI |
+| VIE-6 / staging hardening | Runtime package/manifest đúng HEAD, migration và synthetic clone restore/read-only preflight; không thay pin controller | Tải lại artifact độc lập; HTTPS host/docroot/private config; backup mã hóa, clone dữ liệu VTA, ledger/row reconciliation, migration rehearsal và rollback được ký |
+| Functional UAT | Master/B2C isolation, revision, approval, snapshot, HMAC, company/permission HTTP và browser preview | HTTPS login từng role; B2C publish/withdraw/image/inquiry → customer/inquiry → quote; 50 chương trình thật; DOCX/PDF Unicode/ảnh thật |
 | VIE-11 / owner | CI logs cung cấp dữ liệu review | Owner signoff theo checklist, quyết định scope/retail và nghiệm thu trên site thật |
 | PWA | Cache version mới, asset rotation và private-API boundary fixture | Android install/update/offline thật, session/logout, stale cache |
 | B2B / pricing | Giữ luồng NET, 5 pax bands và Hotel/Cruise độc lập | Private/SIC, 3/4/5 sao, mixed 3★ hotel + 5★ cruise, 6 paying + 1 FOC; finance/operations trên dữ liệu thực |
