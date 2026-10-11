@@ -110,7 +110,7 @@ jobs:
         run: |
           mkdir -p tests/test-results/backend
           set -o pipefail
-          php tests/rc62-golden-path-continuity-native.php | tee tests/test-results/backend/native-acceptance.log
+          php tests/rc62-v5-template-persistence-native.php | tee tests/test-results/backend/native-acceptance.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
