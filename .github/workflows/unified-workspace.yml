@@ -102,15 +102,36 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, zip, gd, dom, curl, pdo_mysql, pdo_sqlite
           coverage: none
-      - name: Fresh schema, document/media, authoritative costing and program library acceptance
+      - name: Native Golden Path and authenticated HTTP Tour Library acceptance
         env:
           VTA_TEST_DB_PASSWORD: vta-fixture-only
           VTA_TEST_DB_PORT: '33317'
           VS22_OUTPUT_DIR: ${{ runner.temp }}/vta-word-output
+          VTA_V5_TEST_PASSWORD: vta-fixture-only-http-password
+          VTA_V5_HTTP_URL: http://127.0.0.1:18869
+          VTA_V5_HTTP_PORT: '18869'
         run: |
+          set -euo pipefail
           mkdir -p tests/test-results/backend
-          set -o pipefail
-          php tests/rc62-v5-template-persistence-native.php | tee tests/test-results/backend/native-acceptance.log
+          umask 077
+          PRIVATE_DIR=$(mktemp -d "$RUNNER_TEMP/vta-v5-http-private.XXXXXXXX")
+          export VTA_V5_HTTP_CONFIG="$PRIVATE_DIR/config.php"
+          cleanup() {
+            if [ -n "${SERVER_PID:-}" ]; then kill "$SERVER_PID" 2>/dev/null || :; fi
+            rm -rf "$PRIVATE_DIR"
+          }
+          trap cleanup EXIT
+          php tests/rc62-v5-http-fixture-setup.php | tee tests/test-results/backend/native-acceptance.log
+          export VTA_CONFIG_FILE="$VTA_V5_HTTP_CONFIG"
+          php -S 127.0.0.1:18869 -t . > "$PRIVATE_DIR/php-server.log" 2>&1 &
+          SERVER_PID=$!
+          ready=0
+          for i in {1..25}; do
+            if curl --silent --fail --max-time 2 "http://127.0.0.1:18869/api/index.php?route=health" >/dev/null; then ready=1; break; fi
+            sleep 0.2
+          done
+          if [ "$ready" -ne 1 ]; then echo "Local PHP fixture server did not start"; exit 1; fi
+          node tests/rc62-v5-http-auth-api.cjs | tee tests/test-results/backend/authenticated-http-acceptance.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
