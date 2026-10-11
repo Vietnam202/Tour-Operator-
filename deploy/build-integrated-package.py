@@ -18,12 +18,18 @@ BLOCKED_SEGMENTS = {
     "logs", "cache", "backup", "backups", "generated", "node_modules",
 }
 ROOT_EXTS = {".js", ".css", ".html", ".json", ".php"}
+REQUIRED_PDF_ASSETS = {
+    "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
+    "api/vendor/tfpdf/font/unifont/DejaVu_LICENSE.txt",
+    "api/vendor/tfpdf/LICENSE",
+}
 ASSET_EXTS = {".css", ".js", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff", ".woff2", ".ttf"}
 REQUIRED = {
     ".htaccess", "index.html", "preview.html", "partner.html",
     "api/index.php", "api/bootstrap.php", "api/bin/healthcheck.php",
     "api/lib/RuntimeGuard.php", "api/lib/Migrations.php",
     "api/lib/SmartEnhancements.php", "api/lib/PartnerHub.php",
+    "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
     "smart-enhancements.js", "smart-enhancements.css", "service-worker.js",
@@ -41,6 +47,8 @@ def managed(name: str) -> bool:
         return False
     if any(v in BLOCKED_SEGMENTS or v == ".env" or v.startswith(".env.") for v in p.parts):
         return False
+    if name in REQUIRED_PDF_ASSETS:
+        return True
     if name in {"api/config.php", "api/config.example.php"}:
         return False
     if len(p.parts) == 1:
