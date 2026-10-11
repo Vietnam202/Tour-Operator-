@@ -29,14 +29,62 @@ async function run(){
  assert.equal(calls[0].opt.body.days.length,2);
  assert.equal(calls[0].opt.body.days[0].description,'Edited day description');
  console.log('PASS studio render, group/private rates, add day and API save');
+ // Read-only must also suppress V5 restore write and paste entrypoints.
+ // Checked after mounting read-only below.
  // A view-only user cannot mutate data and can inspect existing program.
  w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:false,toast:(...x)=>toasts.push(x),onBack:async()=>{},onSaved:async()=>{}});
  assert.equal(root.querySelector('[data-action="save"]').hidden,true);
+ assert.equal(root.querySelector('[data-action="paste"]').hidden,true);
+ assert.equal(root.querySelector('[data-action="save-template"]').hidden,true);
  assert.equal(root.querySelector('[data-meta="title"]').disabled,true);
  assert.equal(root.querySelector('[data-day-field="description"]').getAttribute('contenteditable'),'false');
  root.querySelector('[data-action="preview"]').click();await settle();
  assert.equal(calls.length,1);
  console.log('PASS view-only permissions and preview');
+ // Parity with the original V5 interaction; preview layout gallery remains independent.
+ w.VTATourProposalStudio.mount(root,{program:program(),api,canEdit:true,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
+ root.querySelector('[data-action="paste"]').click();
+ assert(root.querySelector('[role="dialog"]'));
+ root.querySelector('[data-vtps-paste-text]').value='Day 2: Ha Long Bay\nCruise itinerary\nDay 3: Ninh Binh\nScenic boat journey';
+ root.querySelector('[data-action="paste-apply"]').click();
+ assert.equal(root.querySelectorAll('[data-day-index]').length,3);
+ assert.equal(root.querySelector('[data-day-index="1"] [data-day-field="title"]').textContent,'Ha Long Bay');
+ root.querySelector('[data-action="save-template"]').click();await settle();await settle();
+ const last=calls.at(-1);
+ assert.equal(last.route,'tour-library');
+ assert.equal(last.opt.method,'POST');
+ assert(last.opt.body.tags.includes('VTA_TEMPLATE'));
+ assert.equal(last.opt.body.status,'DRAFT');
+ assert.equal(last.opt.body.days.length,3);
+ assert.equal(last.opt.body.source_type,'MANUAL');
+ assert.equal(last.opt.body.id,undefined);
+ assert.equal(program().title,'Hanoi – Halong 2D1N');
+ // Changes in day title and meal codes refresh the read-only summary table without a page rerender.
+ const first=root.querySelector('[data-day-index="0"] [data-day-field="title"]');
+ first.textContent='Updated Hanoi Welcome';
+ first.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(2)').textContent,'Updated Hanoi Welcome');
+ const meals=root.querySelector('[data-day-index="0"] [data-day-field="meals"]');
+ meals.value='B/L';
+ meals.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(root.querySelector('#vtps-summary tbody tr:first-child td:nth-child(3)').textContent,'B/L');
+ // Overlapping price bands are identified at the time of editing, before hitting Save.
+ const band=root.querySelector('[data-private-row="1"] [data-field="min"]');
+ band.value='2';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ band.value='3';
+ band.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert(!root.querySelector('[data-pricing-warnings]').textContent.includes('bị trùng'));
+ console.log('PASS live summary and private passenger-band warning');
+ console.log('PASS Studio paste/Save as Template creates independent draft');
+ // The new visual template gallery still previews without writing to the backend.
+ root.querySelector('[data-action="templates"]').click();
+ const countBeforeGallery=calls.length;
+ root.querySelector('[data-vtps-template="b2b"]').click();
+ assert.equal(calls.length,countBeforeGallery,'layout preview must not persist a clone');
+ assert.equal(root.querySelector('.vtps').dataset.vtpsLayout,'b2b');
+ console.log('PASS visual template picker stays independent from saved Library template');
  w.close();
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

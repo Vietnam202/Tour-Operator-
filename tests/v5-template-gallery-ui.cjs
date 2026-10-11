@@ -49,7 +49,8 @@ async function main(){
  assert.equal(host.querySelector('[data-vtps-template="brochure"]').getAttribute('aria-pressed'),'true');
  assert.equal(host.querySelector('[data-vtps-template="detailed"]').getAttribute('aria-pressed'),'false');
  assert.equal(writes.length,0,'template preview must not write to the server');
- assert(!host.querySelector('[data-action="save-template"]'),'no pretend custom template saving action');
+ assert(host.querySelector('[data-action="save-template"]'),
+  'native Save-as-Template is offered separately from visual gallery');
  assert(!host.querySelector('[data-action="export-template"]'),'no pretend template export');
  host.querySelector('[data-action="preview"]').click();
  assert.equal(host.querySelector('.vtps').dataset.vtpsLayout,'brochure','template preview survives V5 re-render');
@@ -68,6 +69,8 @@ async function main(){
  assert.equal(host.querySelector('.vtps').dataset.vtpsLayout,'quick');
  assert.equal(host.querySelector('[data-day-field="description"]').getAttribute('contenteditable'),'false');
  assert.equal(host.querySelector('[data-action="save"]').hidden,true);
+ assert.equal(host.querySelector('[data-action="save-template"]').hidden,true);
+ assert.equal(host.querySelector('[data-action="paste"]').hidden,true);
  assert.equal(writes.length,1,'read-only viewer cannot write');
  // All four visuals are screen-only; original print and back-end cost logic unchanged.
  for(const id of ['detailed','brochure','quick','b2b']){
@@ -75,7 +78,7 @@ async function main(){
  }
  assert(stylesheet.includes('.vtps .vtps-template-gallery[hidden]'),'gallery supports hidden state');
  assert(stylesheet.includes('@media screen'),'screen only');
- console.log('PASS: V5 four template previews, unsaved data/caret DOM preserved, permissions, no cost/API/export changes');
+ console.log('PASS: V5 layout gallery preserves unsaved data/caret, separates persistent templates, permissions and cost/API/export');
  dom.window.close();
 }
 main().catch(err=>{console.error(err);process.exitCode=1;});
