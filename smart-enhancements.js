@@ -197,7 +197,13 @@
         '<span class="vta-smart-alert-dot" aria-hidden="true"></span><div><strong>'+safe(a.title)+'</strong><small>'+safe(a.detail||'')+'</small></div>'+
         '<button class="btn small" type="button" data-smart-alert="'+i+'">Mở</button></article>'
       ).join(''):'<p class="empty">Hiện không có cảnh báo trong phạm vi quyền của bạn.</p>';
-      const dialog=modal('Smart Alerts · '+alerts.length, '<div class="vta-smart-alert-list">'+rowsHtml+'</div><p class="muted">Dữ liệu đọc trực tiếp từ Tasks, Booking Risk và Rate Expiry. Không tự xác nhận dịch vụ.</p>');
+      const controls=['task.view','quote.approve','finance.close','operations.view'].some(can)
+        ?'<button class="btn" type="button" id="vtaSmartOpenControl">Mở Tasks & Approvals →</button>':'';
+      const dialog=modal('Smart Alerts · '+alerts.length, '<div class="vta-smart-alert-list">'+rowsHtml+'</div><p class="muted">Dữ liệu đọc trực tiếp từ Tasks, Booking Risk và Rate Expiry. Không tự xác nhận dịch vụ.</p>'+controls);
+      dialog.querySelector('#vtaSmartOpenControl')?.addEventListener('click',()=>{
+        document.querySelector('.modal-backdrop')?.remove();
+        navigate('control');
+      });
       dialog.querySelectorAll('[data-smart-alert]').forEach(btn=>btn.addEventListener('click',()=>{
         const a=alerts[Number(btn.dataset.smartAlert)];
         document.querySelector('.modal-backdrop')?.remove();
