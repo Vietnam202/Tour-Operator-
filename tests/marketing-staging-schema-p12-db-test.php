@@ -74,6 +74,11 @@ try {
     $blocked=false;try{MarketingSchemaUpgrade::inspect($db,$manifest);}
     catch(RuntimeException $e){$blocked=true;}
     verifyP12($blocked,'historical Marketing checksum tampering fails closed');
+    $restoreHash=$db->prepare('UPDATE migration_checksums SET sha256=? WHERE version=?');
+    $restoreHash->execute([$manifest['marketing']['042_meta_messenger_replies'],'042_meta_messenger_replies']);
+    verifyP12($db->query("SELECT sha256 FROM migration_checksums WHERE version='042_meta_messenger_replies'")->fetchColumn()
+        ===$manifest['marketing']['042_meta_messenger_replies'],
+        'negative checksum fixture restores the exact reviewed migration digest');
     require_once __DIR__.'/../api/lib/MarketingStagingGate.php';
     $sourceDecision=MarketingStagingGate::summary(MarketingStagingGate::inspectSource(dirname(__DIR__)));
     verifyP12($sourceDecision['safe_to_release']===false,
