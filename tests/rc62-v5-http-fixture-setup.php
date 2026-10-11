@@ -7,6 +7,7 @@ declare(strict_types=1);
  * Never invoke it against staging/production; never reuse VTA live passwords.
  */
 require __DIR__.'/rc62-v5-template-persistence-native.php';
+require __DIR__.'/b2c-native-assertions.php';
 require_once __DIR__.'/../api/lib/RuntimeGuard.php';
 
 $port=(int)(getenv('VTA_V5_HTTP_PORT') ?: 18869);
@@ -29,14 +30,14 @@ foreach ([['tester@example.invalid',1],['other@example.invalid',2]] as [$email,$
     check($q->rowCount()===1,'V5 HTTP fixture: synthetic login account exists for company '.$company);
 }
 
-// Read-only same-company account, granted only the library view permission.
+// Read-only same-company account, granted only Master/B2C view permissions.
 $db->prepare("INSERT INTO roles(company_id,code,name) VALUES(1,'V5_VIEWER','V5 Fixture Viewer')")->execute();
 $viewerRole=(int)$db->lastInsertId();
 $db->prepare("INSERT INTO users(company_id,role_id,full_name,email,password_hash) VALUES(1,?,'V5 Viewer','viewer@example.invalid',?)")->execute([$viewerRole,$hash]);
-$db->prepare("INSERT INTO role_permissions(role_id,permission_id) SELECT ?,id FROM permissions WHERE code='tour_library.view'")->execute([$viewerRole]);
+$db->prepare("INSERT INTO role_permissions(role_id,permission_id) SELECT ?,id FROM permissions WHERE code IN ('tour_library.view','b2c.view')")->execute([$viewerRole]);
 check($viewerRole>0
-    && (int)$db->query("SELECT COUNT(*) FROM role_permissions WHERE role_id=".$viewerRole)->fetchColumn()===1,
-    'V5 HTTP fixture: viewer has only the library view permission');
+    && (int)$db->query("SELECT COUNT(*) FROM role_permissions WHERE role_id=".$viewerRole)->fetchColumn()===2,
+    'V5 HTTP fixture: viewer has only Master/B2C view permissions');
 
 @mkdir($private.'/documents',0700,true);
 $config=[

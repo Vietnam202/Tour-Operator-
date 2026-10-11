@@ -16,6 +16,7 @@ final class WP_REST_Request {
     public function get_json_params():array {return $this->body;}
 }
 function add_action(...$v):void {}
+function add_filter(...$v):void {}
 function add_shortcode(...$v):void {}
 function wp_parse_url(string $v):array|false {return parse_url($v);}
 function home_url(string $v='/'):string {return 'https://vietnamtraveladvisor.vn'.$v;}

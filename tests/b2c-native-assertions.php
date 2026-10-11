@@ -1,0 +1,58 @@
+<?php
+declare(strict_types=1);
+// Included only after the existing disposable native fixture; never a real database.
+require_once __DIR__.'/../api/lib/B2CStudio.php';
+require_once __DIR__.'/../api/lib/B2CPublicationBridge.php';
+require_once __DIR__.'/../integrations/wordpress/vta-connect/includes/class-vta-b2c-publications.php';
+if(!preg_match('/^vta_test_[a-f0-9]{10}$/D',(string)$db->query('SELECT DATABASE()')->fetchColumn()))throw new RuntimeException('DISPOSABLE_B2C_FIXTURE_REQUIRED');
+$b2cMaster=TourLibrary::save($db,$user,['title'=>'B2C fixture master','destination'=>'Hanoi','language'=>'en','days'=>[],'proposal'=>['document'=>['schema'=>'VTA_DOC_2','title'=>'B2C fixture master','content'=>['type'=>'doc','content'=>[['type'=>'paragraph','content'=>[['type'=>'text','text'=>'Public itinerary']]]]]]]]);
+$b2cMasterBefore=TourProgramWorkspace::program($db,$user,(int)$b2cMaster['id']);
+$b2cRequest=['master_program_id'=>(int)$b2cMaster['id'],'creation_key'=>'b2c-native-create-0001'];
+$b2cNew=B2CStudio::create($db,$user,$b2cRequest);$b2cId=$b2cNew['id'];
+check(B2CStudio::create($db,$user,$b2cRequest)['id']===$b2cId,'B2C create retry is idempotent');
+rejects(fn()=>B2CStudio::create($db,$user,['master_program_id'=>(int)$b2cMaster['id']+1,'creation_key'=>'b2c-native-create-0001']),DomainException::class,'B2C creation key cannot target another master');
+rejects(fn()=>B2CStudio::row($db,['company_id'=>2,'id'=>2],$b2cId),OutOfBoundsException::class,'B2C cross-company access denied');
+$b2cCtx=B2CStudio::context($db,$user,B2CStudio::row($db,$user,$b2cId));
+rejects(fn()=>B2CStudio::save($db,$user,$b2cId,['expected_revision'=>0,'settings'=>$b2cCtx['settings']]),DomainException::class,'B2C stale save denied');
+rejects(fn()=>B2CStudio::transition($db,$user,$b2cId,'publish',['expected_revision'=>1]),DomainException::class,'B2C draft cannot publish');
+B2CStudio::transition($db,$user,$b2cId,'review',['expected_revision'=>1]);
+rejects(fn()=>B2CStudio::transition($db,$user,$b2cId,'approve',['expected_revision'=>1]),DomainException::class,'B2C approval requires public content review');
+B2CStudio::transition($db,$user,$b2cId,'approve',['expected_revision'=>1,'public_content_reviewed'=>true]);B2CStudio::transition($db,$user,$b2cId,'publish',['expected_revision'=>1]);
+$b2cPublished=$db->query('SELECT * FROM b2c_publication_events WHERE program_id='.$b2cId.' ORDER BY id DESC LIMIT 1')->fetch();
+B2CStudio::transition($db,$user,$b2cId,'publish',['expected_revision'=>1]);
+check((int)$db->query('SELECT COUNT(*) FROM b2c_publication_events WHERE program_id='.$b2cId)->fetchColumn()===1,'B2C publish replay creates no duplicate event');
+check(B2CStudio::publication($db,(int)$user['company_id'],(int)$b2cPublished['id'])['snapshot_json']===$b2cPublished['snapshot_json'],'B2C publication bytes immutable');
+$b2cConfig=['app'=>['base_url'=>'https://example.invalid'],'integrations'=>['b2c_publications'=>['fixture_b2c'=>['enabled'=>true,'company_id'=>(int)$user['company_id'],'secret'=>str_repeat('s',48)]]]];
+$b2cPull=['timestamp'=>time(),'nonce'=>str_repeat('a',32),'after_id'=>0];$b2cRaw=json_encode($b2cPull,JSON_THROW_ON_ERROR);$b2cSig='sha256='.hash_hmac('sha256',$b2cRaw,str_repeat('s',48));
+$b2cFeed=B2CPublicationBridge::pull($db,$b2cConfig,'fixture_b2c',$b2cRaw,$b2cSig);
+$b2cVerified=VTA_B2C_Publications::verify($b2cFeed['body'],$b2cFeed['signature'],$b2cPull,['secret'=>str_repeat('s',48),'source'=>'fixture_b2c']);
+check(count($b2cVerified['events'])>=1,'B2C WordPress verifies signed feed');
+rejects(fn()=>B2CPublicationBridge::pull($db,$b2cConfig,'fixture_b2c',$b2cRaw,'sha256='.str_repeat('0',64)),OutOfBoundsException::class,'B2C tampered request denied');
+rejects(fn()=>VTA_B2C_Publications::verify($b2cFeed['body'].' ',$b2cFeed['signature'],$b2cPull,['secret'=>str_repeat('s',48),'source'=>'fixture_b2c']),RuntimeException::class,'B2C tampered response denied');
+$b2cOther=$b2cPull;$b2cOther['nonce']=str_repeat('b',32);
+rejects(fn()=>VTA_B2C_Publications::verify($b2cFeed['body'],$b2cFeed['signature'],$b2cOther,['secret'=>str_repeat('s',48),'source'=>'fixture_b2c']),RuntimeException::class,'B2C response replay for another request denied');
+$b2cEdited=$b2cCtx['settings'];$b2cEdited['document']['content']['content'][]=['type'=>'paragraph','content'=>[['type'=>'text','text'=>'Independent B2C revision']]];
+$b2cSaved=B2CStudio::save($db,$user,$b2cId,['expected_revision'=>1,'settings'=>$b2cEdited]);
+check($b2cSaved['program']['revision']===2&&$b2cSaved['program']['status']==='DRAFT'&&$b2cSaved['program']['approved_revision']===null,'B2C edit clears approval and returns draft');
+rejects(fn()=>B2CStudio::publication($db,(int)$user['company_id'],(int)$b2cPublished['id']),OutOfBoundsException::class,'B2C old publication is withdrawn after edit');
+check((int)$db->query('SELECT COUNT(*) FROM b2c_revisions WHERE program_id='.$b2cId)->fetchColumn()===2,'B2C retains revision history');
+check($db->query('SELECT snapshot_json FROM b2c_publication_events WHERE id='.(int)$b2cPublished['id'])->fetchColumn()===$b2cPublished['snapshot_json'],'B2C edit does not overwrite prior snapshot');
+check(TourProgramWorkspace::program($db,$user,(int)$b2cMaster['id'])===$b2cMasterBefore,'B2C leaves Master and B2B source untouched');
+check(!str_contains($b2cPublished['snapshot_json'],'master_program_id')&&!str_contains($b2cPublished['snapshot_json'],'source_text'),'B2C public projection excludes source/internal metadata');
+$b2cEvents=$db->query('SELECT status FROM b2c_publication_events WHERE program_id='.$b2cId.' ORDER BY id')->fetchAll(PDO::FETCH_COLUMN);
+check($b2cEvents===['PUBLISHED','WITHDRAWN'],'B2C feed preserves publish then withdrawal ordering');
+
+// Copy into a fresh draft; preserve commercial identity and every sent bundle.
+$b2cSentBefore=$db->query('SELECT * FROM quote_sent_bundles ORDER BY quote_version_id')->fetchAll();
+$b2cDraft=QuoteReuse::clone($db,$user,(int)v2v()['id'],(int)v2v()['inquiry_id'],'FULL_DRAFT');$b2cVersion=(int)$b2cDraft['version_id'];
+$b2cBefore=QuoteOptions::version($db,(int)$user['company_id'],$b2cVersion);
+$b2cKeys=['quote_id','inquiry_id','tour_name','start_date','end_date','paying_pax','total_guests','foc','fx_rate','schedule_json','total_cost','total_selling','cost_json'];
+$b2cIdentity=array_intersect_key($b2cBefore,array_flip($b2cKeys));
+B2CStudio::apply($db,$user,$b2cId,['version_id'=>$b2cVersion,'expected_revision'=>(int)$b2cBefore['costing_revision'],'program_revision'=>2]);
+$b2cAfter=QuoteOptions::version($db,(int)$user['company_id'],$b2cVersion);
+check(array_intersect_key($b2cAfter,array_flip($b2cKeys))===$b2cIdentity,'B2C quote copy preserves customer, dates, PAX/FOC and costing');
+$b2cProposal=json_decode($b2cAfter['proposal_json'],true,512,JSON_THROW_ON_ERROR);
+check($b2cProposal['channel']==='B2C'&&$b2cProposal['template']==='VTA_EXPLORER_B2C','B2C quote uses independent channel/template');
+check((int)$db->query('SELECT program_revision FROM b2c_quote_sources WHERE quote_version_id='.$b2cVersion)->fetchColumn()===2,'B2C quote records immutable source revision');
+rejects(fn()=>B2CStudio::apply($db,$user,$b2cId,['version_id'=>$b2cVersion,'expected_revision'=>(int)$b2cBefore['costing_revision'],'program_revision'=>2]),DomainException::class,'B2C quote copy rejects stale quotation revision');
+check($db->query('SELECT * FROM quote_sent_bundles ORDER BY quote_version_id')->fetchAll()===$b2cSentBefore,'B2C quote copy preserves all historical sent snapshots');

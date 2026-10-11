@@ -1,0 +1,8 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
+(async()=>{
+ const dom=new JSDOM('<form data-vta-b2c-inquiry data-api="/wp-json/vta-connect/v1/lead" data-publication="7"><input name="contact_name"><input name="email"><input name="total_guests"><textarea name="message"></textarea><input type="checkbox" name="consent"><button></button><p role="status"></p></form>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window,f=w.document.querySelector('form'),requests=[];let fail=true;
+ w.fetch=async(url,o)=>{requests.push(JSON.parse(o.body));return {ok:!fail,json:async()=>({accepted:!fail})};};w.eval(fs.readFileSync(path.join(__dirname,'../integrations/wordpress/vta-connect/assets/b2c-inquiry.js'),'utf8'));
+ const fill=()=>{for(const [name,value] of Object.entries({contact_name:'Visitor',email:'visitor@example.invalid',total_guests:'2',message:'Hanoi'}))f.elements[name].value=value;f.elements.consent.checked=true;};
+ const submit=()=>f.onsubmit({preventDefault(){}});fill();await submit();fail=false;await submit();assert.equal(requests[0].request_id,requests[1].request_id,'lost/failed response retries same event');fill();await submit();assert.match(requests[2].request_id,/^[a-f0-9-]{36}$/);assert.notEqual(requests[2].request_id,requests[1].request_id,'identical new inquiry after success needs a new event');assert.equal(requests[2].b2c_publication_id,7);dom.window.close();console.log('PASS B2C inquiry retry idempotency and a fresh event for repeated input after success');
+})().catch(e=>{console.error(e);process.exitCode=1;});

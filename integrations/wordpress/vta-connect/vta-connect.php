@@ -2,13 +2,15 @@
 /**
  * Plugin Name: VTA Connect
  * Description: First-party, no-SaaS website chat and quote requests linked to VTA RC6.2.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires PHP: 8.1
  * License: GPL-2.0-or-later
  * Text Domain: vta-connect
  */
 if (!defined('ABSPATH')) exit;
 require_once __DIR__ . '/includes/class-vta-connect-protocol.php';
+require_once __DIR__ . '/includes/class-vta-b2c-publications.php';
+VTA_B2C_Publications::init();
 
 final class VTA_Connect {
     private const VERSION='0.1.0';
@@ -247,6 +249,8 @@ final class VTA_Connect {
         if (!current_user_can('manage_options')) return;
         echo '<div class="wrap"><h1>VTA Connect · Website Chat</h1>';
         echo '<p>Connection status: <strong>'.(self::ready()?'Configured (not live-verified)':'Missing private settings').'</strong></p>';
+        echo '<p>B2C: place <code>[vta_journeys]</code> on the tour collection page. Configure private VTA_B2C_SECRET and VTA_B2C_SOURCE to match RC6 integrations.b2c_publications. Publication sync: '.(int)get_option('vta_b2c_verified_at',0).'</p>';
+        echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="vta_b2c_sync">';wp_nonce_field('vta_b2c_sync');echo '<button class="button">Sync B2C publications</button></form>';
         echo '<p>Place <code>[vta_chat]</code> in a WordPress page or Shortcode block.</p>';
         echo '<p>Set <code>VTA_CONNECT_API_URL</code>, <code>VTA_CONNECT_SECRET</code> and optionally <code>VTA_CONNECT_SOURCE</code> in private wp-config.php. Use the matching <code>integrations.website_webhooks</code> entry in RC6.</p>';
         echo '<p>VTA Connect does not store API secrets in wp_options or expose them to frontend JavaScript. Only staff-approved RC6 tour sharing links may be sent to customers.</p></div>';

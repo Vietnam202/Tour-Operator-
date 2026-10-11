@@ -120,6 +120,7 @@ try {
     }
 
     QuoteProposal::publicHandle($route,$method,$db,$config);
+    B2CPublicationBridge::publicHandle($route,$method,$db,$config);
     WebhookCenter::publicHandle($route,$method,$db,$config);
     WebsiteInbox::publicHandle($route,$method,$db,$config);
     MetaInbox::publicHandle($route,$method,$db,$config);
@@ -157,6 +158,7 @@ try {
     QuoteOptions::handle($route,$method,$db,$user);
     ScheduleImport::handle($route,$method,$db,$user);
     TourLibrary::handle($route,$method,$db,$config,$user);
+    B2CStudio::handle($route,$method,$db,$config,$user);
     PartnerHub::handle($route,$method,$db,$config,$user);
     QuoteReuse::handle($route,$method,$db,$user);
     QuoteCostItems::handle($route,$method,$db,$user);

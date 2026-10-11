@@ -1,3 +1,9 @@
+# RC6.2 core-only WordPress Marketing de-scope (draft)
+
+Marketing / Content / Landing Builder UI is moved out of RC6.2 and owned by WordPress. RC6.2 retains Sales inbound Lead Hub, CRM, Tour Workspace, Pricing, Booking, Operations, Documents and tour AI. Front-end Marketing assets are no longer loaded or precached. **No migration, data deletion, merge, production deployment or WordPress webhook setup is included.** Review [release notes and release gate](docs/RC62_WORDPRESS_MARKETING_DESCOPE.md) before staging acceptance.
+
+---
+
 # VTA Unified OS 3.4.0-RC6.2 — VS1
 
 Mở **START_RC6_2.html** để bắt đầu. Bản này kế thừa toàn bộ VS0 và bổ sung

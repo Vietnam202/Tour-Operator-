@@ -20,7 +20,7 @@ let browser;
  let layouts=0;
  for(const width of [1440,1024,820,390,360]){
   await page.setViewportSize({width,height:width>820?950:844});
-  for(const [id,selector] of [['home','.wsc-center'],['sales','[data-uw-tab="partners"]'],['tours','[data-uw-search]'],['product','[data-tl-grid]'],['suppliers','[data-product-tab]'],['marketing','.mk-studio'],['reports','#reportPeriod'],['settings','[data-uw-settings]']]){await nav(id);await loaded(id,selector);await layout(width+' '+id);layouts++;}
+  for(const [id,selector] of [['home','.wsc-center'],['sales','[data-uw-tab="partners"]'],['tours','[data-uw-search]'],['product','[data-tl-grid]'],['suppliers','[data-product-tab]'],['reports','#reportPeriod'],['settings','[data-uw-settings]']]){await nav(id);await loaded(id,selector);await layout(width+' '+id);layouts++;}
   await nav('sales');await loaded('sales','[data-uw-tab="partners"]');await page.locator('[data-uw-tab="partners"]').click();await loaded('b2b','[data-uw-new-agency]');await layout(width+' B2B partners');layouts++;
   if(width===1440||width===390)await shot('unified-b2b-'+width);
   await page.locator('[data-uw-tab="rates"]').click();await page.waitForFunction(()=>document.querySelector('#workspace').textContent.includes('Bảng NET & phiên bản phát hành'));await layout(width+' B2B NET');layouts++;
@@ -51,7 +51,7 @@ let browser;
  await layout('editable integrated Word editor');
  await page.evaluate(()=>window.__vtaDocumentDispose());
  assert.deepEqual(errors,[],'No JavaScript page errors');assert.deepEqual(external,[],'No external data requests');assert.deepEqual(apiCalls,[],'Preview never requests the live API');
- console.log('PASS '+layouts+' real Chromium layouts across 1440, 1024, 820, 390 and 360px, eight menu modules, B2B, tour editor/cost/quote/booking/operations/files and inquiry');
+ console.log('PASS '+layouts+' real Chromium layouts across 1440, 1024, 820, 390 and 360px, seven core menu modules, B2B, tour editor/cost/quote/booking/operations/files and inquiry');
  console.log('PASS mobile drawer makes every module reachable; no page overflow, blank modules, live API or external calls');
  console.log('PASS real Word engine saves an editable draft through the before-leave guard without hiding the unified navigation');
  console.log('NOTE: sample preview data; live PHP/MariaDB and provider acceptance remain separate.');
