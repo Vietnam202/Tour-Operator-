@@ -38,3 +38,5 @@ The combined PR #61 had V5-4-RECOVERY asset query versions, but its Service Work
 ### CI fixture compatibility correction
 
 The first cache-rotation commit deliberately failed existing Marketing/Unified tests because `tests/pwa.cjs` mocked `caches.open().addAll()` but omitted the standard per-cache `match()` method, and `tests/vta-approved-ui.cjs` still asserted the obsolete cache constant. Updated both existing tests to the real scoped Cache API contract; made global `caches.match()` throw in the test to prevent this regression. Retain the new behavioral test; do not claim PASS until a fresh exact-head run completes.
+
+Additional exact-head Unified QA gate: the RC6.2 UI-refresh parity test also pinned the retired cache string; its expected version has been aligned without weakening stylesheet/order assertions. New CI must pass before a release candidate can be treated as reproducible.
