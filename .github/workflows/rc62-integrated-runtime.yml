@@ -8,6 +8,7 @@ on:
       - 'api/**'
       - 'tests/rc62-release-readiness-unit.php'
       - 'tests/rc62-golden-path-continuity-native.php'
+      - 'tests/rc62-v5-template-persistence-native.php'
       - 'tour-proposal-studio.*'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
