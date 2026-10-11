@@ -76,7 +76,7 @@ check($templateId>0 && $templateId!==$sourceId
         ===$beforeCount+2,
     'V5 template: real MariaDB creates one independent new program instead of updating master');
 
-$templateReopened=TourProgramWorkspace::program($db,$user,$templateId);
+$templateReopened=TourLibrary::publicProgram(TourProgramWorkspace::program($db,$user,$templateId));
 check($templateReopened['id']===$templateId
     && $templateReopened['status']==='DRAFT'
     && in_array('VTA_TEMPLATE',$templateReopened['tags'],true)
@@ -102,7 +102,7 @@ $editedTemplate=$templateReopened;
 $editedTemplate['title']='Independently edited V5 template';
 $editedTemplate['days'][0]['description']='Revised reusable Hanoi introduction';
 TourLibrary::save($db,$user,$editedTemplate,$templateId);
-$editedReopened=TourProgramWorkspace::program($db,$user,$templateId);
+$editedReopened=TourLibrary::publicProgram(TourProgramWorkspace::program($db,$user,$templateId));
 check($editedReopened['title']==='Independently edited V5 template'
     && $editedReopened['days'][0]['description']==='Revised reusable Hanoi introduction',
     'V5 template: edited clone is saved and reopened on actual MariaDB');
