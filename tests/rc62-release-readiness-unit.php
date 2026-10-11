@@ -60,7 +60,28 @@ RC62ReleaseReadiness::assertPinnedCommit($pin,$pin);
 requirePass(true,'Match independent exact-head release SHA');
 mustReject(fn()=>RC62ReleaseReadiness::assertPinnedCommit($pin,str_repeat('b',40)),'RELEASE_SHA_MISMATCH');
 mustReject(fn()=>RC62ReleaseReadiness::assertPinnedCommit($pin,'not-a-sha'),'RELEASE_SHA_MISMATCH');
-mustReject(fn()=>RC62ReleaseReadiness::run(['readiness.php']),'CLI_MANIFEST_AND_PIN_REQUIRED');
+mustReject(fn()=>RC62ReleaseReadiness::run(['readiness.php']),'CLI_MANIFEST_SHA_DB_PIN_REQUIRED');
+
+// Database identity must be pinned by the operator separately from config and
+// manifest; a production-like name, an accidental substring, or a different
+// database returned by SELECT DATABASE() must fail closed.
+RC62ReleaseReadiness::assertCloneDatabase('vta_rc62_clone', 'vta_rc62_clone', 'vta_rc62_clone');
+requirePass(true,'Accept independently pinned disposable DB clone identity');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('vta_rc62_clone','other_rc62_clone'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('vta_rc62_clone','vta_rc62_clone','other_rc62_clone'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('vta_rc62_clone_prod','vta_rc62_clone_prod'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('v2qu_v2qu_vtaos_clone','v2qu_v2qu_vtaos_clone'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('contest_data','contest_data'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::assertCloneDatabase('vta_rc62_clone;DROP','vta_rc62_clone;DROP'),
+    'CLONE_DATABASE_MISMATCH');
+mustReject(fn()=>RC62ReleaseReadiness::run([
+    'readiness.php','--manifest=/private/manifest.json','--expected-sha='.$pin
+]),'CLI_MANIFEST_SHA_DB_PIN_REQUIRED');
 
 // Never show PDOException/RuntimeGuard/raw PHP messages to the operator log.
 requirePass(
