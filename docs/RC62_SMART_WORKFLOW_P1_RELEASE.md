@@ -5,10 +5,10 @@
 ## Implemented
 
 1. **Smart Search** uses the existing topbar search box, keyboard navigation (↑/↓/Enter/Esc), proper result grouping, loading debounce and stale-response rejection.
-   - New GET `api/?route=smart/search&q=...` returns limited **safe fields** for Quote/Tour file, Booking, Customer, Supplier.
+   - New GET `api/?route=smart/search&q=...` returns limited **safe fields** for Master Tour library, Quote/Tour file, Booking, Customer, Supplier.
    - Every SQL statement uses `company_id=?`, `Auth::can`, bounded results and bound query parameters. No rates, NET, profit, supplier contract terms, passports or costs returned.
    - Agency users with `b2b.portal` but not `b2b.admin` receive empty results even if roles are misconfigured.
-   - Quotes/Tour file search is via current quote/trip metadata. This stage does **not** yet index the separate Master Tour Word library; keep this limitation visible.
+   - Search now also indexes the existing Word-style `tour_library_programs` Master Tour table for holders of `tour_library.view`, `product.view` or `supplier.view` (matching the legacy library read policy). Opens the existing Kho chương trình screen with the selected title as search filter; does **not** deep-link to a private document editor.
 2. **Smart Alerts** enhances the existing notification bell (no new dashboard) with authorized, read-only:
    - My OPEN/SNOOZED tasks due within 7 days and overdue;
    - bookings with HIGH/CRITICAL risk and upcoming travel within 30 days, requiring `operations.view`;
@@ -39,4 +39,4 @@
 5. Regression: approved Itinerary → Smart Cost independent 3★/4★/5★ hotel & cruise with 6 paying + 1 FOC → Price → customer-safe Proposal DOCX/PDF → Booking; no migration; browser PC/mobile and PWA offline asset update.
 6. Test against disposable/staging DB with backup/restore before production preparation. PR dependency chain and existing open #42/#43/#44/#48/#49 require reconciling; no production CyberPanel upload or merge without owner sign-off.
 
-**Known omissions:** no indexed Master Tour catalog, no alerts for supplier booking status beyond existing task/booking-risk data, no live provider sending, no autosave / version history / AI automation in this P1 PR. These are separate, higher-risk follow-ups.
+**Known omissions:** no full-text search within day-by-day itinerary paragraphs, no alerts for supplier booking status beyond existing task/booking-risk data, no live provider sending, no autosave / version history / AI automation in this P1 PR. These are separate, higher-risk follow-ups.
