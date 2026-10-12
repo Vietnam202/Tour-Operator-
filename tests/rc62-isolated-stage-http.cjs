@@ -142,8 +142,8 @@ function code(r,status,label){
  // Direct cleartext HTTP MUST fail at the router (even with forged forwarded
  // headers), and plaintext at the TLS listener MUST NOT produce health 200.
  const direct=await new Promise((resolve,reject)=>{
-   http.get({host:'127.0.0.1',port,headers:{
-     Host:host,'X-Forwarded-Proto':'https'}},
+   http.get({host:'127.0.0.1',port,path:'/api/index.php?route=health',headers:{
+     Host:host,'X-Forwarded-Proto':'https','X-VTA-CI-TLS-Token':'forged-by-client'}},
     response=>{
       let raw='';response.on('data',x=>raw+=x.toString());
       response.on('end',()=>resolve({status:response.statusCode,data:JSON.parse(raw)}));
