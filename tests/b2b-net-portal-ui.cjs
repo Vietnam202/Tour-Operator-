@@ -18,6 +18,8 @@ async function harness({sales=false}={}){
   calls.push({route,method:opts.method||'GET',body});
   if(route==='auth/me')return response({user:{id:sales?9:21,full_name:sales?'Assigned Sales':'Partner User',csrf:'fixture-token'}});
   if(route==='b2b/me')return response(sales?{admin:false,sales:true,agencies:[]}:{admin:false,agencies:[{id:10,name:'Agency A',brand_name:'Agency A'}]});
+  if(route==='b2b/kpi')return response({agency:{id:10,brand_name:'Agency A <script>bad</script>'},published_tours:2,active_copies:2,
+    net_requests:{REQUESTED:1,IN_REVIEW:1,CLOSED:0},booking_requests:{REQUESTED:1,IN_REVIEW:0,CONFIRMED:0,REJECTED:0}});
   if(route==='b2b/sales/net-requests')return response({items:[{id:72,agency_id:10,partner_tour_id:11,departure_date:'2027-01-10',paying_pax:6,foc_pax:1,hotel_level:'3',cruise_level:'5',mode:'PRIVATE',notes:'<script>private</script>',status:'IN_REVIEW'}]});
   if(route==='b2b/tours')return response({items:[]});
   if(route==='b2b/my-tours'&&(!opts.method||opts.method==='GET'))return response({items:[{id:11,agency_id:10,title:'Ha Long',agency:'Agency A',revision:1,publication_status:'PUBLISHED'}]});
@@ -42,6 +44,14 @@ async function harness({sales=false}={}){
  console.log('PASS Sales-only account sees scoped NET task UI without partner access');
  s.dom.window.close();
  const h=await harness();
+ h.root.querySelector('[data-tab="kpi"]').click();await tick();
+ assert(h.root.textContent.includes('Partner KPI'),'Partner users see their scoped activity dashboard');
+ assert(h.calls.some(c=>c.route==='b2b/kpi'),'Partner KPI requires a server-authenticated request');
+ assert(h.root.textContent.includes('Published tours available')&&h.root.textContent.includes('NET · In review'),
+   'KPI reports publication and NET request statuses');
+ assert(!h.root.querySelector('script'),'KPI brand labels must escape injected markup');
+ assert(!h.root.textContent.includes('net_per_pax'),'KPI must not render supplier NET fields');
+ console.log('PASS agency KPI renders scoped counts without guest or supplier details');
  h.root.querySelector('[data-tab="my"]').click();await tick();
  h.root.querySelector('[data-edit]').click();await tick();
  const form=h.root.querySelector('#requestNetForm');
