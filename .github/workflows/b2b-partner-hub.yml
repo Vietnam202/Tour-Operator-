@@ -42,10 +42,12 @@ jobs:
           php -l tests/b2b-partner-hub-unit.php
           php -l tests/b2b-hybrid-isolation-unit.php
           php -l tests/b2b-hybrid-schema-ci.php
-      - name: JavaScript syntax check
+      - name: JavaScript syntax and real NET portal DOM regression
         run: |
           node --check partner-hub.js
           node --check tour-library.js
+          npm ci --prefix tests
+          node tests/b2b-net-portal-ui.cjs
       - name: B2B domain tests
         run: |
           php tests/b2b-partner-hub-unit.php
