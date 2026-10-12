@@ -74,8 +74,16 @@ final class RuntimeGuard {
             throw new RuntimeException('UNSAFE_STAGING_ENV');
         // Preserve the existing, historically reviewed legacy test/staging
         // vhost and disposable localhost contracts; do not alter deployment pin.
-        if(in_array($host,['v2quote.vietnamtraveladvisor.com.vn','127.0.0.1','localhost'],true))
+        if(in_array($host,['v2quote.vietnamtraveladvisor.com.vn','127.0.0.1','localhost'],true)){
+            // The legacy staging base URL must never be used as an escape hatch
+            // by a different virtualhost. Leave local :port CI fixtures intact.
+            if($host==='v2quote.vietnamtraveladvisor.com.vn'
+                &&isset($_SERVER['HTTP_HOST'])
+                &&($_SERVER['HTTP_HOST']!==$host
+                    ||!in_array(strtolower((string)($_SERVER['HTTPS']??'')),['on','1'],true)))
+                throw new RuntimeException('UNSAFE_LEGACY_STAGING_REQUEST_HOST');
             return;
+        }
         self::isolatedStaging($config,$_SERVER,[
             'host'=>(string)(getenv('VTA_STAGING_PIN_HOST')?:''),
             'db'=>(string)(getenv('VTA_STAGING_PIN_DB')?:''),
