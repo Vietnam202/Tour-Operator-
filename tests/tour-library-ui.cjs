@@ -38,6 +38,27 @@ async function submit(h, selector) { h.d.querySelector(selector).dispatchEvent(n
 function deferred() { let resolve, reject; const promise = new Promise((a,b) => { resolve=a;reject=b; }); return { resolve, reject, promise }; }
 
 (async()=>{
+ let parity=harness();try{
+  let b2cOptions,editorOptions;
+  parity.w.VTAB2CStudio=options=>{b2cOptions=options;};
+  parity.w.VTATourProgramWorkspace={mount:async(root,options)=>{editorOptions=options;}};
+  await parity.render();
+  assert.equal(parity.d.querySelector('[data-tl-tab="library"]').textContent,'Master');
+  assert(parity.d.querySelector('.tl-tabs [data-tl-b2c]'));
+  assert(!parity.d.querySelector('.tl-head-menu [data-tl-b2c]'));
+  assert(!parity.d.querySelector('[data-tl-edit]'),'No competing legacy editor action when Word workspace is available');
+  await click(parity,'[data-tl-word="1"]');
+  assert.equal(editorOptions.program.id,1);
+  assert.equal(editorOptions.canEdit,true);
+  await click(parity,'[data-tl-b2c]');
+  assert.equal(typeof b2cOptions.api.request,'function');
+  assert.equal(typeof b2cOptions.onBack,'function');
+  console.log('PASS Master/B2C primary navigation and single Word editor action');
+ }finally{parity.close();}
+ parity=harness({permissions:['tour_library.view']});try{
+  await parity.render();assert(!parity.d.querySelector('[data-tl-b2c]'));assert(!parity.d.querySelector('[data-tl-word]'));
+  console.log('PASS primary B2C navigation preserves permission boundary');
+ }finally{parity.close();}
  let h=harness();try{
   await h.render();assert.equal(h.d.querySelectorAll('[data-tl-card]').length,2);assert(h.d.body.textContent.includes('Kho chương trình tour'));set(h,'[data-tl-search]','miền bắc').dispatchEvent(new h.w.Event('input'));assert.equal([...h.d.querySelectorAll('[data-tl-card]')].filter(c=>!c.hidden).length,1);set(h,'[data-tl-search]','').dispatchEvent(new h.w.Event('input'));set(h,'[data-tl-destination]','Cần Thơ').dispatchEvent(new h.w.Event('change'));assert(h.d.querySelector('[data-tl-card="1"]').hidden);set(h,'[data-tl-destination]','').dispatchEvent(new h.w.Event('change'));set(h,'[data-tl-language]','en').dispatchEvent(new h.w.Event('change'));assert(h.d.querySelector('[data-tl-card="1"]').hidden);await click(h,'[data-tl-archived]');assert(h.d.querySelector('[data-tl-card="3"]'));assert.equal(h.errors.length,0);console.log('PASS library title, metadata search, destination/language filters and archived visibility');
  }finally{h.close();}

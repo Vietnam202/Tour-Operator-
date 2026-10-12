@@ -12,6 +12,7 @@ async function run(){
  const api={request:async(route,opt)=>{calls.push({route,opt});return {ok:true,id:8,program:opt.body};}};
  w.VTATourProposalStudio.mount(root,{program:program(),api,toast:(...x)=>toasts.push(x),onSaved:async()=>{},onBack:async()=>{}});
  assert(root.querySelector('.vtps'));assert(root.querySelector('[data-private-row]'));assert.equal(root.querySelectorAll('[data-group-row]').length,3);
+ assert.equal(root.querySelector('[data-vtps-state]').textContent,'Đã lưu','Existing program opens clean');
  // Edit content and persist it through the existing tour-library API.
  root.querySelector('[data-proposal="tour_code"]').value='VTA0602';
  root.querySelector('[data-proposal="overview"]').value='Northern Vietnam Journey';

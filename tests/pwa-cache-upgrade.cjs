@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
 const SCOPE='https://v2quote.vietnamtraveladvisor.com.vn/';
-const CACHE='vta-RC62-B2C-1-PWA';
+const CACHE='vta-RC62-DEMO-PARITY-1-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
@@ -55,7 +55,7 @@ function request(url,{method='GET',mode='cors'}={}) {
  return answered;
 }
 (async()=>{
- assert.match(source,/const CACHE='vta-RC62-B2C-1-PWA'/);
+ assert.match(source,/const CACHE='vta-RC62-DEMO-PARITY-1-PWA'/);
  await lifecycle('install');
  assert(stores.has(CACHE),'new version must have dedicated cache');
  assert.equal(stores.get(CACHE).get(asset),'FRESH:'+asset);

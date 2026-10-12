@@ -66,6 +66,13 @@
     let pendingUndo = null;
     const pendingPropertyMeta = new Map();
     let queue = Promise.resolve();
+    const failedWrites=new Set();
+    const failedRates=new Map();
+    const leaveSheet=async action=>{
+      let pending;do{pending=queue;await pending;}while(pending!==queue);
+      if(failedWrites.size){status('Save failed — correct or retry unsaved changes before continuing');return false;}
+      action();return true;
+    };
     const status = msg => {const node = host.querySelector('[data-vta-status]');if(node)node.textContent = msg;};
     const setMoney = (node, value) => {if(node)node.textContent = money(value);};
     const updateTotals = () => {
@@ -86,7 +93,8 @@
           const warning = row.querySelector('[data-review="' + i + '"]');
           if (warning) warning.hidden = !(l?.review_required || l?.coverage_state === 'UNRESOLVED');
           const rate = row.querySelector('[data-rate="' + i + '"]');
-          if (rate && rate !== host.ownerDocument.activeElement) {
+          const failedRate=[...failedRates.values()].some(f=>f.id===Number(r.id)&&f.values.some(v=>v.index===i));
+          if (rate && !failedRate && rate !== host.ownerDocument.activeElement) {
             const next = l?.unit_rate_vnd ?? '';
             if (rate.value !== String(next)) rate.value = String(next);
           }
@@ -104,16 +112,25 @@
       updateTotals();
     };
     const send = (payload, endpoint = '/smart-costing/sheet', method = 'POST', redraw = false) => {
+      const writeKey=JSON.stringify([endpoint,payload.action||'',payload.requirement_id||payload.requirement?.id||'',payload.variant_ids||[],Object.keys(payload).sort(),Object.keys(payload.requirement||{}).sort(),Object.keys(payload.line||{}).sort()]);
       queue = queue.catch(() => {}).then(async () => {
         status('Saving…');
         try {
           const result = await api.request(base + endpoint,{method,body:{...payload,expected_revision:revision}});
           if (result.costing_revision !== undefined) revision = result.costing_revision;
           await reloadData();
+          failedWrites.delete(writeKey);
+          failedRates.delete(writeKey);
           if (redraw) render();
-          status('Saved');
+          status(failedWrites.size?'Save failed — some changes remain unsaved':'Saved');
           return result;
         } catch (error) {
+          failedWrites.add(writeKey);
+          if(payload.line?.unit_amount_original!==undefined){
+            const id=Number(payload.requirement_id||payload.requirement?.id);
+            const row=host.querySelector('[data-vta-row="'+id+'"]');
+            if(row)failedRates.set(writeKey,{id,values:[...row.querySelectorAll('[data-rate]')].map(el=>({index:Number(el.dataset.rate),value:el.value}))});
+          }
           status('Save failed — changes not saved');
           toast(error.message || 'Could not save cost',true);
           return null;
@@ -155,7 +172,6 @@
       const common = !stay;
       const service='<div class="vta-service"><strong>' + escapeHTML(titles[category] || category) + '</strong>' +
         input('data-name aria-label="Service name" maxlength="255"',r.service_name,'vta-name') +
-        input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination"') +
         (['HOTEL','CRUISE','GUIDE'].includes(category)?'<label class="vta-date-label">' +
           escapeHTML(category==='HOTEL'?'First hotel night':category==='CRUISE'?'Cruise departure':'First guide day') +
           input('type="date" data-service-date aria-label="First service date"',
@@ -167,13 +183,13 @@
         '</label><label>' + escapeHTML(multipliers[category] || 'Qty') +
         input('type="number" min="0" max="10000" data-units inputmode="numeric"',units,'vta-small') +
         '</label></div>';
-      const body=common ? '<div class="vta-common-rate">' + cellRate(r,p,0) + '</div>' :
+      const body=common ? '<div class="vta-common-rate"><small class="vta-shared-caption">Shared rate · all options</small>' + cellRate(r,p,0) + '</div>' :
         '<div class="vta-star-grid">' + packages.map((pack,i) =>
           '<div class="vta-star-column"><span class="vta-star-caption">' +
           escapeHTML(r.category==='HOTEL'?'Hotel '+parseInt(pack.hotel_level,10)+'★':'Cruise '+(pack.cruise_level==null?'—':pack.cruise_level+'★')) +
           '</span>' + cellRate(r,pack,i) + '</div>').join('') + '</div>';
       return '<article class="vta-cost-line '+(stay?'vta-stay-line':'vta-common-line')+'" data-vta-row="' + r.id + '">' +
-        service + qty + body +
+        service + '<div class="vta-location">'+input('data-destination aria-label="Destination" maxlength="160"',r.scope?.destination || '','vta-destination','placeholder="Destination / Description"')+'</div>' + qty + body +
         (edit?'<button type="button" class="vta-remove" data-remove aria-label="Remove service">×</button>' +
         '<div class="vta-remove-confirm" hidden><label>Removal reason<input data-remove-reason placeholder="Not included in this quote"></label>' +
         '<button type="button" data-confirm-remove>Remove</button><button type="button" data-cancel-remove>Cancel</button></div>' +
@@ -254,14 +270,14 @@
     }
     function render() {
       packages=getPackages();
-      const rows=visible(),common=rows.filter(r=>!isStay(r)),stays=rows.filter(isStay);
+      const rows=visible();
       const modeChoices=[['PRIVATE','Private'],['SIC','SIC / Group'],['HYBRID','Hybrid']];
       const card=(title,arr,stay)=>'<section class="vta-cost-section"><header><h2>' + title +
         '</h2><small>' + arr.length + ' services</small></header>' +
         '<div class="vta-section-grid '+(stay?'vta-stay-grid':'vta-shared-grid')+'">' +
-        (stay?'<div class="vta-table-header"><span>Service / Destination</span><span>Pax / Qty</span>' +
-          packages.map((p,i)=>'<span>Option '+String.fromCharCode(65+i)+'</span>').join('') + '</div>':
-          '<div class="vta-table-header"><span>Service / Destination</span><span>Pax / Qty</span><span>Unit Rate / Total</span></div>') +
+        (stay?'<div class="vta-table-header"><span>Service</span><span>Destination / Description</span><span>Pax / Qty</span>' +
+          '<div class="vta-table-options">'+packages.map((p,i)=>'<span>Option '+String.fromCharCode(65+i)+'<small>Hotel '+escapeHTML(parseInt(p.hotel_level,10))+'★ · Cruise '+escapeHTML(p.cruise_level??'—')+(p.cruise_level==null?'':'★')+'</small></span>').join('') + '</div></div>':
+          '<div class="vta-table-header"><span>Service</span><span>Destination / Description</span><span>Pax / Qty</span><span>Shared rate · all options</span></div>') +
         arr.map(buildRow).join('') + (arr.length?'':'<p class="vta-empty">No services yet. Use + Add.</p>') +
         '</div></section>';
       const guest=context.guests || {},profile=context.profile || {};
@@ -274,7 +290,7 @@
         '<div class="vta-toolbar"><label>Mode ' + selectHTML(modeChoices,mode,'data-mode') + '</label>' +
         '<span>' + escapeHTML(guest.paying_pax) + ' paying · ' + escapeHTML(guest.total_guests) + ' guests</span>' +
         '<span>' + escapeHTML(profile.hotel_pax ?? '—') + ' hotel pax · ' + escapeHTML(profile.cruise_pax ?? '—') + ' cruise pax</span>' +
-        '<span class="vta-save-state" role="status" data-vta-status>' + (locked?'Read-only':'Saved') + '</span></div>' +
+        '<span class="vta-save-state" role="status" data-vta-status>' + (locked?'Read-only':failedWrites.size?'Save failed — some changes remain unsaved':'Saved') + '</span></div>' +
         '<div class="vta-guest-controls">' +
         '<label>Paying Pax' + input('type="number" min="1" max="10000" data-guest="paying_pax" inputmode="numeric"',guest.paying_pax,'vta-guest-input') + '</label>' +
         '<label>FOC Guests<input class="vta-guest-input" type="text" value="'+escapeHTML(guest.foc ?? Math.max(0,Number(guest.total_guests||0)-Number(guest.paying_pax||0)))+'" disabled aria-label="FOC Guests"></label>' +
@@ -298,9 +314,7 @@
         (edit?selectHTML(options,'HOTEL','data-new-service aria-label="Service to add"') +
           '<button type="button" class="btn primary" data-add>+ Add Service</button>':'') +
         (pendingUndo && edit ? '<button type="button" class="btn" data-undo>Undo remove</button>':'') + '</div>' +
-        card('A. Common Services',common,false) +
-        '<details class="vta-advanced-stays"><summary>B. Hotel & Cruise · Detailed rate matrix</summary>' +
-        card('B. Hotel & Cruise · Each destination has its own rate',stays,true) + '</details>' +
+        '<div class="vta-advanced-stays vta-unified-services">'+card('Dịch vụ · Nhập và chỉnh trực tiếp',rows,true)+'</div>' +
         '<section class="vta-cost-section vta-overview"><header><h2>C. Costing Overview</h2>' +
         '<small>3 options above · paying PAX excludes FOC</small></header>' +
         '<p>Rates, reviews and totals originate from the VTA server. No artificial sample rates are used in this quotation.</p></section>' +
@@ -310,6 +324,16 @@
         '<p class="vta-disclaimer">Cost by pax: Hotel = pax × nights × VND/pax/night; Cruise = pax × packages × VND/pax/package. ' +
         'Missing supplier rates remain unresolved, never zero. Supplier approval and pricing validation are enforced by the server.</p>' +
         '</div>';
+      // Keep direct-entry services first, with all three server-calculated results below.
+      // Never hide destination rates behind a collapsed disclosure.
+      const summaryTitle=host.querySelector('.vta-summary-title');
+      const summaries=host.querySelector('.vta-cost-summaries');
+      const overview=host.querySelector('.vta-overview');
+      overview.before(summaryTitle,summaries);
+      for(const draft of failedRates.values())for(const value of draft.values){
+        const field=host.querySelector('[data-vta-row="'+draft.id+'"] [data-rate="'+value.index+'"]');
+        if(field)field.value=value.value;
+      }
       bind();
       loadGroupMatrix();
     }
@@ -404,8 +428,8 @@
       };
     }
     function bind() {
-      host.querySelector('[data-open-group-price]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
-      host.querySelector('[data-sales]').onclick=()=>navigate('sales-list',{salesTab:'quotes'});
+      host.querySelector('[data-open-group-price]').onclick=()=>leaveSheet(()=>{host.dataset.sheetStep='price';refresh();});
+      host.querySelector('[data-sales]').onclick=()=>leaveSheet(()=>navigate('sales-list',{salesTab:'quotes'}));
       host.querySelector('[data-info]').onclick=()=>{
         if(typeof env.modal!=='function')return;
         const field=(label,name,value,type='text')=>'<label>'+escapeHTML(label)+
@@ -422,11 +446,11 @@
           send(changes,'/smart-costing/context','PUT',true);
         };
       };
-      host.querySelector('[data-itinerary]').onclick=()=>onProposal?.();
-      host.querySelector('[data-price]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
-      host.querySelector('[data-proposal]').onclick=()=>onProposal?.();
-      host.querySelector('[data-next]').onclick=()=>{host.dataset.sheetStep='price';refresh();};
-      host.querySelector('[data-mode]').onchange=e=>{host.dataset.sheetMode=e.target.value;refresh();};
+      host.querySelector('[data-itinerary]').onclick=()=>leaveSheet(()=>onProposal?.());
+      host.querySelector('[data-price]').onclick=()=>leaveSheet(()=>{host.dataset.sheetStep='price';refresh();});
+      host.querySelector('[data-proposal]').onclick=()=>leaveSheet(()=>onProposal?.());
+      host.querySelector('[data-next]').onclick=()=>leaveSheet(()=>{host.dataset.sheetStep='price';refresh();});
+      host.querySelector('[data-mode]').onchange=e=>{const nextMode=e.target.value;leaveSheet(()=>{host.dataset.sheetMode=nextMode;refresh();}).then(ok=>{if(!ok&&e.target.isConnected)e.target.value=mode;});};
       host.querySelector('[data-check]').onclick=async()=>{
         try{const r=await api.request(base+'/smart-costing/validation');
           const box=host.querySelector('[data-validation]');

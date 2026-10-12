@@ -11,7 +11,7 @@ function fixture(star,cat,id){
     total_vnd:String(rate*(cat==='TRANSPORT'?2:cat==='HOTEL'?12:6)),coverage_state:'PRICED',
     supplier_id:1,manual_reason:'Supplier rate contract',review_required:0};
 }
-async function harness({locked=false,cost=true}={}){
+async function harness({locked=false,cost=true,beforeWrite=null}={}){
   const dom=new JSDOM('<main></main>',{url:'https://rc6.local/',runScripts:'outside-only'});
   const w=dom.window,root=w.document.querySelector('main'),calls=[];
   w.mountCostSheet=async host=>{host.textContent='Legacy view';};
@@ -36,6 +36,7 @@ async function harness({locked=false,cost=true}={}){
     if(route.endsWith('/smart-costing/context')&&(!opts.method||opts.method==='GET'))return structuredClone(ctx);
     if(route.endsWith('/smart-costing/validation'))return {valid:false,errors:[{code:'RATE_REVIEW_REQUIRED'}],warnings:[]};
     if(opts.method){
+      if(beforeWrite)await beforeWrite(route,opts);
       if(opts.body?.line?.unit_amount_original==='999999')throw Error('Supplier unavailable');
       ctx.costing_revision++;
       const b=opts.body||{};
@@ -63,6 +64,20 @@ async function harness({locked=false,cost=true}={}){
 (async()=>{
   let h=await harness(),{root,w,calls}=h;
   assert.equal(root.querySelectorAll('[data-vta-row]').length,4);
+  assert.equal(root.querySelectorAll('.vta-unified-services .vta-section-grid').length,1,'One direct-entry service table');
+  assert.equal(root.querySelectorAll('.vta-unified-services [data-vta-row]').length,4,'Common services and stays share the same table');
+  assert.equal(root.querySelectorAll('.vta-table-options > span').length,3);
+  assert(root.querySelector('.vta-table-options').textContent.includes('Hotel 3★ · Cruise 3★'));
+  assert(root.querySelector('.vta-common-rate .vta-shared-caption'),'Shared rate label is accessible DOM text');
+  for(const row of root.querySelectorAll('[data-vta-row]')){
+    assert(row.querySelector('.vta-location [data-destination]'),'Destination has its own editable column');
+    assert(!row.querySelector('.vta-service [data-destination]'),'Service column does not duplicate destination');
+    assert(row.querySelector('.vta-quantities [data-count]'));
+  }
+  assert(!root.querySelector('details.vta-advanced-stays'),'Hotel/Cruise rates are not hidden behind a disclosure');
+  const summaries=root.querySelector('.vta-cost-summaries');
+  const lastService=root.querySelectorAll('[data-vta-row]')[3];
+  assert(lastService.compareDocumentPosition(summaries)&w.Node.DOCUMENT_POSITION_FOLLOWING,'Three results follow editable services');
   assert.equal(root.querySelectorAll('.vta-stay-line').length,3);
   assert.equal(root.querySelectorAll('[data-vta-summary]').length,3);
   assert.equal(root.querySelector('[data-vta-row="10"] [data-name]').value,'Hanoi Hotel');
@@ -141,6 +156,7 @@ async function harness({locked=false,cost=true}={}){
   const unsaved=root.querySelector('[data-vta-row="11"] [data-rate="0"]');
   unsaved.value='999999';unsaved.dispatchEvent(new w.Event('change'));await settle();
   assert(root.querySelector('[data-vta-status]').textContent.includes('Save failed'));
+  root.querySelector('[data-next]').click();await settle();assert.notEqual(root.dataset.sheetStep,'price');
   console.log('PASS explicit supplier review and failed autosave warning');
   const del=root.querySelector('[data-vta-row="11"]');
   del.querySelector('[data-remove]').click();
@@ -149,10 +165,22 @@ async function harness({locked=false,cost=true}={}){
   del.querySelector('[data-confirm-remove]').click();await settle();
   assert(calls.some(c=>c.body?.action==='remove'&&c.body.requirement_id===11&&c.body.reason==='Transfer not required'));
   assert(root.querySelector('[data-undo]'));root.querySelector('[data-undo]').click();await settle();
+  assert.equal(root.querySelector('[data-vta-row="11"] [data-rate="0"]').value,'999999','Failed rate survives unrelated successful redraw');
   assert(calls.some(c=>c.body?.requirement?.id===11&&c.body.requirement.requirement_state==='REQUIRED'));
   console.log('PASS inline remove reason and undo backed by audit-safe requirement state');
-  root.querySelector('[data-next]').click();assert.equal(root.dataset.sheetStep,'price');
+  root.querySelector('[data-next]').click();await settle();assert.notEqual(root.dataset.sheetStep,'price','Unrelated successful writes do not hide failed rate');
+  const retry=root.querySelector('[data-vta-row="11"] [data-rate="0"]');retry.value='700000';retry.dispatchEvent(new w.Event('change'));await settle();
+  root.querySelector('[data-next]').click();await settle();assert.equal(root.dataset.sheetStep,'price');
+  console.log('PASS failed rate blocks Price until matching corrected rate is saved');
   h.dom.window.close();
+  let release;const pending=new Promise(resolve=>{release=resolve;});
+  h=await harness({beforeWrite:()=>pending});
+  const pendingRate=h.root.querySelector('[data-vta-row="11"] [data-rate="0"]');
+  pendingRate.value='710000';pendingRate.dispatchEvent(new h.w.Event('change'));await settle();
+  h.root.querySelector('[data-open-group-price]').click();await settle();
+  assert.notEqual(h.root.dataset.sheetStep,'price','Group price waits for pending rate save');
+  release();await settle();assert.equal(h.root.dataset.sheetStep,'price');
+  console.log('PASS group-price navigation waits for pending save');h.dom.window.close();
   h=await harness({locked:true});assert(!h.root.querySelector('[data-add]'));
   assert([...h.root.querySelectorAll('[data-rate]')].every(x=>x.disabled));
   console.log('PASS issued quotes remain read-only');h.dom.window.close();
