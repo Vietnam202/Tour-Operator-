@@ -93,6 +93,7 @@ jobs:
           php tests/rc6-group-pricing-unit.php
           php tests/rc6-group-pricing-manual-unit.php
           php tests/b2c-unit.php
+          php tests/b2c-storefront-unit.php
           php tests/tour-library.php
           php tests/tour-program-workspace-unit.php
           php tests/document-freeform-unit.php
