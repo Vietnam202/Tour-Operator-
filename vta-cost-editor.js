@@ -115,15 +115,14 @@
       const writeKey=JSON.stringify([endpoint,payload.action||'',payload.requirement_id||payload.requirement?.id||'',payload.variant_ids||[],Object.keys(payload).sort(),Object.keys(payload.requirement||{}).sort(),Object.keys(payload.line||{}).sort()]);
       queue = queue.catch(() => {}).then(async () => {
         status('Saving…');
+        let result;
         try {
-          const result = await api.request(base + endpoint,{method,body:{...payload,expected_revision:revision}});
+          result = await api.request(base + endpoint,{method,body:{...payload,expected_revision:revision}});
           if (result.costing_revision !== undefined) revision = result.costing_revision;
-          await reloadData();
+          // A confirmed server write must clear only its own failed-write state.
+          // A subsequent refresh error must not turn it into a failed mutation.
           failedWrites.delete(writeKey);
           failedRates.delete(writeKey);
-          if (redraw) render();
-          status(failedWrites.size?'Save failed — some changes remain unsaved':'Saved');
-          return result;
         } catch (error) {
           failedWrites.add(writeKey);
           if(payload.line?.unit_amount_original!==undefined){
@@ -135,6 +134,18 @@
           toast(error.message || 'Could not save cost',true);
           return null;
         }
+        try {
+          await reloadData();
+          if (redraw) render();
+          status(failedWrites.size?'Save failed — some changes remain unsaved':'Saved');
+        } catch (error) {
+          const pending=failedWrites.size>0;
+          status(pending
+            ? 'Saved on server · other failed edits remain; review before continuing'
+            : 'Saved on server · refresh failed; reopen Cost to see current totals');
+          toast('Cost saved on server, but the view could not refresh: '+(error.message||'Retry by reopening Cost'),true);
+        }
+        return result;
       });
       return queue;
     };
@@ -466,6 +477,13 @@
         const existing=data.items.find(p=>p.costing_mode===mode && parseInt(p.hotel_level,10)===hotel &&
           (p.cruise_level==null?null:Number(p.cruise_level))===cruise);
         const selectVariant=id=>{
+          // A newly created mix may be committed before the follow-up /options
+          // request succeeds. Never select a variant missing from the current
+          // option set or render undefined packages from stale client data.
+          if(!data.items.some(p=>Number(p.variant_id)===Number(id)&&p.costing_mode===mode)){
+            status('Combination saved on server · reopen Cost to load the new option');
+            return false;
+          }
           const chosen=ids();chosen[index]=Number(id);
           if(new Set(chosen).size!==3){
             render();

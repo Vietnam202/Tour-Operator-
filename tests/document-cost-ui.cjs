@@ -6,11 +6,11 @@ async function harness(cost=true,status='DRAFT',price=false,partial=false,savedV
  w.structuredClone=structuredClone;w.eval(fs.readFileSync(path.join(__dirname,'../cost-sheet.js'),'utf8'));
  const ctx={costing_revision:7,guests:{adults:16,children:0,infants:0,foc:1,paying_pax:16,total_guests:17},profile:{hotel_pax:17,cruise_pax:17},schedule:[{day_key:'d1',date:'2027-01-01',title:'Hanoi',route:'Hanoi'}],requirements:[{id:9,category:'OTHER',service_name:'Supplier service',service_date:'2027-01-01',service_units:2,default_quantity_source:'CUSTOM_QTY',requirement_state:'REQUIRED',scope:{}}]};
  const data={items:[3,4,5].map(s=>({variant_id:s,variant_key:'private-'+s+'-'+s,hotel_level:s+'*',cruise_level:s,costing_mode:'PRIVATE',label:s+' stars',pricing_mode:'MARKUP',pricing_value:'15',selling_currency:'USD',pricing:{cost_total_vnd:'600',selling_per_pax:'1',total_selling:'16',profit_vnd:'50'},lines:[{id:s+10,requirement_id:9,line_kind:'SERVICE',active:true,unit_rate_vnd:'100',total_vnd:'600',custom_quantity:3,review_required:1,coverage_state:'PRICED',supplier_id:1,manual_reason:'Supplier evidence',trace:{sentence:'3 × 2 × 100 VND = 600 VND'}}]})),supplier_choices:[{id:1,name:'Supplier A'}]};
- let failProposal=false;
+ let failProposal=false,failRefresh=false,refreshCalls=0;
  if(partial)data.items=data.items.slice(0,1);
 const api={request:async(route,opt={})=>{calls.push({route,...opt});if(failProposal&&opt.method==='PUT'&&route.endsWith('/proposal'))throw Error('SAVE_FAILED');if(route.endsWith('/proposal'))return {settings:{selected_variant_id:savedVariant,pricing_display:savedVariant?'SELECTED_OPTION':'NET',accommodation:[{type:'HOTEL',destination:'Hanoi',nights:1,three_star:'Hotel A',four_star:'Hotel B',five_star:'Hotel C'}]},days:ctx.schedule,links:[]};return {costing_revision:8,errors:[],warnings:[],valid:true};}};
  const modal=(title,body,footer='')=>{const m=w.document.createElement('section');m.innerHTML='<h2>'+title+'</h2>'+body+footer;w.document.querySelector('#modals').replaceChildren(m);return m;};
-await w.mountCostSheet(root,{api,quoteData:{quote:{id:2,quote_ref:'QT-UX'},version:{id:5,tour_name:'Vietnam',version_no:1,version_status:status,start_date:'2027-01-01',end_date:'2027-01-01',fx_rate:'25000'}},can:p=>p==='quote.view_cost'?cost:true,navigate:()=>{},modal,closeModal:()=>w.document.querySelector('#modals').replaceChildren(),toast:()=>{},refresh:async()=>{},onProposal:()=>calls.push({route:'proposal-nav'}),ctx,data:cost?data:{items:[]}});return {dom,w,root,calls,failProposal:value=>{failProposal=value;}};
+await w.mountCostSheet(root,{api,quoteData:{quote:{id:2,quote_ref:'QT-UX'},version:{id:5,tour_name:'Vietnam',version_no:1,version_status:status,start_date:'2027-01-01',end_date:'2027-01-01',fx_rate:'25000'}},can:p=>p==='quote.view_cost'?cost:true,navigate:()=>{},modal,closeModal:()=>w.document.querySelector('#modals').replaceChildren(),toast:()=>{},refresh:async()=>{refreshCalls++;if(failRefresh)throw Error('REFRESH_FAILED');},onProposal:()=>calls.push({route:'proposal-nav'}),ctx,data:cost?data:{items:[]}});return {dom,w,root,calls,failProposal:value=>{failProposal=value;},failRefresh:value=>{failRefresh=value;},refreshCount:()=>refreshCalls};
 }
 (async()=>{
  const missing=await harness(true,'DRAFT',true,false,999);
@@ -64,6 +64,27 @@ await w.mountCostSheet(root,{api,quoteData:{quote:{id:2,quote_ref:'QT-UX'},versi
  const accommodation=h.root.querySelector('[data-accommodation]');accommodation.value='Hotel A / Deluxe';accommodation.dispatchEvent(new h.w.Event('change'));await settle();const p=h.calls.at(-1);assert.equal(p.body.settings.accommodation[0].three_star,'Hotel A / Deluxe');assert.equal(p.body.settings.accommodation[0].four_star,'Hotel B');console.log('PASS UX accommodation editing preserves independent option selections');h.dom.window.close();
  h=await harness(false);assert(!h.root.querySelector('.sheet-table'));assert(!h.calls.some(c=>c.route.endsWith('/options')||c.route.includes('supplier')));console.log('PASS UX no financial view or financial requests without cost permission');h.dom.window.close();
  h=await harness(true,'SENT');assert(!h.root.querySelector('[data-remove]'));assert(!h.root.querySelector('[data-add]'));assert([...h.root.querySelectorAll('[data-unit]')].every(x=>x.disabled));assert(!h.root.querySelector('[data-pricing]'));console.log('PASS UX Sent sheet cannot edit prices or guest quantities');h.dom.window.close();
+ // A confirmed server write must never be relabeled as a failed save when only
+ // the follow-up refresh fails; a subsequent real edit can still save normally.
+ const refreshFailure=await harness();
+ refreshFailure.failRefresh(true);
+ const firstAdult=refreshFailure.root.querySelector('[name=adults]');
+ firstAdult.value='18';firstAdult.dispatchEvent(new refreshFailure.w.Event('change'));
+ await settle();
+ let state=refreshFailure.root.querySelector('[data-sheet-status]').textContent;
+ assert(state.includes('Saved on server'),state);
+ assert(!state.includes('Save failed'));
+ assert.equal(refreshFailure.calls.filter(c=>c.method==='PUT').length,1);
+ assert.equal(refreshFailure.refreshCount(),1);
+ refreshFailure.failRefresh(false);
+ firstAdult.value='19';firstAdult.dispatchEvent(new refreshFailure.w.Event('change'));
+ await settle();
+ state=refreshFailure.root.querySelector('[data-sheet-status]').textContent;
+ assert.equal(state,'Saved');
+ assert.equal(refreshFailure.calls.filter(c=>c.method==='PUT').length,2);
+ assert.equal(refreshFailure.refreshCount(),2);
+ refreshFailure.dom.window.close();
+ console.log('PASS confirmed cost save is not mislabeled after refresh failure; subsequent save recovers');
  // Document default and editing projection are independent of supplier data.
  const dom=new JSDOM('<main></main><aside id="modals"></aside>',{url:'http://local.test',runScripts:'outside-only'}),w=dom.window;w.eval(fs.readFileSync(path.join(__dirname,'../visual-proposal.js'),'utf8'));const calls=[];
  const ctx={costing_revision:3,immutable:false,settings:{template:'VTA_STANDARD_B2B',sections:['schedule','itinerary'],accommodation:[]},days:[{day_key:'stable-01',date:'2027-01-01',title:'Hanoi',description:'Morning visit',meals:'B/L',overnight:'Hanoi',overnight_type:'HOTEL'}],links:[],requirements:[],templates:{VTA_STANDARD_B2B:'VTA B2B'},selling_options:[]};

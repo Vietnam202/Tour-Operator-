@@ -36,6 +36,7 @@ REQUIRED = {
     "vta-plus-assist.js", "vta-plus-assist.css",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
+    "cost-sheet.js", "document-editor.js", "vta-cost-editor.js",
     "smart-enhancements.js", "smart-enhancements.css", "service-worker.js",
 }
 MIN_FILES = 75
@@ -168,7 +169,7 @@ def verify(package: Path, manifest_file: Path) -> None:
                 if path.lstrip("./") not in entries:
                     raise RuntimeError("HTML reference missing from payload: " + path)
         sw = archive.read("runtime/service-worker.js").decode()
-        if "smart-enhancements.js" not in sw or "vta-RC62-B2C-1-PWA" not in sw:
+        if "smart-enhancements.js" not in sw or "vta-RC62-COST-SAVE-2-PWA" not in sw:
             raise RuntimeError("PWA version/assets missing")
         forbidden = {"integrations/", "tests/", "verification/", "docs/", "deploy/", ".git/", "api/config.php"}
         for name in names:

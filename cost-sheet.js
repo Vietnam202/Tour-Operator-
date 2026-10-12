@@ -16,7 +16,29 @@
   const request=async(path,b,method='POST')=>{const r=await api.request(path,{method,body:{...b,expected_revision:revision}});if(r.costing_revision!==undefined)revision=r.costing_revision;return r;};
   const sheet=b=>request(base+'/smart-costing/sheet',{variant_ids:ids,...b});
   const status=t=>{const el=host.querySelector('[data-sheet-status]');if(el)el.textContent=t;};
-  const run=async fn=>{if(busy)return;busy=true;status('Saving…');const controls=[...host.querySelectorAll('input:not(:disabled),select:not(:disabled),button:not(:disabled)')];controls.forEach(x=>x.disabled=true);try{await fn();status('Saved');await refresh();}catch(e){status('Save failed · '+e.message);toast(e.message,true);}finally{busy=false;controls.filter(x=>x.isConnected).forEach(x=>x.disabled=false);}};
+  const run=async fn=>{
+   if(busy)return;
+   busy=true;status('Saving…');
+   const controls=[...host.querySelectorAll('input:not(:disabled),select:not(:disabled),button:not(:disabled)')];
+   controls.forEach(x=>x.disabled=true);
+   try{
+    await fn();
+    // The server has confirmed the write. A later UI refresh failure must not
+    // be represented as a failed save or encourage a duplicate write/retry.
+    status('Saved');
+    try{await refresh();}
+    catch(e){
+     status('Saved on server · refresh failed. Reopen the quote to load the saved version.');
+     toast('Saved on server; unable to refresh the view: '+e.message,true);
+    }
+   }catch(e){
+    status('Save failed · '+e.message);
+    toast(e.message,true);
+   }finally{
+    busy=false;
+    controls.filter(x=>x.isConnected).forEach(x=>x.disabled=false);
+   }
+  };
   const line=(p,r)=>p?.lines.find(l=>Number(l.requirement_id)===Number(r.id)&&l.line_kind==='SERVICE');
   const rows=ctx.requirements.filter(r=>r.requirement_state!=='NOT_APPLICABLE'&&packages.some(p=>line(p,r)?.active));
   const warnings=ls=>ls.some(l=>l?.active&&l.rate_status==='RATE_CONFLICT')?'⚠ Rate conflict':ls.some(l=>l?.active&&l.coverage_state==='UNRESOLVED')?'⚠ Rate not found':ls.some(l=>l?.active&&Number(l.review_required))?'⚠ Review required':'';

@@ -6,13 +6,15 @@ const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
 const SCOPE='https://v2quote.vietnamtraveladvisor.com.vn/';
-const CACHE='vta-RC62-DEMO-PARITY-1-PWA';
+const CACHE='vta-RC62-COST-SAVE-2-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
+const costAsset=new URL('./cost-sheet.js?v=COST-SAVE-1',SCOPE).href;
+const directCostAsset=new URL('./vta-cost-editor.js?v=COST-SAVE-2',SCOPE).href;
 const stores=new Map([
- [OLD,new Map([[asset,'STALE-V5-OLD'],[offlinePage,'STALE-OFFLINE']])],
- ['foreign-app-cache',new Map([[asset,'FOREIGN-UNREVIEWED'],[offlinePage,'FOREIGN-OFFLINE']])]
+ [OLD,new Map([[asset,'STALE-V5-OLD'],[costAsset,'STALE-COST'],[directCostAsset,'STALE-DIRECT-COST'],[offlinePage,'STALE-OFFLINE']])],
+ ['foreign-app-cache',new Map([[asset,'FOREIGN-UNREVIEWED'],[costAsset,'FOREIGN-COST'],[directCostAsset,'FOREIGN-DIRECT-COST'],[offlinePage,'FOREIGN-OFFLINE']])]
 ]);
 const events={};
 let claimCount=0,globalMatchCount=0,skipWaitingCount=0,networkCalls=0,offline=false;
@@ -55,12 +57,23 @@ function request(url,{method='GET',mode='cors'}={}) {
  return answered;
 }
 (async()=>{
- assert.match(source,/const CACHE='vta-RC62-DEMO-PARITY-1-PWA'/);
+ assert.match(source,/const CACHE='vta-RC62-COST-SAVE-2-PWA'/);
+ assert(source.includes("'./cost-sheet.js?v=COST-SAVE-1'"),'fallback Cost editor must be precached');
+ assert(source.includes("'./vta-cost-editor.js?v=COST-SAVE-2'"),'direct Cost editor must be precached');
+ for(const page of ['index.html','preview.html']) {
+  const html=fs.readFileSync(path.join(__dirname,'..',page),'utf8');
+  assert(html.includes('cost-sheet.js?v=COST-SAVE-1'),page+' must request the updated fallback Cost editor');
+  assert(html.includes('vta-cost-editor.js?v=COST-SAVE-2'),page+' must request the updated direct Cost editor');
+ }
  await lifecycle('install');
  assert(stores.has(CACHE),'new version must have dedicated cache');
  assert.equal(stores.get(CACHE).get(asset),'FRESH:'+asset);
+ assert.equal(stores.get(CACHE).get(costAsset),'FRESH:'+costAsset);
+ assert.equal(stores.get(CACHE).get(directCostAsset),'FRESH:'+directCostAsset);
  // Old and unrelated caches exist; a scoped lookup must never return them.
  assert.equal(await request(asset),'FRESH:'+asset,'current assets must come only from current-version cache');
+ assert.equal(await request(costAsset),'FRESH:'+costAsset,'cost editor must not be served from old/foreign cache');
+ assert.equal(await request(directCostAsset),'FRESH:'+directCostAsset,'direct Cost editor must never use stale Cost JavaScript');
  assert.equal(globalMatchCount,0,'never globally scan caches for allowlisted assets');
  await lifecycle('activate');
  assert.equal(stores.has(OLD),false,'activation removes stale VTA cache');
@@ -82,6 +95,7 @@ function request(url,{method='GET',mode='cors'}={}) {
   [SCOPE+'api/index.php?route=public-proposals/example',{}],
   [SCOPE+'uploads/private.jpg',{}],
   [SCOPE+'other.js',{}],
+  [SCOPE+'cost-sheet.js?v=3.4.0-VS23-UX',{}],
   [asset,{method:'POST'}],
   ['https://external.invalid/service.js',{}]
  ];

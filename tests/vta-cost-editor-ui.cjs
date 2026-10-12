@@ -14,6 +14,7 @@ function fixture(star,cat,id){
 async function harness({locked=false,cost=true,beforeWrite=null}={}){
   const dom=new JSDOM('<main></main>',{url:'https://rc6.local/',runScripts:'outside-only'});
   const w=dom.window,root=w.document.querySelector('main'),calls=[];
+  let optionsUnavailable=false;
   w.mountCostSheet=async host=>{host.textContent='Legacy view';};
   w.eval(source);
   const ctx={costing_revision:9,guests:{adults:6,children:0,infants:0,foc:0,total_guests:6,paying_pax:6},
@@ -32,7 +33,10 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
   d.items.push({...d.items[1],variant_id:44,variant_key:'custom-4-3',cruise_level:3});
   const api={request:async(route,opts={})=>{
     calls.push({route,...opts});
-    if(route.endsWith('/options'))return structuredClone(d);
+    if(route.endsWith('/options')){
+      if(optionsUnavailable)throw Error('GET_OPTIONS_FAILED');
+      return structuredClone(d);
+    }
     if(route.endsWith('/smart-costing/context')&&(!opts.method||opts.method==='GET'))return structuredClone(ctx);
     if(route.endsWith('/smart-costing/validation'))return {valid:false,errors:[{code:'RATE_REVIEW_REQUIRED'}],warnings:[]};
     if(opts.method){
@@ -46,7 +50,7 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
         if(b.paying_pax!==undefined)ctx.guests.paying_pax=b.paying_pax;
       }
       if(b.action==='mix'){
-        d.items.push({...d.items[0],variant_id:99,variant_key:'mixed-3-5',cruise_level:5,pricing:{cost_total_vnd:'36000000'}});
+        if(!optionsUnavailable)d.items.push({...d.items[0],variant_id:99,variant_key:'mixed-3-5',cruise_level:5,pricing:{cost_total_vnd:'36000000'}});
         return {costing_revision:ctx.costing_revision,variant_id:99};
       }
       if(b.action==='remove')ctx.requirements.find(x=>x.id===b.requirement_id).requirement_state='NOT_APPLICABLE';
@@ -59,7 +63,7 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
     ctx,data:d,can:perm=>perm==='quote.view_cost'?cost:true,
     navigate:()=>{},toast:msg=>{calls.push({toast:msg});},refresh:async()=>{},onProposal:()=>{}};
   await w.mountCostSheet(root,env);
-  return {dom,w,root,ctx,d,calls,env};
+  return {dom,w,root,ctx,d,calls,env,setOptionsUnavailable:value=>{optionsUnavailable=value;}};
 }
 (async()=>{
   let h=await harness(),{root,w,calls}=h;
@@ -181,6 +185,44 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
   assert.notEqual(h.root.dataset.sheetStep,'price','Group price waits for pending rate save');
   release();await settle();assert.equal(h.root.dataset.sheetStep,'price');
   console.log('PASS group-price navigation waits for pending save');h.dom.window.close();
+  // Real Cost editor is the active screen. A write acknowledged by the API
+  // must not be marked failed because a subsequent GET of options fails.
+  h=await harness();h.setOptionsUnavailable(true);
+  const confirmedName=h.root.querySelector('[data-vta-row="10"] [data-name]');
+  confirmedName.value='Server saved hotel';
+  confirmedName.dispatchEvent(new h.w.Event('change'));await settle();
+  const confirmedWrites=h.calls.filter(c=>c.method==='POST'&&c.route.endsWith('/smart-costing/sheet'));
+  assert.equal(confirmedWrites.length,1);
+  assert.equal(confirmedWrites[0].body.expected_revision,9);
+  assert(h.root.querySelector('[data-vta-status]').textContent.includes('Saved on server'));
+  assert(!h.root.querySelector('[data-vta-status]').textContent.includes('Save failed'));
+  h.setOptionsUnavailable(false);
+  confirmedName.value='Next saved hotel';
+  confirmedName.dispatchEvent(new h.w.Event('change'));await settle();
+  const recoveredWrites=h.calls.filter(c=>c.method==='POST'&&c.route.endsWith('/smart-costing/sheet'));
+  assert.equal(recoveredWrites.length,2,'retryable next edit does not duplicate the earlier save');
+  assert.equal(recoveredWrites[1].body.expected_revision,10,'confirmed revision advances even if GET failed');
+  assert.equal(h.root.querySelector('[data-vta-status]').textContent,'Saved');
+  h.root.querySelector('[data-next]').click();await settle();
+  assert.equal(h.root.dataset.sheetStep,'price','confirmed write and recovered refresh must not block Price');
+  console.log('PASS direct Cost editor confirms write despite failed refresh, retains revision and recovers Price navigation');
+  h.dom.window.close();
+  // A new Hotel 3★ / Cruise 5★ server variant can be persisted even when its
+  // updated options list cannot be retrieved. Keep the old UI usable, do not
+  // render an undefined package, and require a fresh GET before selecting it.
+  h=await harness();h.setOptionsUnavailable(true);
+  const unlistedMix=h.root.querySelector('[data-mix-cruise="0"]');
+  unlistedMix.value='5';
+  unlistedMix.dispatchEvent(new h.w.Event('change'));
+  await settle();
+  assert.equal(h.calls.filter(c=>c.body?.action==='mix').length,1);
+  assert.equal(h.root.querySelectorAll('[data-vta-summary]').length,3);
+  assert(h.root.querySelector('[data-vta-status]').textContent.includes('Combination saved on server'));
+  assert(!h.root.dataset.vtaCostVariants || !h.root.dataset.vtaCostVariants.includes('99'));
+  h.root.querySelector('[data-next]').click();await settle();
+  assert.equal(h.root.dataset.sheetStep,'price','committed mix must not trap operator after refresh failure');
+  console.log('PASS saved mixed Hotel/Cruise option avoids stale variant render after GET failure');
+  h.dom.window.close();
   h=await harness({locked:true});assert(!h.root.querySelector('[data-add]'));
   assert([...h.root.querySelectorAll('[data-rate]')].every(x=>x.disabled));
   console.log('PASS issued quotes remain read-only');h.dom.window.close();
