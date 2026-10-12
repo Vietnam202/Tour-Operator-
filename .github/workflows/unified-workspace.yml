@@ -150,6 +150,7 @@ jobs:
           done
           if [ "$ready" -ne 1 ]; then echo "Local PHP fixture server did not start"; exit 1; fi
           node tests/rc62-v5-http-auth-api.cjs | tee tests/test-results/backend/authenticated-http-acceptance.log
+          node tests/tour-library-bulk50-http.cjs | tee tests/test-results/backend/bulk50-rich-docx-acceptance.log
           node tests/b2c-http-auth.cjs | tee tests/test-results/backend/b2c-http-acceptance.log
       - uses: actions/upload-artifact@v4
         if: always()
