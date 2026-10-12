@@ -247,7 +247,7 @@ def verify_private_evidence(packet:dict,root:Path)->dict:
         if d["format"]=="PDF":
             require(magic.startswith(b"%PDF-"),"DOCUMENT_SOURCE_FORMAT_MISMATCH")
         else:
-            require(magic.startswith(b"PK\\x03\\x04"),"DOCUMENT_SOURCE_FORMAT_MISMATCH")
+            require(magic.startswith(b"PK\x03\x04"),"DOCUMENT_SOURCE_FORMAT_MISMATCH")
             try:
                 with zipfile.ZipFile(target) as arc:
                     require("word/document.xml" in arc.namelist()
