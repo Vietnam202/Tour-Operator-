@@ -90,6 +90,8 @@ function query(port,route,opts={}){
      path:'/api/index.php?route='+encodeURIComponent(route.split('?')[0])+
         (route.includes('?')?'&'+route.split('?').slice(1).join('?'):''),
      method:body===null?'GET':'POST',headers,timeout:5000},res=>{
+     const tlsVerified=res.socket?.authorized===true;
+     const negotiatedProtocol=res.socket?.getProtocol?.();
      const parts=[];let bytes=0;
      res.on('data',part=>{bytes+=part.length;
        if(bytes>512000){req.destroy(Error('FIXTURE_HTTP_RESPONSE_TOO_LARGE'));return;}
@@ -99,8 +101,7 @@ function query(port,route,opts={}){
        const raw=Buffer.concat(parts).toString('utf8');
        let value=null;try{value=JSON.parse(raw)}catch{}
        resolve({status:res.statusCode,data:value,headers:res.headers,
-         tlsVerified:res.socket.authorized===true,
-         negotiatedProtocol:res.socket.getProtocol()});
+         tlsVerified,negotiatedProtocol});
      });
    });
    req.on('timeout',()=>req.destroy(Error('FIXTURE_HTTP_TIMEOUT')));
