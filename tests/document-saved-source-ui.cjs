@@ -71,7 +71,7 @@ async function setup({allowed=true,confirm=true,source=true}={}){
   const writes=h.calls.filter(x=>x.route==='tour-library/7/document'&&x.options.method==='PUT');
   assert.equal(writes.length,1,'reviewed Word canvas persists via existing revision-guarded PUT');
   assert.equal(writes[0].options.body.expected_revision,'baseline-v1');
-  assert.deepEqual(writes[0].options.body.links.map(x=>x.asset_id),[42],'saved Word references uploaded private image');
+  assert.deepEqual(Array.from(writes[0].options.body.links,x=>Number(x.asset_id)),[42],'saved Word references uploaded private image');
   assert(h.host.querySelector('[data-wd-notice]').textContent.includes('Tables and source prices need review'));
   console.log('PASS private DOCX reopened with heading/table/image and saved in existing Word revision');
  }finally{h.close();}
