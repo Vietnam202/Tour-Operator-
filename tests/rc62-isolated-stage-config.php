@@ -43,13 +43,22 @@ chmod($configOut,0600);
 $api=realpath(dirname(__DIR__).'/api/index.php');
 if(!$api||RuntimeGuard::inside($sourceDir,$repo))
     throw new RuntimeException('STAGE_SIMULATION_ROUTER_INVALID');
-// Explicitly simulated SSL termination for PHP's built-in HTTP server.
-// Real staging MUST use separately verified, actual end-to-end HTTPS.
+// Only a private CI HTTPS proxy may assert TLS to the localhost PHP router.
+// A direct HTTP request with a spoofed X-Forwarded-Proto must never set HTTPS.
+// On CyberPanel this router MUST NOT be deployed or reused.
 file_put_contents($routerOut, "<?php\n".
     "if(str_starts_with(\$_SERVER['REQUEST_URI']??'','/api/index.php')) {\n".
+    "  \$pin=(string)getenv('VTA_STAGE_CI_PROXY_TOKEN');\n".
+    "  \$present=(string)(\$_SERVER['HTTP_X_VTA_CI_TLS_TOKEN']??'');\n".
+    "  if(getenv('GITHUB_ACTIONS')!=='true' || strlen(\$pin)<32 ||\n".
+    "     !hash_equals(\$pin,\$present) || (\$_SERVER['REMOTE_ADDR']??'')!=='127.0.0.1'){\n".
+    "    http_response_code(503);header('Content-Type: application/json');\n".
+    "    echo json_encode(['ok'=>false,'error'=>'UNSAFE_STAGING_CONFIGURATION']);return true;\n".
+    "  }\n".
+    "  unset(\$_SERVER['HTTP_X_VTA_CI_TLS_TOKEN']);\n".
     "  \$_SERVER['HTTPS']='on';\n".
     "  require ".var_export($api,true).";\n".
     "  return true;\n".
     "}\nreturn false;\n");
 chmod($routerOut,0600);
-echo "PASS disposable stage config: new HTTPS host+DB+media pins; no actual TLS or staging host\n";
+echo "PASS disposable stage config: new HTTPS host+DB+media pins; real TLS proxy required, no actual staging host\n";
