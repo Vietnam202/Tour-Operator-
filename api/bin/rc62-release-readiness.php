@@ -27,7 +27,8 @@ final class RC62ReleaseReadiness
         'INVALID_MANIFEST_JSON', 'INVALID_PRIVATE_CONFIG',
         'UNSAFE_BASE_URL', 'ORIGIN_MISMATCH',
         'ISOLATED_DB_NAME_REQUIRED', 'PHP_EXTENSION_MISSING', 'PHP_83_REQUIRED',
-        'MIGRATION_FILE_COUNT_DRIFT', 'MIGRATIONS_PENDING_ON_CLONE'
+        'MIGRATION_FILE_COUNT_DRIFT', 'MIGRATIONS_PENDING_ON_CLONE',
+        'READ_ONLY_DB_ACCOUNT_REQUIRED'
     ];
 
     public static function safeFailure(Throwable $error): string
@@ -58,6 +59,32 @@ final class RC62ReleaseReadiness
             || !hash_equals($configured, $operatorPinned)
             || ($connected !== null && !hash_equals($configured, $connected)))
             self::reject('CLONE_DATABASE_MISMATCH');
+    }
+
+    /**
+     * Release preflight must never run with the app's writable SQL account.
+     * SHOW GRANTS includes all grants for the current authenticated MariaDB
+     * principal. Only USAGE at global level and SELECT on this exact clone
+     * database are permitted; all unexpected grants fail closed.
+     * Neither grants nor user/connection details may be logged.
+     *
+     * @param list<string> $grants
+     */
+    public static function assertReadOnlyGrants(array $grants,string $database):void
+    {
+        $allowedSelect=false;
+        if(!$grants)self::reject('READ_ONLY_DB_ACCOUNT_REQUIRED');
+        foreach($grants as $grant){
+            if(!is_string($grant)||preg_match('/\\bWITH\\s+GRANT\\s+OPTION\\b/i',$grant))
+                self::reject('READ_ONLY_DB_ACCOUNT_REQUIRED');
+            $statement=trim($grant);
+            if(preg_match('/^GRANT\\s+USAGE\\s+ON\\s+\\*\\.\\*\\s+TO\\s+.+$/iD',$statement))continue;
+            if(!preg_match('/^GRANT\\s+SELECT\\s+ON\\s+`?([A-Za-z0-9_]{6,64})`?\\.\\*\\s+TO\\s+.+$/iD',
+                    $statement,$parts) || !hash_equals($database,$parts[1]))
+                self::reject('READ_ONLY_DB_ACCOUNT_REQUIRED');
+            $allowedSelect=true;
+        }
+        if(!$allowedSelect)self::reject('READ_ONLY_DB_ACCOUNT_REQUIRED');
     }
 
     private static function reject(string $reason): void
@@ -211,6 +238,9 @@ final class RC62ReleaseReadiness
             ]);
         self::assertCloneDatabase(
             $dbName, $expectedDb, (string)$db->query('SELECT DATABASE()')->fetchColumn()
+        );
+        self::assertReadOnlyGrants(
+            $db->query('SHOW GRANTS FOR CURRENT_USER()')->fetchAll(PDO::FETCH_COLUMN),$dbName
         );
         $versions = $db->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
         $ledger = $db->query('SELECT version,sha256,status FROM migration_checksums')->fetchAll(PDO::FETCH_ASSOC);

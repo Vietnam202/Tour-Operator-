@@ -83,6 +83,34 @@ mustReject(fn()=>RC62ReleaseReadiness::run([
     'readiness.php','--manifest=/private/manifest.json','--expected-sha='.$pin
 ]),'CLI_MANIFEST_SHA_DB_PIN_REQUIRED');
 
+// SHOW GRANTS must establish SELECT-only on the independently pinned
+// clone schema. Checking only the configured username is insufficient.
+$readOnly=[
+    'GRANT USAGE ON *.* TO `vta_rc62_preflight_ci`@`%`',
+    'GRANT SELECT ON `vta_rc62_restore_clone_ci`.* TO `vta_rc62_preflight_ci`@`%`'
+];
+RC62ReleaseReadiness::assertReadOnlyGrants($readOnly,'vta_rc62_restore_clone_ci');
+requirePass(true,'Read-only clone user with only SELECT/USAGE is accepted');
+$unsafe=[
+    ['GRANT ALL PRIVILEGES ON *.* TO root@localhost'],
+    ['GRANT SELECT, INSERT ON `vta_rc62_restore_clone_ci`.* TO `operator`@`%`'],
+    ['GRANT SELECT ON *.* TO `global-reader`@`%`'],
+    ['GRANT SELECT ON `vta_rc62_other_clone_ci`.* TO `user`@`%`'],
+    ['GRANT SELECT ON `vta_rc62_restore_clone_ci`.users TO `user`@`%`'],
+    ['GRANT SELECT ON `vta_rc62_restore_clone_ci`.* TO `user`@`%` WITH GRANT OPTION'],
+    ['GRANT USAGE ON *.* TO `user`@`%`'],
+    ['GRANT `dbAdminRole`@`%` TO `user`@`%`']
+];
+foreach($unsafe as $grants){
+    mustReject(fn()=>RC62ReleaseReadiness::assertReadOnlyGrants($grants,'vta_rc62_restore_clone_ci'),
+        'READ_ONLY_DB_ACCOUNT_REQUIRED');
+}
+mustReject(fn()=>RC62ReleaseReadiness::assertReadOnlyGrants(
+    [...$readOnly, 'GRANT UPDATE ON `vta_rc62_restore_clone_ci`.* TO `user`@`%`'],
+    'vta_rc62_restore_clone_ci'), 'READ_ONLY_DB_ACCOUNT_REQUIRED');
+requirePass(RC62ReleaseReadiness::safeFailure(new RuntimeException('READ_ONLY_DB_ACCOUNT_REQUIRED'))===
+    'READ_ONLY_DB_ACCOUNT_REQUIRED','Read-only denial reports only a safe reason code');
+
 // Never show PDOException/RuntimeGuard/raw PHP messages to the operator log.
 requirePass(
     RC62ReleaseReadiness::safeFailure(new PDOException('SQLSTATE leaked database=private password=secret'))==='PREFLIGHT_ERROR',
