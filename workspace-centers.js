@@ -182,14 +182,16 @@
  }
  window.mountLeadHandover=async function(host,options={}){
   const c=mounted(host,options);if(!c)return;const {t,can,alive}=c,marketing=options.mode==='marketing';
-  const allowed=can('lead.view'),queues=marketing?['NEW','PENDING','RETURNED','ACCEPTED']:['PENDING','ACCEPTED','RETURNED','CONVERTED'];
-  const names={NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Needs lead review','Cần xem lại lead'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
+  const allowed=can('lead.view'),queues=marketing?['NEW','REJECTED','PENDING','RETURNED','ACCEPTED']:['PENDING','ACCEPTED','RETURNED','CONVERTED'];
+  const names={REJECTED:t('Not potential','Không tiềm năng'),NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Needs lead review','Cần xem lại lead'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
   let selected=queues.includes(options.initialStatus)?options.initialStatus:queues[0],offset=0,ticket=0,data=null,counts={},command=null;
   const title=marketing?t('Inbound leads → Sales handover','Bàn giao lead đầu vào → Sales'):t('Sales handover queue','Hàng chờ bàn giao Sales');
   function rowHTML(row,index){
-   const state=selected==='NEW'?'NEW':row.handover_status,version=selected==='NEW'?row.version_no:row.handover_version;
+   const state=['NEW','REJECTED'].includes(selected)?selected:row.handover_status,version=['NEW','REJECTED'].includes(selected)?row.version_no:row.handover_version;
    const valid=id(row.id)&&id(version),actions=[];
    if(selected==='NEW'&&valid&&can('lead.manage'))actions.push(['qualify',t('Qualify & hand over','Đánh giá & bàn giao')]);
+   if(selected==='NEW'&&valid&&can('lead.manage'))actions.push(['not-potential',t('Not potential','Không tiềm năng')]);
+   if(selected==='REJECTED'&&valid&&can('lead.manage'))actions.push(['restore-potential',t('Restore','Khôi phục')]);
    if(state==='RETURNED'&&valid&&can('lead.manage'))actions.push(['resubmit',t('Review & resubmit','Xem lại & bàn giao lại')]);
    if(state==='PENDING'&&valid&&can('lead.sales_accept'))actions.push(['accept',t('Accept','Nhận')]);
    if(['PENDING','ACCEPTED'].includes(state)&&valid&&can('lead.sales_accept'))actions.push(['return',t('Return with reason','Trả về có lý do')]);
@@ -216,10 +218,10 @@
    if(!allowed){host.querySelector('[data-vs1-list]').innerHTML=c.empty(t('Lead read permission is required.','Cần quyền xem lead.'));return;}
    try{
     const focus=options.requestId?'&request_id='+id(options.requestId):'';
-    const route=selected==='NEW'?'lead-hub/requests?status=NEW&limit=30&offset='+offset+focus:'lead-hub/leads?handover_status='+selected+'&limit=30&offset='+offset+focus;
+    const route=['NEW','REJECTED'].includes(selected)?'lead-hub/requests?status='+selected+'&limit=30&offset='+offset+focus:'lead-hub/leads?handover_status='+selected+'&limit=30&offset='+offset+focus;
     const [result,summary]=await Promise.all([options.api.request(route),selected==='NEW'?options.api.request('lead-hub/leads?limit=1&offset=0'+focus):Promise.resolve(null)]);if(!alive()||n!==ticket)return;
     if(!object(result)||!Array.isArray(result.items))throw Error(t('Handover response is incomplete.','Dữ liệu bàn giao chưa đầy đủ.'));
-    data=result;counts={...counts,...(object(summary?.counts)?summary.counts:{}),...(object(result.counts)?result.counts:{})};if(selected==='NEW'&&Number.isSafeInteger(result.total))counts.NEW=result.total;
+    data=result;counts={...counts,...(object(summary?.counts)?summary.counts:{}),...(object(result.counts)?result.counts:{})};if(['NEW','REJECTED'].includes(selected)&&Number.isSafeInteger(result.total))counts[selected]=result.total;
     render();
    }catch(e){if(alive()&&n===ticket)host.querySelector('[data-vs1-list]').innerHTML=c.error(e);}
   }
@@ -230,6 +232,15 @@
   }
   async function openCommand(action,row){
    if(!alive()||!row||!id(row.id))return;
+   if(['not-potential','restore-potential'].includes(action)){
+    if(!can('lead.view')||!can('lead.manage'))return;
+    const section=host.querySelector('[data-vs1-command]'),marker={};command=marker;
+    const fresh=()=>alive()&&command===marker&&section.isConnected,restore=action==='restore-potential';
+    const reasons=[['SPAM','Spam'],['INVALID_CONTACT','Sai liên hệ'],['UNREACHABLE','Không liên lạc được'],['PRODUCT_MISMATCH','Không phù hợp sản phẩm'],['BUDGET_MISMATCH','Ngân sách không phù hợp'],['UNAVAILABLE','Không đáp ứng dịch vụ'],['COMPETITOR','Đã chọn đơn vị khác'],['REFERENCE_ONLY','Chỉ tham khảo'],['OTHER','Khác']];
+    section.innerHTML='<section class="wsc-command"><h3>'+t(restore?'Restore request':'Not potential',restore?'Khôi phục inquiry':'Không tiềm năng')+'</h3><form data-vs1-form><label>'+t('Reason','Lý do')+(restore?'<input name="reason" required maxlength="120">':'<select name="reason" required><option value="">—</option>'+reasons.map(([code,label])=>'<option value="'+code+'">'+esc(label)+'</option>').join('')+'</select>')+'</label><label>'+t('Note','Ghi chú')+'<textarea name="note" maxlength="4000"></textarea></label><div data-vs1-form-error></div><button class="btn primary" type="submit">'+t('Apply','Áp dụng')+'</button><button class="btn" type="button" data-close-potential>'+t('Cancel','Hủy')+'</button></form></section>';
+    const form=section.querySelector('form'),key=c.actionKey();section.querySelector('[data-close-potential]').onclick=()=>{command=null;section.innerHTML='';};
+    form.onsubmit=async e=>{e.preventDefault();if(!fresh()||!can('lead.manage')||!can('lead.view')||!form.reportValidity())return;const values=Object.fromEntries(new FormData(form));if(values.reason==='OTHER'&&!values.note.trim()){form.querySelector('[data-vs1-form-error]').textContent='Nhập ghi chú cho lý do khác.';return;}await submit(form,'lead-hub/requests/'+id(row.id)+'/'+action,{...values,expected_version:Number(row.version_no),action_key:key},fresh,()=>load(selected,offset));};return;
+   }
    if(action==='inquiry'){if(can('sales.view'))options.navigate?.('sales-list',{salesTab:'inquiries',inquiryId:id(row.inquiry_id)});return;}
    if(action==='customer'){if(can('sales.view'))options.navigate?.('customer-360',{customerId:id(row.customer_id)});return;}
    if(!can('lead.view')||(['qualify','resubmit'].includes(action)&&!can('lead.manage'))||(['accept','return'].includes(action)&&!can('lead.sales_accept'))||(action==='convert'&&!['lead.manage','inquiry.manage','sales.view'].every(can)))return;

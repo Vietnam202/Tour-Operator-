@@ -132,6 +132,9 @@ final class LeadHub {
                 });Http::json(['ok'=>true]+$result,201);
             }
             if($method==='POST' && preg_match('#^lead-hub/requests/(\d+)/qualify$#',$route,$m)) Http::json(['ok'=>true]+self::qualify($db,$user,(int)$m[1],Http::body()));
+            if($method==='POST' && preg_match('#^lead-hub/requests/(\d+)/(not-potential|restore-potential)$#',$route,$m)){
+                Http::json(['ok'=>true]+LeadSalesHandover::requestPotential($db,$user,(int)$m[1],Http::body(),$m[2]==='restore-potential'));
+            }
             if($method==='POST' && preg_match('#^lead-hub/leads/(\d+)/(accept|return|resubmit)$#',$route,$m)){
                 $body=Http::body();$result=match($m[2]){'accept'=>LeadSalesHandover::accept($db,$user,(int)$m[1],$body),'return'=>LeadSalesHandover::returnLead($db,$user,(int)$m[1],$body),default=>LeadSalesHandover::resubmit($db,$user,(int)$m[1],$body)};Http::json(['ok'=>true]+$result);
             }

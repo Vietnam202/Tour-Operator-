@@ -72,6 +72,33 @@ final class LeadSalesHandover {
             Audit::log($db,$cid,(int)$user['id'],'LEAD_QUALIFIED','lead',$id,null,$result+['qualification_note'=>$note]);DomainOutbox::commandResult($db,$user,$key,$hash,'lead',$id,$result);return $result;
         });
     }
+    /** Close an unqualified inbound request without deleting it; restore is explicit. */
+    public static function requestPotential(PDO $db,array $user,int $requestId,array $b,bool $restore=false): array {
+        self::permissions($db,$user,['lead.view','lead.manage']);
+        $key=self::action($b);$action=$restore?'restore_potential':'not_potential';
+        $hash=DomainOutbox::hash(['action'=>$action,'request_id'=>$requestId,'body'=>$b]);
+        return self::transaction($db,function()use($db,$user,$requestId,$b,$restore,$key,$action,$hash){
+            $cid=(int)$user['company_id'];
+            $row=self::query($db,'SELECT * FROM lead_requests WHERE company_id=? AND id=? FOR UPDATE',[$cid,$requestId])->fetch(PDO::FETCH_ASSOC);
+            if(!$row)throw new OutOfBoundsException('Request not found');
+            if($old=DomainOutbox::commandReplay($db,$user,$key,$hash))return $old;
+            self::version($row,$b,'version_no');
+            if($row['status']!==($restore?'REJECTED':'NEW'))throw new DomainException('INVALID_REQUEST_TRANSITION');
+            // A legacy rejected request can have a lead: never silently detach or reactivate that Sales record.
+            if(self::query($db,'SELECT id FROM leads WHERE company_id=? AND request_id=?',[$cid,$requestId])->fetchColumn())throw new DomainException('REQUEST_HAS_EXISTING_LEAD');
+            $reason=self::text($b,'reason',120,true);
+            $allowed=['SPAM','INVALID_CONTACT','UNREACHABLE','PRODUCT_MISMATCH','BUDGET_MISMATCH','UNAVAILABLE','COMPETITOR','REFERENCE_ONLY','OTHER'];
+            if(!$restore&&!in_array($reason,$allowed,true))throw new InvalidArgumentException('Invalid closure reason');
+            $note=self::text($b,'note',4000);
+            if(!$restore&&$reason==='OTHER'&&$note==='')throw new InvalidArgumentException('Other reason requires a note');
+            $status=$restore?'NEW':'REJECTED';
+            self::query($db,'UPDATE lead_requests SET status=?,version_no=version_no+1 WHERE company_id=? AND id=?',[$status,$cid,$requestId]);
+            $result=['id'=>$requestId,'status'=>$status,'version_no'=>(int)$row['version_no']+1];
+            Audit::log($db,$cid,(int)$user['id'],$restore?'LEAD_REQUEST_RESTORED':'LEAD_REQUEST_NOT_POTENTIAL','lead_request',$requestId,['status'=>$row['status'],'version_no'=>(int)$row['version_no']],$result+['reason'=>$reason,'note'=>$note]);
+            DomainOutbox::commandResult($db,$user,$key,$hash,'lead_request',$requestId,$result);
+            return $result;
+        });
+    }
     public static function accept(PDO $db,array $user,int $id,array $b): array { return self::decision($db,$user,$id,$b,'accept'); }
     public static function returnLead(PDO $db,array $user,int $id,array $b): array { return self::decision($db,$user,$id,$b,'return'); }
     public static function resubmit(PDO $db,array $user,int $id,array $b): array { return self::decision($db,$user,$id,$b,'resubmit'); }
