@@ -14,6 +14,11 @@ on:
       - 'tests/rc62-clone-restore-preflight.sh'
       - 'tests/marketing-staging-schema-p12-db-test.php'
       - 'tour-proposal-studio.*'
+      - 'cost-sheet.js'
+      - 'document-editor.js'
+      - 'vta-cost-editor.js'
+      - 'vta-cost-editor.css'
+      - 'tests/document-cost-ui.cjs'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
       - 'tests/v5-parity-recovery.cjs'
@@ -59,6 +64,8 @@ jobs:
           php tests/rc62-release-readiness-unit.php
           node --check app.js
           node --check tour-proposal-studio.js
+          node --check cost-sheet.js
+          node --check document-editor.js
           node --check smart-enhancements.js
           node --check service-worker.js
           node tests/pwa-cache-upgrade.cjs
@@ -67,6 +74,7 @@ jobs:
           node tests/vta-smart-enhancements-ui.cjs
           node tests/vta-approved-ui.cjs
           node tests/tour-proposal-studio.cjs
+          node tests/document-cost-ui.cjs
           node tests/v5-template-gallery-ui.cjs
           node tests/v5-parity-recovery.cjs
       - name: Package real RC6.2 PHP/MariaDB runtime with SHA256 manifest
@@ -81,6 +89,8 @@ jobs:
           assert m['source_commit'] == subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           assert len(glob.glob('dist/vta-rc62-integrated-staging-*.zip')) == 1
           assert m['migration_execution'] == 'NOT_PERFORMED'
+          for path in ('cost-sheet.js', 'document-editor.js'):
+              assert path in m['sha256'], f'Missing reviewed workspace asset: {path}'
           print('PASS exact SHA release manifest')
           PY
           (cd dist && sha256sum *.zip *.json > SHA256SUMS.txt)
