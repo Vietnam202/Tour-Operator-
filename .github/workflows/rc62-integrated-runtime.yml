@@ -12,6 +12,8 @@ on:
       - 'tests/rc62-release-readiness-unit.php'
       - 'tests/rc62-golden-path-continuity-native.php'
       - 'tests/rc62-v5-template-persistence-native.php'
+      - 'tests/tour-library-saved-source-unit.php'
+      - 'tests/document-saved-source-ui.cjs'
       - 'tests/rc62-v5-http-fixture-setup.php'
       - 'tests/rc62-v5-http-auth-api.cjs'
       - 'tests/rc62-clone-restore-preflight.sh'
@@ -66,6 +68,7 @@ jobs:
           php -l api/lib/SmartEnhancements.php
           php -l api/bin/rc62-release-readiness.php
           php tests/rc62-release-readiness-unit.php
+          php tests/tour-library-saved-source-unit.php
           node --check app.js
           node --check tour-proposal-studio.js
           node --check cost-sheet.js
@@ -80,6 +83,7 @@ jobs:
           node tests/vta-approved-ui.cjs
           node tests/tour-proposal-studio.cjs
           node tests/document-cost-ui.cjs
+          node tests/document-saved-source-ui.cjs
           node tests/vta-cost-editor-ui.cjs
           node tests/v5-template-gallery-ui.cjs
           node tests/v5-parity-recovery.cjs

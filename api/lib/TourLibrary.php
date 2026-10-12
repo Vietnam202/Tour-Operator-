@@ -254,23 +254,31 @@ final class TourLibrary {
         if(!class_exists('ZipArchive'))throw new RuntimeException('ZIP import requires PHP ZipArchive');
         $zip=new ZipArchive();
         if($zip->open($file['tmp_name'])!==true)throw new InvalidArgumentException('Invalid ZIP archive');
-        $items=[];$seen=[];$total=0;$count=0;
+        $items=[];$seenHashes=[];$entries=[];$names=[];$total=0;
         try{
             if($zip->numFiles>250)throw new InvalidArgumentException('ZIP has too many archive entries');
+            // Plan the whole batch before extracting or staging any source:
+            // a 51st document, duplicate filename, unsafe path or compressed
+            // bomb cannot leave 50 invisible pending uploads behind.
             for($i=0;$i<$zip->numFiles;$i++){
                 $stat=$zip->statIndex($i);if(!$stat)continue;
                 $path=(string)($stat['name']??'');
-                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
                 if(str_contains($path,"\0")||str_contains($path,'\\')||str_contains($path,'../')||str_starts_with($path,'/'))
                     throw new InvalidArgumentException('Unsafe ZIP entry name');
+                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
                 $name=self::filename(basename($path));$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
                 if(!in_array($ext,['docx','pdf','txt'],true))continue;
-                if(++$count>50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
-                if(isset($seen[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
-                $seen[strtolower($name)]=true;
+                if(count($entries)>=50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
+                if(isset($names[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
+                $names[strtolower($name)]=true;
                 $size=(int)($stat['size']??0);$packed=(int)($stat['comp_size']??0);$total+=$size;
                 if($size<1||$size>self::MAX_FILE_BYTES||$total>209715200||$size/max(1,$packed)>150)
                     throw new InvalidArgumentException('ZIP file limit or unsafe compression ratio: '.$name);
+                $entries[]=['path'=>$path,'name'=>$name,'ext'=>$ext,'size'=>$size];
+            }
+            if(!$entries)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
+            foreach($entries as $entry){
+                ['path'=>$path,'name'=>$name,'ext'=>$ext,'size'=>$size]=$entry;
                 $temp=tempnam(sys_get_temp_dir(),'vta-b2b-');
                 if($temp===false)throw new RuntimeException('Cannot create temporary import file');
                 try {
@@ -280,11 +288,14 @@ final class TourLibrary {
                     $copied=stream_copy_to_stream($stream,$output,self::MAX_FILE_BYTES+1);fclose($stream);fclose($output);
                     if($copied!==$size)throw new InvalidArgumentException('ZIP member decompression did not match expected size');
                     self::validateFile($temp,$ext);
+                    $digest=hash_file('sha256',$temp);
+                    if(isset($seenHashes[$digest]))throw new DomainException('Duplicate content already in this ZIP: '.$seenHashes[$digest]);
+                    $seenHashes[$digest]=$name;
                     $r=DocumentParser::extract($temp,$ext);
                     if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Document too long');
                     $item=self::previewText($r['text'],$name,'PC','');
                     $item['warnings'][]=$r['note'];
-                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original Word source is retained.';
+                    $item['warnings'][]='Review tables, images, policies and source prices. Original file is kept for Word re-import.';
                     $item['extraction_quality']=$r['quality'];
                     $item['import_token']=self::stage($db,$cfg,$u,$temp,$name,$ext,'PC','');
                     $item['has_source']=true;
@@ -294,8 +305,42 @@ final class TourLibrary {
                 }finally{if(is_file($temp))unlink($temp);}
             }
         }finally{$zip->close();}
-        if($count===0)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
-        return ['items'=>$items,'total'=>$count,'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
+        return ['items'=>$items,'total'=>count($entries),'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
+    }
+    /**
+     * Reopen an original file already preserved by Tour Library without asking
+     * the operator to upload the same DOCX/PDF/TXT a second time.
+     * Only a verified private file belonging to the fetched company program
+     * may reach the parser; never trust a path from the browser.
+     */
+    public static function verifiedSource(array $cfg,array $program):array {
+        $base=rtrim((string)($cfg['storage']['local_path']??''),'/\\');
+        $root=$base!==''?realpath($base.'/tour-library'):false;
+        $file=realpath((string)($program['source_storage_path']??''));
+        if(!$root||!$file||!RuntimeGuard::inside($file,$root)||!is_file($file))
+            throw new OutOfBoundsException('Preserved source is unavailable');
+        $name=(string)($program['source_name']??'');
+        $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
+        if(!in_array($ext,['docx','pdf','txt'],true)
+            ||(string)($program['source_mime']??'')!==self::mime($ext))
+            throw new DomainException('Saved source type needs review');
+        $stored=(string)($program['source_sha256']??'');
+        if(!preg_match('/^[a-f0-9]{64}$/D',$stored)||!hash_equals($stored,hash_file('sha256',$file)))
+            throw new DomainException('Preserved source checksum changed; contact the operator');
+        self::validateFile($file,$ext);
+        return ['path'=>$file,'extension'=>$ext];
+    }
+    public static function importSavedSource(PDO $db,array $cfg,array $u,int $id):array {
+        $program=self::program($db,(int)$u['company_id'],$id);
+        if($program['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');
+        $source=self::verifiedSource($cfg,$program);
+        $result=DocumentParser::proposal($source['path'],$source['extension'],true);
+        if(trim((string)($result['text']??''))===''&&empty($result['images']))
+            throw new InvalidArgumentException('No editable text or images extracted. The original remains available; OCR is not enabled.');
+        $result['warnings'][]=$source['extension']==='pdf'
+            ? 'PDF best-effort searchable text only. Images, tables and layout need manual review.'
+            : 'Review DOCX layout, image positions, merged cells and public price/supplier text before saving.';
+        return $result+['extension'=>$source['extension']];
     }
     private static function program(PDO $db,int $company,int $id,bool $lock=false): array {
         $r=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND id=?'.($lock?' FOR UPDATE':''),[$company,$id])->fetch(PDO::FETCH_ASSOC);
@@ -386,7 +431,7 @@ final class TourLibrary {
                 $b=Http::body();$version=filter_var($b['version_id']??null,FILTER_VALIDATE_INT);if(!$version||$version<1)throw new InvalidArgumentException('Select a quote version');
                 Http::json(['ok'=>true]+TourProgramWorkspace::fromQuote($db,$config,$u,$version,$b),201);
             }
-            if(preg_match('#^tour-library/(\d+)/(document|apply-to-document)(?:/(document-import|html|docx|pdf))?$#D',$route,$m)){
+            if(preg_match('#^tour-library/(\d+)/(document|apply-to-document)(?:/(document-import|document-import-source|html|docx|pdf))?$#D',$route,$m)){
                 self::permission($db,$u);$id=(int)$m[1];$action=$m[2];$output=$m[3]??'';
                 if($action==='apply-to-document'&&$output===''&&$method==='POST'){
                     Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');Auth::requirePermission($db,$u,'media.view');
@@ -397,6 +442,7 @@ final class TourLibrary {
                     if($output===''&&$method==='GET')Http::json(['ok'=>true]+TourProgramWorkspace::context($db,$u,TourProgramWorkspace::program($db,$u,$id)));
                     if($output===''&&$method==='PUT'){self::permission($db,$u,true);Http::json(['ok'=>true]+TourProgramWorkspace::saveDocument($db,$u,$id,Http::body()));}
                     if($output==='document-import'&&$method==='POST'){self::permission($db,$u,true);$p=TourProgramWorkspace::program($db,$u,$id);if($p['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');Http::json(['ok'=>true]+FreeformDocument::upload($_FILES['file']??[]));}
+                    if($output==='document-import-source'&&$method==='POST'){self::permission($db,$u,true);Auth::requirePermission($db,$u,'media.view');Http::json(['ok'=>true]+self::importSavedSource($db,$config,$u,$id));}
                     if($method==='GET'&&in_array($output,['html','docx','pdf'],true))TourProgramWorkspace::output($db,$config,$u,TourProgramWorkspace::program($db,$u,$id),$output);
                 }
                 Http::json(['ok'=>false,'error'=>'METHOD_OR_ROUTE_NOT_SUPPORTED'],405);
