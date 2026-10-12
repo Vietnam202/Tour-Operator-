@@ -4,6 +4,8 @@
 Usage: python3 deploy/check-rc62-evidence.py --manifest ... --zip ... --sha256sums ...
        --expected-sha <independently-approved-40-hex> --evidence <private/redacted.json>
        --evidence-root <private/operator-only/evidence-files>
+       --signature <private/operator-evidence.sig> --trusted-public-key <independently-approved.pem>
+       --trusted-public-key-sha256 <independently-approved-64-hex>
 
 The operator controls all evidence assertions. Passing this structural gate
 does NOT authenticate claims, complete real staging UAT, or authorize release.
@@ -13,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import re
 import sys
 import zipfile
@@ -291,13 +294,55 @@ def verify_private_evidence(packet:dict,root:Path,artifact:dict)->dict:
                 raise Stop("DOCUMENT_SOURCE_FORMAT_MISMATCH") from None
     return {"attachment_count":len(verified),"real_original_count":50}
 
+def verify_detached_signature(
+    packet_path:Path,signature_path:Path,public_key_path:Path,expected_fingerprint:str,
+    evidence_root:Path
+)->None:
+    """Verify an independent approver public key and its detached RSA/ECDSA signature.
+
+    Signature proves possession of a key independently trusted by the
+    operator, NOT genuine staging operation or final release authorization.
+    Refuse public keys shipped beside evidence and never print OpenSSL stderr.
+    """
+    require(SHA64.fullmatch(expected_fingerprint) is not None,
+        "TRUSTED_APPROVER_KEY_PIN_REQUIRED")
+    repo=Path(__file__).resolve().parents[1]
+    root=evidence_root.resolve(strict=True)
+    for path in (packet_path,signature_path,public_key_path):
+        require(path.is_file() and not path.is_symlink(),
+            "PRIVATE_SIGNATURE_FILE_MISSING")
+        resolved=path.resolve(strict=True)
+        require(not resolved.is_relative_to(repo),
+            "APPROVER_SIGNATURE_INSIDE_REPOSITORY")
+    pub=public_key_path.resolve(strict=True)
+    require(not pub.is_relative_to(root),"TRUSTED_APPROVER_KEY_CANNOT_BE_IN_EVIDENCE_ROOT")
+    try:
+        key_bytes=public_key_path.read_bytes()
+        signature=signature_path.read_bytes()
+        require(50<=len(key_bytes)<=8192 and 64<=len(signature)<=8192,
+            "PRIVATE_SIGNATURE_FILE_INVALID")
+        require(sha(key_bytes)==expected_fingerprint,"TRUSTED_APPROVER_KEY_HASH_MISMATCH")
+        result=subprocess.run(
+            ["openssl","dgst","-sha256","-verify",str(public_key_path),
+             "-signature",str(signature_path),str(packet_path)],
+            check=False,capture_output=True,timeout=15
+        )
+    except (OSError,subprocess.TimeoutExpired):
+        raise Stop("SIGNATURE_VERIFIER_UNAVAILABLE") from None
+    require(result.returncode==0,"OPERATOR_EVIDENCE_SIGNATURE_INVALID")
+
 def main(argv:list[str])->int:
     parser=argparse.ArgumentParser(description=__doc__)
-    for name in ("manifest","zip","sha256sums","expected-sha","evidence","evidence-root"):
+    for name in ("manifest","zip","sha256sums","expected-sha","evidence","evidence-root",
+                 "signature","trusted-public-key","trusted-public-key-sha256"):
         parser.add_argument("--"+name,required=True)
     args=parser.parse_args(argv)
     try:
         artifact=verify_artifact(Path(args.manifest),Path(args.zip),Path(args.sha256sums),args.expected_sha)
+        verify_detached_signature(
+            Path(args.evidence),Path(args.signature),Path(args.trusted_public_key),
+            args.trusted_public_key_sha256,Path(args.evidence_root)
+        )
         packet=load(Path(args.evidence))
         verify_evidence(packet,artifact)
         bound=verify_private_evidence(packet,Path(args.evidence_root),artifact)
@@ -306,6 +351,7 @@ def main(argv:list[str])->int:
             "migration_files":artifact["migration_files"],
             "private_evidence_files_verified":bound["attachment_count"],
             "real_original_file_hashes_verified":bound["real_original_count"],
+            "signed_packet_verified_against_independent_public_key":True,
             "release_authorized":False,"requires":"independent_operator_authenticity_review_and_separate_release_approval"}))
         return 0
     except Stop as exc:

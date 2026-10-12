@@ -127,12 +127,52 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
     yes(True,"synthetic structurally complete packet still has release_authorized=false")
     packet_file=directory/"synthetic-operator-evidence.json"
     packet_file.write_text(json.dumps(packet))
+    # This temporary 2048-bit RSA key belongs to a synthetic unit test,
+    # never store an operator's real private key in GitHub or build artifacts.
+    private_key=directory/"fixture-approver-private.pem"
+    public_key=directory/"fixture-approver-public.pem"
+    signature=directory/"signed-packet.sig"
+    def openssl(*args):
+        result=subprocess.run(["openssl",*map(str,args)],capture_output=True,text=True)
+        assert result.returncode==0,"Fixture signing failed (stderr not surfaced)"
+    openssl("genpkey","-algorithm","RSA","-pkeyopt","rsa_keygen_bits:2048","-out",private_key)
+    openssl("pkey","-in",private_key,"-pubout","-out",public_key)
+    fingerprint=sha(public_key.read_bytes())
+    openssl("dgst","-sha256","-sign",private_key,"-out",signature,packet_file)
+    gate.verify_detached_signature(packet_file,signature,public_key,fingerprint,private_root)
+    yes(True,"independent public key pin validates a detached signature of actual operator JSON bytes")
     cli=subprocess.run([sys.executable,str(root/"deploy/check-rc62-evidence.py"),
         "--manifest",str(m),"--zip",str(z),"--sha256sums",str(sums),
         "--expected-sha",PIN,"--evidence",str(packet_file),
-        "--evidence-root",str(private_root)],capture_output=True,text=True)
-    yes(cli.returncode==0 and json.loads(cli.stdout)["release_authorized"] is False,
-        "offline operator CLI verifies local evidence bytes but never authorizes release")
+        "--evidence-root",str(private_root),
+        "--signature",str(signature),
+        "--trusted-public-key",str(public_key),
+        "--trusted-public-key-sha256",fingerprint],capture_output=True,text=True)
+    yes(cli.returncode==0 and json.loads(cli.stdout)["release_authorized"] is False
+        and json.loads(cli.stdout)["signed_packet_verified_against_independent_public_key"] is True,
+        "offline CLI verifies signed evidence and original bytes but never authorizes release")
+    rejected(lambda:gate.verify_detached_signature(packet_file,signature,public_key,"0"*64,private_root),
+        "TRUSTED_APPROVER_KEY_HASH_MISMATCH","forged trusted fingerprint denied")
+    saved_packet=packet_file.read_bytes()
+    packet_file.write_bytes(saved_packet+b" ")
+    rejected(lambda:gate.verify_detached_signature(packet_file,signature,public_key,fingerprint,private_root),
+        "OPERATOR_EVIDENCE_SIGNATURE_INVALID","changed JSON bytes invalidate previously issued operator signature")
+    packet_file.write_bytes(saved_packet)
+    saved_signature=signature.read_bytes()
+    signature.write_bytes(saved_signature[:-1]+bytes([saved_signature[-1]^1]))
+    rejected(lambda:gate.verify_detached_signature(packet_file,signature,public_key,fingerprint,private_root),
+        "OPERATOR_EVIDENCE_SIGNATURE_INVALID","tampered detached signature rejected")
+    signature.write_bytes(saved_signature)
+    trusted_in_evidence=private_root/"unexpected-approver-pub.pem"
+    trusted_in_evidence.write_bytes(public_key.read_bytes())
+    rejected(lambda:gate.verify_detached_signature(packet_file,signature,trusted_in_evidence,fingerprint,private_root),
+        "TRUSTED_APPROVER_KEY_CANNOT_BE_IN_EVIDENCE_ROOT",
+        "untrusted public key supplied alongside editable proofs refused")
+    trusted_in_evidence.unlink()
+    signature.unlink()
+    rejected(lambda:gate.verify_detached_signature(packet_file,signature,public_key,fingerprint,private_root),
+        "PRIVATE_SIGNATURE_FILE_MISSING","signature file must physically exist")
+    signature.write_bytes(saved_signature)
     # Changing a preflight *and updating its SHA index* must still fail
     # against the independently pinned candidate SHA and migration count.
     ref_pre=packet["recovery"]["preflight_ref"]

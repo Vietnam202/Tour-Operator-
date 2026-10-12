@@ -56,15 +56,34 @@ python3 deploy/check-rc62-evidence.py \
   --manifest="/private/release/vta-rc62-manifest-<SHA>.json" \
   --sha256sums="/private/release/SHA256SUMS.txt" \
   --evidence="/private/release/operator-evidence.json" \
-  --evidence-root="/private/release/evidence-files"
+  --evidence-root="/private/release/evidence-files" \
+  --signature="/private/release/operator-evidence.sig" \
+  --trusted-public-key="/private/independent-review/trusted-approver.pem" \
+  --trusted-public-key-sha256="$APPROVED_PUBLIC_KEY_SHA256"
 ```
 
-- Exit **2**, `STAGING_EVIDENCE_BLOCKED`: thiếu hoặc sai bằng chứng/SHA/ZIP hoặc chưa nghiệm thu; **dừng**.
+- Exit **2**, `STAGING_EVIDENCE_BLOCKED`: thiếu hoặc sai bằng chứng/SHA/ZIP/chữ ký/khóa hoặc chưa nghiệm thu; **dừng**.
 - Exit **0**, `EVIDENCE_PACKET_STRUCTURALLY_COMPLETE`: hồ sơ đúng cấu trúc và byte ZIP trùng checksum đã cung cấp. **Vẫn `release_authorized=false`**; công cụ không thể chứng minh ảnh/log là thật hoặc người ký có thẩm quyền.
 - Tuyệt đối không dùng kết quả này làm điều kiện tự động upload, merge, migrate, đổi nhánh controller hoặc GO production.
 
 **Điều kiện GO độc lập:** Người phụ trách xác thực nguồn bằng chứng, độ tin cậy backup/restore thực tế, UAT nguyên bản, chữ ký/ủy quyền và kế hoạch rollback, rồi quyết định bằng quy trình thay đổi production riêng. Giữ nguyên `RuntimeGuard` và pin `codex/Vietnam/rc6.2-testing` cho đến khi có phê duyệt thay đổi đúng quy trình. Namecheap full-server restore có thể ghi đè toàn bộ website/database/email: **không dùng làm clone phục hồi không mất dữ liệu**.
 
+
+### Chữ ký số độc lập cho hồ sơ nghiệm thu (bước 2K)
+
+Bộ kiểm tra offline bắt buộc chữ ký tách rời `operator-evidence.sig` do người phụ trách được ủy quyền ký **sau khi hoàn thành JSON**, và khóa công khai `trusted-approver.pem` cùng SHA-256 được **người kiểm tra thứ hai xác nhận độc lập** (không sao chép dấu vân tay một cách mù quáng từ JSON, ZIP, hoặc chính khóa vừa tải). Cặp khóa riêng tư/công khai phải được tạo và quản lý bởi người phụ trách bảo mật theo chính sách công ty; không tải private key lên GitHub, Linear, webroot, artifact hoặc gửi trong chat.
+
+Cách ký trên thiết bị được ủy quyền có OpenSSL, đối với **khóa ký đã được cấp phát an toàn**:
+
+```bash
+openssl dgst -sha256 -sign /private/keys/approver-private.pem \
+  -out /private/release/operator-evidence.sig \
+  /private/release/operator-evidence.json
+```
+
+Đội kiểm tra độc lập lấy `APPROVED_PUBLIC_KEY_SHA256` bằng kênh đáng tin cậy, ghim cùng `APPROVED_SHA` của candidate, rồi sử dụng lệnh kiểm tra ở phần 3. Nếu không có khóa công khai đã xác minh hoặc chữ ký hợp lệ, checker phải trả `STAGING_EVIDENCE_BLOCKED`. Mọi thay đổi dù chỉ một byte trong JSON sau khi ký đều cần được người có thẩm quyền xem xét và ký lại. **Không chấp nhận việc một người tự phát sinh khóa và tự kê khai nó được ủy quyền**.
+
+**Giới hạn:** chữ ký hợp lệ chứng minh khóa riêng tương ứng đã ký bytes của JSON; không chứng minh hóa đơn/ảnh/log hoặc tên người tham gia là thật. Các hồ sơ DOCX/PDF nguồn vẫn phải được kiểm tra thực tế, staging phải được bảo vệ, và phê duyệt triển khai production **là quyết định riêng**. Công cụ luôn trả `release_authorized=false`.
 
 ### Ràng buộc kết quả preflight thực tế
 
