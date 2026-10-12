@@ -101,7 +101,10 @@ function documentRateComparison(PDO $db,int $companyId,int $documentId): array {
 try {
     if ($route === 'health' && $method === 'GET') {
         $db->query('SELECT 1');
-        Http::json(['ok'=>true,'service'=>'VTA API','version'=>'3.4.0-RC6.1','time'=>date(DATE_ATOM)]);
+        require_once __DIR__.'/lib/RuntimeBuildIdentity.php';
+        $build=RuntimeBuildIdentity::read(__DIR__.'/runtime-build-identity.json');
+        Http::json(['ok'=>true,'service'=>'VTA API','version'=>'3.4.0-RC6.2',
+            'build'=>$build??['status'=>'UNPACKAGED_SOURCE'],'time'=>date(DATE_ATOM)]);
     }
 
     if ($route === 'auth/login' && $method === 'POST') {
