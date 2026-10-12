@@ -138,4 +138,56 @@ expect_block() {
 }
 expect_block "RELEASE_SHA_MISMATCH" "0000000000000000000000000000000000000000" "$CLONE_DB"
 expect_block "CLONE_DATABASE_MISMATCH" "$EXPECTED_SHA" "vta_rc62_other_clone_ci"
+# Enforce actual SQL write denial, not only a PHP-side GRANT regex.
+# A successful UPDATE would be an immediate CI failure (and release blocker).
+if MYSQL_PWD="$RO_PASSWORD" mariadb --protocol=tcp --host=127.0.0.1 --port=3306 \
+    --user="$RO_USER" --database="$CLONE_DB" --execute="UPDATE users SET full_name='unsafe-write-fixture' WHERE id=1" \
+    >"$PRIVATE_DIR/unexpected-write.log" 2>&1; then
+  fail "SELECT_ONLY_USER_COULD_MODIFY_CLONE"
+fi
+pass "dedicated preflight MariaDB account rejects UPDATE at the actual SQL authorization boundary"
+
+# A simple table-count comparison misses overwritten cells. Deliberately alter
+# a real synthetic fixture row ONLY in the restored disposable clone, then
+# destroy and reconstruct the clone from the original dump and prove exact
+# value, inventory, row counts and ledger are identical again. Never touch
+# the source schema or keep SQL/PII in CI artifacts.
+USER_ID="$(root_sql "SELECT MIN(id) FROM $CLONE_DB.users")"
+[[ "$USER_ID" =~ ^[0-9]+$ && "$USER_ID" -gt 0 ]] || fail "CLONE_FIXTURE_USER_REQUIRED"
+user_digest() {
+  root_sql "SELECT SHA2(CONCAT_WS('|',id,full_name,email),256) FROM $1.users WHERE id=$USER_ID"
+}
+SOURCE_USER_DIGEST="$(user_digest "$SOURCE_DB")"
+RESTORED_USER_DIGEST="$(user_digest "$CLONE_DB")"
+[[ "$SOURCE_USER_DIGEST" == "$RESTORED_USER_DIGEST" ]] || fail "SOURCE_AND_CLONE_BASELINE_VALUE_MISMATCH"
+root_sql "UPDATE $CLONE_DB.users SET full_name=CONCAT(full_name,'-rollback-probe') WHERE id=$USER_ID" >/dev/null
+CHANGED_USER_DIGEST="$(user_digest "$CLONE_DB")"
+[[ "$CHANGED_USER_DIGEST" != "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_TEST_FAILED_TO_MUTATE_CLONE"
+[[ "$(user_digest "$SOURCE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_TEST_MUTATED_SOURCE"
+pass "synthetic clone value mutation is detected; source MariaDB remains byte-value unchanged"
+
+root_sql "DROP DATABASE $CLONE_DB"
+CLONE_CREATED=0
+root_sql "CREATE DATABASE $CLONE_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+CLONE_CREATED=1
+mariadb --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --database="$CLONE_DB" <"$PRIVATE_DIR/source.sql"
+[[ "$(user_digest "$CLONE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_RESTORE_VALUE_MISMATCH"
+[[ "$(user_digest "$SOURCE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_CHANGED_SOURCE"
+root_sql "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$CLONE_DB' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME" >"$PRIVATE_DIR/after-restore.tables"
+diff -u "$PRIVATE_DIR/$SOURCE_DB.tables" "$PRIVATE_DIR/after-restore.tables" >/dev/null || fail "ROLLBACK_TABLE_INVENTORY_MISMATCH"
+: >"$PRIVATE_DIR/after-restore.count-queries"
+while IFS= read -r table; do
+  [[ "$table" =~ ^[A-Za-z0-9_]+$ ]] || fail "UNSAFE_RESTORED_TABLE"
+  printf "SELECT '%s', COUNT(*) FROM %s.%s;\n" "$table" "$CLONE_DB" "$table" >>"$PRIVATE_DIR/after-restore.count-queries"
+done <"$PRIVATE_DIR/after-restore.tables"
+mariadb --protocol=tcp --host=127.0.0.1 --port=3306 --user=root <"$PRIVATE_DIR/after-restore.count-queries" >"$PRIVATE_DIR/after-restore.counts"
+diff -u "$PRIVATE_DIR/$SOURCE_DB.counts" "$PRIVATE_DIR/after-restore.counts" >/dev/null || fail "ROLLBACK_ROW_COUNTS_MISMATCH"
+root_sql "SELECT version, applied_at FROM $CLONE_DB.schema_migrations ORDER BY version" >"$PRIVATE_DIR/after-restore.schema-ledger"
+root_sql "SELECT version, sha256, status FROM $CLONE_DB.migration_checksums ORDER BY version" >"$PRIVATE_DIR/after-restore.checksum-ledger"
+diff -u "$PRIVATE_DIR/$SOURCE_DB.schema-ledger" "$PRIVATE_DIR/after-restore.schema-ledger" >/dev/null || fail "ROLLBACK_SCHEMA_LEDGER_MISMATCH"
+diff -u "$PRIVATE_DIR/$SOURCE_DB.checksum-ledger" "$PRIVATE_DIR/after-restore.checksum-ledger" >/dev/null || fail "ROLLBACK_CHECKSUM_LEDGER_MISMATCH"
+run_preflight "$EXPECTED_SHA" "$CLONE_DB" >"$PRIVATE_DIR/after-restore-readiness.json" 2>&1 || fail "ROLLBACK_PREFLIGHT_FAILED"
+grep -F '"status":"READ_ONLY_PREFLIGHT_PASS"' "$PRIVATE_DIR/after-restore-readiness.json" >/dev/null || fail "ROLLBACK_PREFLIGHT_NOT_PASS"
+grep -F '"release_authorized":false' "$PRIVATE_DIR/after-restore-readiness.json" >/dev/null || fail "ROLLBACK_MUST_NOT_AUTHORIZE_RELEASE"
+pass "mutation -> cloned DB dropped -> backup restored -> row values, counts, schema/checksum ledgers and RO preflight recover"
 pass "real staging restore, authenticated UAT and operator signoff remain required"
