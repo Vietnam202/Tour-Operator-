@@ -65,8 +65,8 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
     manifest={"schema":"vta.rc62.runtime.manifest.v1","release_type":gate.RELEASE_TYPE,
         "source_commit":PIN,"migration_execution":"NOT_PERFORMED",
         "sha256":names,"file_count":len(names),"migration_count":35}
-    m=directory/"vta-rc62-manifest-"+PIN[:12]+".json"
-    z=directory/"vta-rc62-integrated-staging-"+PIN[:12]+".zip"
+    m=directory/("vta-rc62-manifest-"+PIN[:12]+".json")
+    z=directory/("vta-rc62-integrated-staging-"+PIN[:12]+".zip")
     sums=directory/"SHA256SUMS.txt"
     m.write_text(json.dumps(manifest))
     with zipfile.ZipFile(z,"w",zipfile.ZIP_DEFLATED) as arc:
