@@ -67,7 +67,7 @@
    const previous=['FOLLOW_LATER','NOT_POTENTIAL'].includes(from)?lead.potential_previous_status:from;if(!['PENDING','ACCEPTED','RETURNED'].includes(previous))fail(409,'Missing prior stage.');
    const status=restore?previous:follow?'FOLLOW_LATER':'NOT_POTENTIAL',deadline=follow?due(body.next_action_due):lead.next_action_due;
    const owner=previous==='ACCEPTED'?lead.sales_owner_user_id:lead.owner_user_id;if(status!=='NOT_POTENTIAL'){requiredOwner(api,owner);due(deadline);}
-   lead.potential_previous_status=restore?null:previous;lead.next_action_due=deadline;stage(api,lead,status,body.reason+(body.note?' — '+body.note:''),null,deadline);closeLeadTasks(api,lead);
+   lead.potential_previous_status=restore?null:previous;lead.next_action_due=deadline;stage(api,lead,status,body.reason+(body.note?' — '+body.note:''),null,deadline);api.leadEvents.at(-1).event='lead.'+action.replaceAll('-','_');closeLeadTasks(api,lead);
    if(status!=='NOT_POTENTIAL'){updateTask(api,lead,owner,deadline);const task=api.tasks.at(-1);if(status==='FOLLOW_LATER')task.rule_code='LEAD_POTENTIAL_FOLLOWUP';}
    return {ok:true,...remember(api,path,cmd,{id:lead.id,request_id:lead.request_id,handover_status:status,handover_version:lead.handover_version,next_action_due:deadline})};
   }
