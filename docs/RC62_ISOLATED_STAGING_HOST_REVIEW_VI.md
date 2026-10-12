@@ -55,6 +55,14 @@ Bộ thử xác minh: (1) đúng ba pin mới có health 200, (2) Host productio
 
 **Quan trọng:** bộ thử dùng một PHP router giả lập `$_SERVER['HTTPS']=on` trên kết nối HTTP loopback. Do đó nó **không chứng minh TLS thực tế, reverse proxy cấu hình đúng, DNS/staging thật hay an toàn CyberPanel**. Các login trong CI chỉ thay đổi audit/last_login_at trên database giả `vta_test_*` và được huỷ sau job. Không đưa tên miền `.invalid`, DB hoặc biến PIN test lên VPS thật. Phải kiểm tra **TLS/Host/IP/nguồn trusted proxy ngoài CI** trên máy chủ staging được cấp phép.
 
+## Bước 2O — Kiểm thử chứng chỉ TLS thật + nginx → PHP-FPM
+
+Workflow `.github/workflows/b2c-native-storefront.yml` bổ sung `tests/rc62-stage-real-tls-fpm-ci.sh` và `tests/rc62-stage-real-tls-fpm.cjs`. Bài này cấp **chứng chỉ TLS tự ký tồn tại trong một job CI**, với SAN `staging-fixture.example.invalid`, rồi chạy nginx lắng nghe trên loopback, chuyển FastCGI sang PHP-FPM 8.3 và MariaDB 10.11 disposable. Phía Node **bắt buộc xác minh chứng chỉ, hostname SNI, chuỗi CA riêng của fixture**, không sử dụng `rejectUnauthorized=false`, `curl -k` hoặc mở kết nối đến DNS bên ngoài.
+
+Các điều kiện bắt buộc của bài test gồm: (1) chứng chỉ khớp host thì health API 200; tên SNI khác và không có CA được tin cậy phải bị từ chối trước HTTP, (2) TLS với HTTP Host production giả vẫn bị `RuntimeGuard` chặn 503, (3) Origin giả bị chặn 403, (4) X-Forwarded-Host/X-Forwarded-Proto của client không được proxy dùng để ghi đè HTTP_HOST hoặc HTTPS ở PHP-FPM, (5) thiếu DB pin dù TLS hợp lệ vẫn trả 503, (6) cookie phiên PHP phải có `Secure`, `HttpOnly`, `SameSite=Strict`, (7) hai tài khoản A/B tổng hợp chỉ đọc được KPI thuộc agency của mình.
+
+**Phân biệt rõ với staging thật:** TLS trong CI được xác minh thực sự qua nginx nhưng **chứng chỉ là chứng chỉ tự ký chỉ để chạy thử**, không phải chứng chỉ do CA công khai cấp cho miền của công ty. nginx trong CI cũng **không phải OpenLiteSpeed/CyberPanel**. Bài này không cài SSL, DNS hoặc proxy trên hosting; không xác minh thiết lập PHP-FPM/trusted proxy hay chính sách routing đang chạy trên CyberPanel. Cần thực hiện operator UAT riêng trên HTTPS staging được phê duyệt trước khi sử dụng dữ liệu thật.
+
 ## Ranh giới bảo vệ
 
 - Bổ sung một allowlist có điều kiện vào code **không mở máy chủ staging** khi thiếu config/pin/SSL/clone thực tế.
