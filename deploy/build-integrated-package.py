@@ -33,6 +33,7 @@ REQUIRED = {
     "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
     "api/lib/B2CStudio.php", "api/lib/B2CPublicationBridge.php",
     "api/migrations/044_b2c_publications.sql", "b2c-studio.js", "b2c-demo.js",
+    "journeys.php", "b2c-storefront.js", "b2c-storefront.css", "api/lib/B2CStorefront.php",
     "vta-plus-assist.js", "vta-plus-assist.css",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
@@ -169,7 +170,7 @@ def verify(package: Path, manifest_file: Path) -> None:
                 if path.lstrip("./") not in entries:
                     raise RuntimeError("HTML reference missing from payload: " + path)
         sw = archive.read("runtime/service-worker.js").decode()
-        if "smart-enhancements.js" not in sw or "vta-RC62-COST-SAVE-2-PWA" not in sw:
+        if "smart-enhancements.js" not in sw or "vta-RC62-V5-B2C-NATIVE-1-PWA" not in sw:
             raise RuntimeError("PWA version/assets missing")
         forbidden = {"integrations/", "tests/", "verification/", "docs/", "deploy/", ".git/", "api/config.php"}
         for name in names:

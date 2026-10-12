@@ -23,7 +23,7 @@ for (const p of ['index.html', 'preview.html']) {
   assert(page.indexOf('vta-approved-workspaces.css') > page.indexOf('vta-approved-library.css'), p + ': workspaces polish loads last');
 }
 const sw = read('service-worker.js');
-assert(sw.includes("const CACHE='vta-RC62-COST-SAVE-2-PWA'"), 'new PWA cache');
+assert(sw.includes("const CACHE='vta-RC62-V5-B2C-NATIVE-1-PWA'"), 'new PWA cache');
 assert(sw.includes("'./vta-approved-library.css?v=RC62-LIB3'"), 'approved CSS precached');
 assert(sw.includes("'./vta-approved-workspaces.css?v=RC62-WS1'"), 'approved workspace CSS precached');
 assert(sw.includes("'./tour-library.js?v=DEMO-PARITY-1'"), 'gallery JS precached');

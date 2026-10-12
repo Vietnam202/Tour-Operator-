@@ -1,3 +1,9 @@
+# Candidate native B2C — 12/10/2026
+
+Bổ sung nối PR #62 `b859d4f7d29c1dfe6fee77375c6287d896e21a18`, giữ nguyên B2C và dùng WordPress như giao diện tùy chọn theo xác nhận owner. Candidate/CI/artifact phải lấy từ HEAD PR bổ sung, không dùng ZIP PR #52/#61/#62 cho code mới. Gate và cấu hình hiện hành: [RC62_B2C_NATIVE_STOREFRONT_VI.md](RC62_B2C_NATIVE_STOREFRONT_VI.md). Các mốc bên dưới là lịch sử; không thay branch pin/RuntimeGuard, không cấp quyền deploy hoặc migration dữ liệu thật.
+
+---
+
 # Candidate bổ sung 11/10/2026
 
 Nền mới: PR #61 tại `d203ed67db55af025d77a22275f2d6d4f84a6af3`. B2C/WordPress/Companion và checklist hiện hành: [RC62_B2C_COMPLETION_GATE_VI.md](RC62_B2C_COMPLETION_GATE_VI.md). SHA, package và CI của candidate bổ sung phải lấy từ HEAD PR mới. Các SHA/PR52 hoặc RC1 bên dưới là mốc lịch sử, không dùng làm bằng chứng cho candidate mới. Không đổi pin của deploy controller hoặc bypass gate staging.

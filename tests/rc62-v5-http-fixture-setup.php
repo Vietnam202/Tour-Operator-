@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 require __DIR__.'/rc62-v5-template-persistence-native.php';
 require __DIR__.'/b2c-native-assertions.php';
+require __DIR__.'/b2c-storefront-native.php';
 require_once __DIR__.'/../api/lib/RuntimeGuard.php';
 
 $port=(int)(getenv('VTA_V5_HTTP_PORT') ?: 18869);
@@ -53,7 +54,8 @@ $config=[
         'database'=>$database,'username'=>'root','password'=>$dbPassword,
         'charset'=>'utf8mb4'
     ],
-    'storage'=>['driver'=>'local','local_path'=>$private.'/documents'],
+    'integrations'=>$sfCfg['integrations'],
+    'storage'=>['driver'=>'local','local_path'=>$cfg['storage']['local_path']],
     'security'=>['allowed_origin'=>'http://127.0.0.1:18869','max_upload_bytes'=>15728640]
 ];
 file_put_contents($conf, "<?php\nreturn ".var_export($config,true).";\n");

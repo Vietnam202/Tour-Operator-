@@ -98,7 +98,8 @@ final class B2CStudio {
     }
     public static function publication(PDO $db,int $company,int $event): array {
         $r=self::q($db,"SELECT e.* FROM b2c_publication_events e JOIN b2c_programs p ON p.company_id=e.company_id AND p.id=e.program_id WHERE e.company_id=? AND e.id=? AND e.status='PUBLISHED' AND p.status='PUBLISHED' AND p.approved_revision=p.revision AND e.revision=p.revision AND e.id=(SELECT MAX(x.id) FROM b2c_publication_events x WHERE x.company_id=e.company_id AND x.program_id=e.program_id)",[$company,$event])->fetch(PDO::FETCH_ASSOC);
-        if(!$r)throw new OutOfBoundsException('Publication is withdrawn or stale');return $r;
+        if(!$r)throw new OutOfBoundsException('Publication is withdrawn or stale');
+        if(!hash_equals($r['snapshot_hash'],hash('sha256',$r['snapshot_json'])))throw new OutOfBoundsException('Publication integrity failed');return $r;
     }
     public static function handle(string $route,string $method,PDO $db,array $cfg,array $u): void {
         if($route!=='b2c'&&!str_starts_with($route,'b2c/'))return;

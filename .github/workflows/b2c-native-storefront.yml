@@ -1,0 +1,90 @@
+name: RC6.2 Native B2C Storefront QA
+on:
+  pull_request:
+    paths:
+      - 'b2c-*'
+      - 'journeys.php'
+      - 'api/**'
+      - 'tests/b2c-*'
+      - 'tests/rc62-v5-http-fixture-setup.php'
+      - 'integrations/wordpress/vta-connect/**'
+      - '.github/workflows/b2c-native-storefront.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-publication-inquiry:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: native-fixture-only
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 33317:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom, curl, pdo_mysql, pdo_sqlite
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test harness
+        run: |
+          npm ci --prefix tests
+          npm install --prefix tests --no-save --package-lock=false playwright@1.62.1
+          tests/node_modules/.bin/playwright install --with-deps chromium
+      - name: Syntax and pure public content validation
+        run: |
+          php -l journeys.php
+          php -l api/lib/B2CStorefront.php
+          php -l api/lib/LeadHub.php
+          php tests/b2c-storefront-unit.php
+          php tests/b2c-wordpress-mirror-unit.php
+          node --check b2c-storefront.js
+          node tests/b2c-inquiry-ui.cjs
+      - name: Synthetic native PHP + browser + MariaDB acceptance
+        env:
+          VTA_TEST_DB_PASSWORD: native-fixture-only
+          VTA_TEST_DB_PORT: '33317'
+          VTA_V5_TEST_PASSWORD: native-fixture-only-http-password
+          VTA_V5_HTTP_URL: http://127.0.0.1:18869
+          VTA_V5_HTTP_PORT: '18869'
+          VS22_OUTPUT_DIR: ${{ runner.temp }}/native-b2c-word-output
+        run: |
+          set -euo pipefail
+          mkdir -p tests/test-results/native-b2c
+          umask 077
+          PRIVATE_DIR=$(mktemp -d "$RUNNER_TEMP/vta-native-b2c.XXXXXXXX")
+          export VTA_V5_HTTP_CONFIG="$PRIVATE_DIR/config.php"
+          cleanup() {
+            if [ -n "${SERVER_PID:-}" ]; then kill "$SERVER_PID" 2>/dev/null || :; fi
+            rm -rf "$PRIVATE_DIR"
+          }
+          trap cleanup EXIT
+          php tests/rc62-v5-http-fixture-setup.php | tee tests/test-results/native-b2c/native.log
+          export VTA_CONFIG_FILE="$VTA_V5_HTTP_CONFIG"
+          php -S 127.0.0.1:18869 -t . > "$PRIVATE_DIR/php-server.log" 2>&1 &
+          SERVER_PID=$!
+          ready=0
+          for i in {1..25}; do
+            if curl --silent --fail --max-time 2 'http://127.0.0.1:18869/api/index.php?route=health' >/dev/null; then ready=1; break; fi
+            sleep 0.2
+          done
+          test "$ready" = 1
+          node tests/b2c-storefront-http.cjs | tee tests/test-results/native-b2c/http-browser.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-b2c-fixture-evidence
+          path: tests/test-results/native-b2c

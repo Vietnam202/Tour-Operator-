@@ -1,3 +1,9 @@
+# Candidate native B2C — 12/10/2026
+
+Bổ sung nối PR #62 `b859d4f7d29c1dfe6fee77375c6287d896e21a18`, giữ nguyên B2C và dùng WordPress như giao diện tùy chọn theo xác nhận owner. Candidate/CI/artifact phải lấy từ HEAD PR bổ sung, không dùng ZIP PR #52/#61/#62 cho code mới. Gate và cấu hình hiện hành: [RC62_B2C_NATIVE_STOREFRONT_VI.md](RC62_B2C_NATIVE_STOREFRONT_VI.md). Các mốc bên dưới là lịch sử; không thay branch pin/RuntimeGuard, không cấp quyền deploy hoặc migration dữ liệu thật.
+
+---
+
 # RC6.2 — End-to-End Workflow Continuity Acceptance
 
 Date: 2026-10-11. **Original candidate base:** PR #52 at `157261336e6b999a33bded252ad92144caee05d2`. **Integrated verification branch:** the tested Golden Path from PR #53 is combined with the staging fail-closed CLI from PR #54 on a new Draft branch. The combined branch has a distinct HEAD and distinct CI/package artifact. It is **not** an approved RC1 deployment or production release.
