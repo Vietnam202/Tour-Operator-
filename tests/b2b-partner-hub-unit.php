@@ -68,4 +68,18 @@ refuseNetRequest($match,array_replace($requested,['paying_pax'=>7]),$netEvidence
 refuseNetRequest($match,array_replace($requested,['cruise_level'=>'4']),$netEvidence,$sourceVersion,'Hotel/Cruise mismatch cannot close request');
 refuseNetRequest($match,$requested,['cells'=>array_merge($netEvidence['cells'],[$netEvidence['cells'][0]])],$sourceVersion,'Ambiguous duplicate NET band rejected');
 refuseNetRequest($match,$requested,['cells'=>[]],$sourceVersion,'Missing NET evidence cannot close request');
+$canonical=['company_id'=>1,'agency_id'=>10,'partner_tour_id'=>11,'publication_id'=>31,
+  'requested_by'=>101,'departure_date'=>'2027-01-10','paying_pax'=>6,'foc_pax'=>1,
+  'mode'=>'PRIVATE','hotel_level'=>'3','cruise_level'=>'5','notes'=>'Needs NET verification'];
+$canonicalHash=PartnerHub::netRequestFingerprint($canonical);
+assertB2b(strlen($canonicalHash)===64&&$canonicalHash===PartnerHub::netRequestFingerprint(array_reverse($canonical,true)),
+    'NET idempotency payload hash is canonical regardless of incoming field ordering');
+assertB2b($canonicalHash!==PartnerHub::netRequestFingerprint(array_replace($canonical,['foc_pax'=>2])),
+    'NET retry with modified FOC does not silently reuse the prior request');
+assertB2b($canonicalHash!==PartnerHub::netRequestFingerprint(array_replace($canonical,['notes'=>'Changed notes'])),
+    'NET retry with modified notes does not silently reuse prior content');
+assertB2b($canonicalHash!==PartnerHub::netRequestFingerprint(array_replace($canonical,['agency_id'=>20])),
+    'NET request fingerprint is agency-bound');
+try{PartnerHub::netRequestFingerprint(['company_id'=>1]);throw new RuntimeException('Incomplete NET request should be denied');}
+catch(InvalidArgumentException $expected){assertB2b(true,'Missing validated NET fields denied');}
 echo "B2B partner hub domain assertions passed.\n";
