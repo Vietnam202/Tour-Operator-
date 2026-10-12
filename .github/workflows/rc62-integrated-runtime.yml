@@ -19,6 +19,8 @@ on:
       - 'tests/rc62-operator-evidence-unit.py'
       - 'tests/rc62-staging-readonly-smoke.cjs'
       - 'tests/rc62-staging-readonly-smoke-unit.cjs'
+      - 'tests/rc62-isolated-staging-guard.php'
+      - 'docs/RC62_ISOLATED_STAGING_HOST_GUARD_VI.md'
       - 'docs/RC62_STAGING_HTTP_OPERATOR_SMOKE_VI.md'
       - 'tests/rc62-golden-path-continuity-native.php'
       - 'tests/rc62-v5-template-persistence-native.php'
@@ -78,6 +80,8 @@ jobs:
           php -l api/lib/SalesHandover.php
           php -l api/lib/SmartEnhancements.php
           php -l api/bin/rc62-release-readiness.php
+          php -l api/lib/RuntimeGuard.php
+          php tests/rc62-isolated-staging-guard.php
           php tests/rc62-release-readiness-unit.php
           python3 tests/rc62-operator-evidence-unit.py
           node --check tests/rc62-staging-readonly-smoke.cjs
