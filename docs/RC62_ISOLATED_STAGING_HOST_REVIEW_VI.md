@@ -47,6 +47,14 @@ Chạy trong disposable CI: `php tests/rc62-isolated-host-pin-unit.php`. Bộ ki
 
 Sau khi được cấp riêng HTTPS staging/clone/backup phục hồi, operator có thể dùng `tests/rc62-staging-readonly-smoke.cjs` ở PR #79 để thực hiện GET ẩn danh trước. Bật `--auth` chỉ khi được phê duyệt 7 sự kiện đăng nhập (vì backend ghi last_login_at và audit). Kiểm tra preflight CLI trên **MariaDB clone** phải dùng account SELECT-only, manifest exact SHA độc lập, và cùng host/DB pin. Giữ mọi bằng chứng ngoài repository, kiểm tra chữ ký bởi người khác và **không auto GO**.
 
+## Bước 2N — kiểm thử tích hợp khởi động PHP, database và API trên fixture dùng một lần
+
+CI `.github/workflows/b2c-native-storefront.yml` hiện có bộ thử nghiệm `tests/rc62-isolated-stage-config.php` và `tests/rc62-isolated-stage-http.cjs`. Trên **MariaDB disposable** đã dùng cho B2C/B2B, script tạo cấu hình staging giả trong thư mục riêng bên ngoài repository, tạo storage staging riêng, khởi chạy **PHP 8.3 built-in server** trên loopback với Host header `staging-fixture.example.invalid`, sau đó thực hiện request vào **API/bootstrap.php thật**, không gọi riêng `RuntimeGuard` như unit test.
+
+Bộ thử xác minh: (1) đúng ba pin mới có health 200, (2) Host production hoặc Host có port bị chặn 503 trước khi xử lý API, (3) Origin sai bị chặn 403, (4) X-Forwarded-Host/Proto không thay thế Host/HTTPS tin cậy, (5) thiếu DB pin hoặc media-storage pin trả 503, (6) người ẩn danh không đọc được dữ liệu, (7) hai tài khoản PARTNER tổng hợp đăng nhập thật trên database disposable và không thể đọc KPI của nhau bằng cách sửa `agency_id`.
+
+**Quan trọng:** bộ thử dùng một PHP router giả lập `$_SERVER['HTTPS']=on` trên kết nối HTTP loopback. Do đó nó **không chứng minh TLS thực tế, reverse proxy cấu hình đúng, DNS/staging thật hay an toàn CyberPanel**. Các login trong CI chỉ thay đổi audit/last_login_at trên database giả `vta_test_*` và được huỷ sau job. Không đưa tên miền `.invalid`, DB hoặc biến PIN test lên VPS thật. Phải kiểm tra **TLS/Host/IP/nguồn trusted proxy ngoài CI** trên máy chủ staging được cấp phép.
+
 ## Ranh giới bảo vệ
 
 - Bổ sung một allowlist có điều kiện vào code **không mở máy chủ staging** khi thiếu config/pin/SSL/clone thực tế.

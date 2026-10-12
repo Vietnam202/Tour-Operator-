@@ -9,6 +9,8 @@ on:
       - 'tests/tour-library-zip-http.cjs'
       - 'tests/b2b-http-fixture-seed.php'
       - 'tests/b2b-real-auth-http.cjs'
+      - 'tests/rc62-isolated-stage-config.php'
+      - 'tests/rc62-isolated-stage-http.cjs'
       - 'partner-hub.js'
       - 'partner.html'
       - 'tests/rc62-v5-http-fixture-setup.php'
@@ -55,6 +57,8 @@ jobs:
           php -l api/lib/B2CStorefront.php
           php -l api/lib/LeadHub.php
           php tests/b2c-storefront-unit.php
+          php -l tests/rc62-isolated-stage-config.php
+          node --check tests/rc62-isolated-stage-http.cjs
           php tests/b2c-wordpress-mirror-unit.php
           node --check b2c-storefront.js
           node tests/b2c-inquiry-ui.cjs
@@ -91,6 +95,12 @@ jobs:
           node tests/b2c-storefront-http.cjs | tee tests/test-results/native-b2c/http-browser.log
           node tests/tour-library-zip-http.cjs | tee tests/test-results/native-b2c/library-zip50.log
           node tests/b2b-real-auth-http.cjs | tee tests/test-results/native-b2c/b2b-auth-browser.log
+          php tests/rc62-isolated-stage-config.php | tee tests/test-results/native-b2c/isolated-stage-setup.log
+          export VTA_RC62_STAGING_HOST_PIN='staging-fixture.example.invalid'
+          VTA_RC62_STAGING_DB_PIN=$(php -r '$c=require getenv("VTA_V5_HTTP_CONFIG"); echo $c["db"]["database"];')
+          export VTA_RC62_STAGING_DB_PIN
+          export VTA_RC62_STAGING_STORAGE_PIN="$PRIVATE_DIR/staging-documents"
+          node tests/rc62-isolated-stage-http.cjs | tee tests/test-results/native-b2c/isolated-stage-http.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
