@@ -59,11 +59,22 @@ final class RuntimeGuard {
             || str_starts_with(strtolower($dbName),'v2qu_v2qu_vtaos')
             || getenv('VTA_RC62_STAGING_DB_PIN')!==$dbName)
             $fail();
-        // Storage must be private for the new stage; never inside public_html.
-        if(($config['storage']['driver']??'local')==='local'){
-            $dir=(string)($config['storage']['local_path']??'');
-            try{ self::privatePath($dir); }catch(Throwable){$fail();}
-        }
+        // An isolated clone must NEVER share production media, even if the
+        // old storage lives outside the application source/public_html.
+        // Stage runs local-private only; enabling Google Drive would risk
+        // reusing a production OAuth account, folder and supplier images.
+        if(($config['storage']['driver']??'')!=='local')$fail();
+        $dir=(string)($config['storage']['local_path']??'');
+        try{
+            self::privatePath($dir);
+            $resolved=str_replace('\\','/',(string)realpath($dir));
+        }catch(Throwable){$fail();}
+        if($resolved==='' || !str_starts_with($resolved,'/')
+            || preg_match('~(?:^|/)(?:public_html|www|htdocs)(?:/|$)~i',$resolved)
+            || preg_match('~(?:^|[/_.-])v2quote(?:[/_.-]|$)~i',$resolved)
+            || !preg_match('~(?:^|[/_.-])stag(?:e|ing)(?:[/_.-]|$)~i',$resolved)
+            || getenv('VTA_RC62_STAGING_STORAGE_PIN')!==$resolved)
+            $fail();
         // Do not trust X-Forwarded-Host or client supplied proxies. PHP-FPM
         // should receive actual HTTPS and the independently approved Host.
         if(PHP_SAPI!=='cli' && (!isset($_SERVER['HTTP_HOST']) || !isset($_SERVER['HTTPS'])))
