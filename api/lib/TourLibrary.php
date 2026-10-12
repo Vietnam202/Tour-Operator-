@@ -269,6 +269,7 @@ final class TourLibrary {
         try {
             $result['proposal']=['document'=>TourProgramWorkspace::reusableDocument(
                 ['schema'=>'VTA_DOC_2','title'=>$title,'content'=>['type'=>'doc','content'=>$nodes]])];
+            $result['warnings'][]='Editable Word draft is prepared (headings, styled text, lists and simple tables). Review the original DOCX and all images, prices, layout and policies before publishing.';
         }catch(InvalidArgumentException|DomainException $e){
             $result['warnings'][]='Editable Word structure needs manual review; the original DOCX and extracted text remain available.';
         }
