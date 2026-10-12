@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
 const SCOPE='https://v2quote.vietnamtraveladvisor.com.vn/';
-const CACHE='vta-RC62-COST-SAVE-1-PWA';
+const CACHE='vta-RC62-COST-SAVE-2-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
@@ -56,7 +56,7 @@ function request(url,{method='GET',mode='cors'}={}) {
  return answered;
 }
 (async()=>{
- assert.match(source,/const CACHE='vta-RC62-COST-SAVE-1-PWA'/);
+ assert.match(source,/const CACHE='vta-RC62-COST-SAVE-2-PWA'/);
  assert(source.includes("'./cost-sheet.js?v=COST-SAVE-1'"),'current Cost editor must be precached');
  for(const page of ['index.html','preview.html']) {
   const html=fs.readFileSync(path.join(__dirname,'..',page),'utf8');
