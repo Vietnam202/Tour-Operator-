@@ -155,6 +155,16 @@ final class PartnerHub {
         }
         if(count($matches)!==1)throw new DomainException('Select one uniquely approved NET rate for the requested Hotel, Cruise, mode and PAX');
     }
+    /** Canonical, server-validated input; used to reject request-key reuse after edits. */
+    public static function netRequestFingerprint(array $data):string {
+        $keys=['company_id','agency_id','partner_tour_id','publication_id','requested_by',
+            'departure_date','paying_pax','foc_pax','mode','hotel_level','cruise_level','notes'];
+        $payload=[];foreach($keys as $key){
+            if(!array_key_exists($key,$data))throw new InvalidArgumentException('Incomplete NET request');
+            $payload[$key]=$data[$key];
+        }
+        return hash('sha256',self::json($payload));
+    }
     private static function quote(array $work,array $pub,array $params):array {
         $rates=self::parse($pub['rate_json']);$cells=$rates['cells']??[];
         $pax=self::id($params['pax']??0);$mode=strtoupper(self::field($params['mode']??'',10));
@@ -208,8 +218,21 @@ final class PartnerHub {
     public static function handle(string $route,string $method,PDO $db,array $cfg,array $u):void {
         if($route!=='b2b'&&!str_starts_with($route,'b2b/'))return;
         try {
-            self::requirePortal($db,$u);$company=(int)$u['company_id'];$user=(int)$u['id'];
+            $company=(int)$u['company_id'];$user=(int)$u['id'];
+            // Staff Sales may read only their own assigned NET queue. Never
+            // grant them an agency workspace, partner document or NET prices.
+            if($route==='b2b/sales/net-requests'&&$method==='GET'){
+                Auth::requirePermission($db,$u,'quote.edit');
+                $rows=self::q($db,"SELECT id,agency_id,partner_tour_id,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,notes,status,created_at,source_quote_version_id FROM b2b_net_requests WHERE company_id=? AND assigned_to_user_id=? ORDER BY id DESC LIMIT 100",[$company,$user])->fetchAll(PDO::FETCH_ASSOC);
+                Http::json(['ok'=>true,'items'=>$rows]);
+            }
             $admin=Auth::can($db,$user,'b2b.admin');
+            $partner=Auth::can($db,$user,'b2b.portal');
+            if($route==='b2b/me'&&$method==='GET'&&!$admin&&!$partner){
+                Auth::requirePermission($db,$u,'quote.edit');
+                Http::json(['ok'=>true,'admin'=>false,'sales'=>true,'agencies'=>[]]);
+            }
+            self::requirePortal($db,$u);
             if($route==='b2b/me'&&$method==='GET'){
                 $agencies=$admin?self::q($db,"SELECT * FROM b2b_agencies WHERE company_id=? AND status='ACTIVE' ORDER BY agency_name",[$company])->fetchAll(PDO::FETCH_ASSOC):
                 self::q($db,"SELECT a.* FROM b2b_agencies a JOIN b2b_agency_members m ON m.agency_id=a.id AND m.company_id=a.company_id WHERE a.company_id=? AND m.user_id=? AND a.status='ACTIVE' ORDER BY a.agency_name",[$company,$user])->fetchAll(PDO::FETCH_ASSOC);
@@ -376,18 +399,41 @@ final class PartnerHub {
                 $date=self::field((string)($b['departure_date']??''),10);
                 if(!preg_match('/^20\d\d-\d\d-\d\d$/D',$date)||!checkdate((int)substr($date,5,2),(int)substr($date,8,2),(int)substr($date,0,4))||$date<date('Y-m-d'))
                     throw new InvalidArgumentException('Valid future departure required');
-                $paying=self::id($b['pax']??0);$foc=(int)($b['foc']??0);
-                if($paying>1000||$foc<0||$foc>100)throw new InvalidArgumentException('Invalid PAX/FOC');
+                $paying=self::id($b['pax']??0);
+                $foc=filter_var($b['foc']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>100]]);
+                if($paying>1000||$foc===false)throw new InvalidArgumentException('Invalid PAX/FOC');
                 $mode=strtoupper(self::field((string)($b['mode']??''),10));
                 $hotel=self::field((string)($b['hotel']??''),1);
                 $cruise=self::field((string)($b['cruise']??''),1);
                 if(!in_array($mode,['PRIVATE','SIC'],true)||!in_array($hotel,['3','4','5'],true)||!in_array($cruise,['','3','4','5'],true))
                     throw new InvalidArgumentException('Invalid configuration');
                 $notes=self::field((string)($b['notes']??''),5000);
-                self::q($db,'INSERT INTO b2b_net_requests(company_id,agency_id,partner_tour_id,publication_id,requested_by,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-                    [$company,$agency['id'],$work['id'],$pub['id'],$user,$date,$paying,$foc,$mode,$hotel,$cruise,$notes]);
-                $id=(int)$db->lastInsertId();Audit::log($db,$company,$user,'B2B_NET_REQUESTED','b2b_net_request',$id);
-                Http::json(['ok'=>true,'id'=>$id,'status'=>'REQUESTED'],201);
+                $requestId=$b['request_id']??null;
+                if(!is_string($requestId)||!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$requestId))
+                    throw new InvalidArgumentException('NET request idempotency key required');
+                $key=hash('sha256',$company.':'.$agency['id'].':'.$requestId);
+                $input=['company_id'=>$company,'agency_id'=>(int)$agency['id'],
+                    'partner_tour_id'=>(int)$work['id'],'publication_id'=>(int)$pub['id'],'requested_by'=>$user,
+                    'departure_date'=>$date,'paying_pax'=>$paying,'foc_pax'=>(int)$foc,
+                    'mode'=>$mode,'hotel_level'=>$hotel,'cruise_level'=>$cruise,'notes'=>$notes];
+                $fingerprint=self::netRequestFingerprint($input);
+                $created=true;
+                try{
+                    self::q($db,'INSERT INTO b2b_net_requests(company_id,agency_id,partner_tour_id,publication_id,requested_by,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,notes,request_key_hash,request_payload_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        [$company,$agency['id'],$work['id'],$pub['id'],$user,$date,$paying,$foc,$mode,$hotel,$cruise,$notes,$key,$fingerprint]);
+                    $id=(int)$db->lastInsertId();
+                }catch(PDOException $e){
+                    if((int)($e->errorInfo[1]??0)!==1062)throw $e;
+                    $existing=self::q($db,'SELECT id,status,request_payload_hash FROM b2b_net_requests WHERE company_id=? AND agency_id=? AND request_key_hash=?',[$company,(int)$agency['id'],$key])->fetch(PDO::FETCH_ASSOC);
+                    if(!$existing)throw $e;
+                    if(!hash_equals((string)$existing['request_payload_hash'],$fingerprint))
+                        throw new DomainException('NET request key already used with different content');
+                    $id=(int)$existing['id'];$created=false;
+                }
+                if($created)Audit::log($db,$company,$user,'B2B_NET_REQUESTED','b2b_net_request',$id);
+                $response=$created?['id'=>$id,'status'=>'REQUESTED','reused'=>false]:
+                    ['id'=>$id,'status'=>$existing['status'],'reused'=>true];
+                Http::json(['ok'=>true]+$response,$created?201:200);
             }
             if($route==='b2b/net-requests'&&$method==='GET'){
                 $rows=$admin?
