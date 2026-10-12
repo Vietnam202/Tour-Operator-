@@ -477,6 +477,13 @@
         const existing=data.items.find(p=>p.costing_mode===mode && parseInt(p.hotel_level,10)===hotel &&
           (p.cruise_level==null?null:Number(p.cruise_level))===cruise);
         const selectVariant=id=>{
+          // A newly created mix may be committed before the follow-up /options
+          // request succeeds. Never select a variant missing from the current
+          // option set or render undefined packages from stale client data.
+          if(!data.items.some(p=>Number(p.variant_id)===Number(id)&&p.costing_mode===mode)){
+            status('Combination saved on server · reopen Cost to load the new option');
+            return false;
+          }
           const chosen=ids();chosen[index]=Number(id);
           if(new Set(chosen).size!==3){
             render();
