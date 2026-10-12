@@ -57,7 +57,32 @@ $checklist=array_fill_keys(SalesHandover::CHECKLIST,true);$checklist['flights']=
 rejects(fn()=>$transition('return',['reason'=>'']),InvalidArgumentException::class,'VS23 operations return requires reason');
 $transition('return',['reason'=>'Please clarify arrival flight']);check(SalesHandover::context($db,$user,$bid)['handover']['intake_status']==='NEEDS_REVIEW','VS23 return visible to Sales');
 $transition('prepare',['checklist'=>$checklist]);$transition('submit');$transition('accept');check(SalesHandover::context($db,$user,$bid)['handover']['intake_status']==='READY_TO_BOOK','VS23 operations accepts without supplier booking prerequisite');
-$cr=SalesHandover::changeRequest($db,$user,$bid,['description'=>'Customer requests a later pickup','affected_services'=>[(int)$h['services'][0]['id']]]);foreach(['UNDER_REVIEW','APPROVED','IMPLEMENTED'] as $status)$cr=SalesHandover::changeRequest($db,$user,$bid,['expected_revision'=>(int)$cr['revision'],'status'=>$status,'reason'=>'Fixture change status only'],(int)$cr['id']);
+$cr=SalesHandover::changeRequest($db,$user,$bid,['description'=>'Customer requests a later pickup','affected_services'=>[(int)$h['services'][0]['id']]]);
+$held=SalesHandover::context($db,$user,$bid);
+check($held['pending_change_requests']===1&&!$held['ready_to_book']
+    &&$held['handover']['stage']==='HANDOVER_PREPARATION'
+    &&$held['handover']['intake_status']==='NEEDS_REVIEW'
+    &&$held['handover']['accepted_at']===null,
+    'VS23 late customer change retracts Ops READY_TO_BOOK acceptance and invalidates prior handover');
+$transition('prepare',['checklist'=>$checklist]);
+rejects(fn()=>$transition('submit'),DomainException::class,'VS23 Sales cannot resubmit while customer change is unresolved');
+foreach(['UNDER_REVIEW','APPROVED'] as $status){
+ $cr=SalesHandover::changeRequest($db,$user,$bid,['expected_revision'=>(int)$cr['revision'],'status'=>$status,'reason'=>'Fixture change status only'],(int)$cr['id']);
+ rejects(fn()=>$transition('submit'),DomainException::class,'VS23 pending '.$status.' cannot reopen Operations queue');
+}
+$cr=SalesHandover::changeRequest($db,$user,$bid,['expected_revision'=>(int)$cr['revision'],'status'=>'IMPLEMENTED','reason'=>'Reviewed change; source remains immutable'],(int)$cr['id']);
+check(SalesHandover::context($db,$user,$bid)['pending_change_requests']===0,
+    'VS23 implemented change clears hold, without automatically approving supplier availability');
+rejects(fn()=>$transition('submit'),DomainException::class,
+    'VS23 implemented customer change invalidates Sales checklist completed before the decision');
+$transition('prepare',['checklist'=>$checklist,'sales_notes'=>'Reviewed after change implemented']);
+$transition('submit');
+$accepted=SalesHandover::context($db,$user,$bid);
+check($accepted['handover']['intake_status']==='NEW_HANDOVER'&&!$accepted['ready_to_book'],
+    'VS23 Sales must re-send revised handover for Operations review');
+$transition('accept');
+check(SalesHandover::context($db,$user,$bid)['ready_to_book'],
+    'VS23 only explicit new Operations acceptance restores ready-to-book queue');
 check($cr['status']==='IMPLEMENTED'&&v2q('SELECT * FROM booking_quote_snapshots WHERE booking_id=?',[$bid])->fetch()===$book23,'VS23 change foundation never modifies confirmed snapshot');
 check(v2q('SELECT * FROM quote_sent_bundles WHERE quote_version_id=?',[$qvid])->fetch()===$sent23&&v2q('SELECT * FROM quote_sent_bundles WHERE quote_version_id=?',[$priorIssued])->fetch()===$priorSent,'VS23 historical and current Sent bytes remain identical');
 $storedInputs=QuoteVs2Repository::decode(PriceMatrix::row($db,v2v())['inputs_json']);$frozenVariant=$storedInputs['graph']['variants'][0];$eight=PaxScenario::calculate($db,$storedInputs['graph'],$frozenVariant,8,$config,'25000');$nine=PaxScenario::calculate($db,$storedInputs['graph'],$frozenVariant,9,$config,'25000');$e=array_column($eight['cost_lines'],null,'id');$n=array_column($nine['cost_lines'],null,'id');
