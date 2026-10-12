@@ -84,6 +84,10 @@ try{
   putenv('VTA_STAGING_PIN_DB='.$db);
   unset($_SERVER['HTTPS']);
   stageDeny(fn()=>RuntimeGuard::config($tmp,$config),'bootstrap-no-tls-denied');
+  $_SERVER=array_replace($oldServer,$server);
+  stageDeny(fn()=>RuntimeGuard::config($tmp,[
+     'app'=>['env'=>'staging','base_url'=>'https://v2quote.vietnamtraveladvisor.com.vn']
+  ]),'legacy-base-url-wrong-http-host-bypass-blocked');
   $_SERVER=$oldServer;
   RuntimeGuard::config($tmp,['app'=>['env'=>'testing','base_url'=>'http://127.0.0.1:18869']]);
   stageCheck(true,'existing disposable local HTTP fixture unchanged');
