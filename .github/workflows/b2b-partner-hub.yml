@@ -9,6 +9,7 @@ on:
       - 'api/bootstrap.php'
       - 'api/migrations/037_b2b_partner_hub.sql'
       - 'api/migrations/038_b2b_hybrid_distribution.sql'
+      - 'api/migrations/045_b2b_net_request_resolution.sql'
       - 'api/lib/Migrations.php'
       - 'tests/b2b-hybrid-isolation-unit.php'
       - 'tests/b2b-hybrid-schema-ci.php'
