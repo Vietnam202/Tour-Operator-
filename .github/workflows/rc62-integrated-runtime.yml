@@ -9,6 +9,9 @@ on:
       - 'docs/RC62_INTEGRATED_STAGING_RELEASE_VI.md'
       - '.github/workflows/rc62-integrated-runtime.yml'
       - 'api/**'
+      - 'handover.js'
+      - 'tests/vs23-native.php'
+      - 'tests/vs23-ui.cjs'
       - 'tests/rc62-release-readiness-unit.php'
       - 'tests/rc62-golden-path-continuity-native.php'
       - 'tests/rc62-v5-template-persistence-native.php'
@@ -65,6 +68,7 @@ jobs:
           php -l api/bootstrap.php
           php -l api/lib/PartnerHub.php
           php -l api/lib/TourLibrary.php
+          php -l api/lib/SalesHandover.php
           php -l api/lib/SmartEnhancements.php
           php -l api/bin/rc62-release-readiness.php
           php tests/rc62-release-readiness-unit.php
@@ -84,6 +88,7 @@ jobs:
           node tests/tour-proposal-studio.cjs
           node tests/document-cost-ui.cjs
           node tests/document-saved-source-ui.cjs
+          node tests/vs23-ui.cjs
           node tests/vta-cost-editor-ui.cjs
           node tests/v5-template-gallery-ui.cjs
           node tests/v5-parity-recovery.cjs
@@ -175,6 +180,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes mariadb-client
           bash tests/rc62-clone-restore-preflight.sh
+      - name: Native Sales to Operations handover change-hold on disposable MariaDB
+        env:
+          VTA_TEST_DB_PASSWORD: ci_root_password
+          VTA_TEST_DB_PORT: '3306'
+          VS22_OUTPUT_DIR: ${{ runner.temp }}/vs23-ops
+        run: |
+          set -euo pipefail
+          mkdir -p "$VS22_OUTPUT_DIR"
+          php tests/vs23-native.php | tee "$VS22_OUTPUT_DIR/handover-native.log"
       - name: Domain regression, pricing and official staging safety rules
         run: |
           set -euo pipefail
