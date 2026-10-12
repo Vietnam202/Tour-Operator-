@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /** Synthetic only. No network, credentials, migrations or real staging files. */
 require dirname(__DIR__).'/api/lib/RuntimeGuard.php';
-$base=sys_get_temp_dir().'/vta-isolated-host-fixture-'.bin2hex(random_bytes(5));
+$base=sys_get_temp_dir().'/vta-staging-host-fixture-'.bin2hex(random_bytes(5));
 if(!mkdir($base,0700) || !mkdir($base.'/private-storage',0700))
     throw new RuntimeException('Cannot create CI-only runtime guard fixture');
 $configPath=$base.'/config.php';
@@ -17,7 +17,8 @@ $valid=[
     'storage'=>['driver'=>'local','local_path'=>$base.'/private-storage']
 ];
 $originalPins=[
-  getenv('VTA_RC62_STAGING_HOST_PIN'),getenv('VTA_RC62_STAGING_DB_PIN')
+  getenv('VTA_RC62_STAGING_HOST_PIN'),getenv('VTA_RC62_STAGING_DB_PIN'),
+  getenv('VTA_RC62_STAGING_STORAGE_PIN')
 ];
 $origHost=$_SERVER['HTTP_HOST']??null;$origHttps=$_SERVER['HTTPS']??null;
 $passed=0;
@@ -41,6 +42,9 @@ try{
     putenv('VTA_RC62_STAGING_HOST_PIN='.$host);
     refuse(fn()=>RuntimeGuard::config($configPath,$valid),'a host pin alone cannot authorize staging DB');
     putenv('VTA_RC62_STAGING_DB_PIN='.$dbName);
+    refuse(fn()=>RuntimeGuard::config($configPath,$valid),
+        'pinned host and DB still deny without separately pinned private storage');
+    putenv('VTA_RC62_STAGING_STORAGE_PIN='.realpath($base.'/private-storage'));
     RuntimeGuard::config($configPath,$valid);
     yes(true,'exact host + clone db pins permit only isolated candidate from private config');
     $_SERVER['HTTP_HOST']=$host;$_SERVER['HTTPS']='on';
@@ -89,6 +93,22 @@ try{
     refuse(fn()=>RuntimeGuard::config($configPath,$bad),'remote database endpoint cannot be implicitly accepted');
     $bad=$valid;$bad['storage']['local_path']=dirname(__DIR__).'/api';
     refuse(fn()=>RuntimeGuard::config($configPath,$bad),'staging local storage cannot be inside application directory');
+    putenv('VTA_RC62_STAGING_STORAGE_PIN=/wrong/staging/private-storage');
+    refuse(fn()=>RuntimeGuard::config($configPath,$valid),
+        'independently pinned staging storage must match actual realpath');
+    putenv('VTA_RC62_STAGING_STORAGE_PIN='.realpath($base.'/private-storage'));
+    $bad=$valid;$bad['storage']['driver']='google_drive';
+    refuse(fn()=>RuntimeGuard::config($configPath,$bad),
+        'new stage cannot reuse production Google Drive OAuth credentials');
+    foreach(['public_html','v2quote'] as $dir){
+        mkdir($base.'/'.$dir,0700);
+        $bad=$valid;$bad['storage']['local_path']=$base.'/'.$dir;
+        putenv('VTA_RC62_STAGING_STORAGE_PIN='.realpath($bad['storage']['local_path']));
+        refuse(fn()=>RuntimeGuard::config($configPath,$bad),
+            'isolation refuses staging storage in '.$dir);
+        rmdir($base.'/'.$dir);
+    }
+    putenv('VTA_RC62_STAGING_STORAGE_PIN='.realpath($base.'/private-storage'));
     foreach([
         'notstaging.example.invalid','stage-prod.example.invalid',
         'production-stage.example.invalid','quote.vietnamtraveladvisor.com.vn',
@@ -107,12 +127,14 @@ try{
     $legacy=$valid;$legacy['app']['base_url']='http://127.0.0.1:18869';$legacy['app']['env']='testing';
     putenv('VTA_RC62_STAGING_HOST_PIN');
     putenv('VTA_RC62_STAGING_DB_PIN');
+    putenv('VTA_RC62_STAGING_STORAGE_PIN');
     unset($_SERVER['HTTP_HOST'],$_SERVER['HTTPS']);
     RuntimeGuard::config($configPath,$legacy);
     yes(true,'legacy local CI fixture remains compatible without staging host opt-in');
     echo "PASS ".$passed." isolated staging host pin checks, no production changes".PHP_EOL;
 } finally {
-    foreach(['VTA_RC62_STAGING_HOST_PIN','VTA_RC62_STAGING_DB_PIN'] as $i=>$key){
+    foreach(['VTA_RC62_STAGING_HOST_PIN','VTA_RC62_STAGING_DB_PIN',
+        'VTA_RC62_STAGING_STORAGE_PIN'] as $i=>$key){
         if($originalPins[$i]===false)putenv($key); else putenv($key.'='.$originalPins[$i]);
     }
     if($origHost===null)unset($_SERVER['HTTP_HOST']);else $_SERVER['HTTP_HOST']=$origHost;
