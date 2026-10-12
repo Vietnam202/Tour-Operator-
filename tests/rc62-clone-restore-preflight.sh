@@ -35,6 +35,13 @@ existing="$(root_sql "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCH
 tables="$(root_sql "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SOURCE_DB' AND TABLE_TYPE='BASE TABLE'")"
 [[ "$tables" -gt 0 ]] || fail "MIGRATED_SOURCE_FIXTURE_REQUIRED"
 
+# The migration-only source fixture contains no end-user records. Seed one
+# clearly synthetic business-value probe so a rollback test can detect cell
+# corruption (row counts alone are insufficient). This is CI-only, pinned
+# source vta_p12_clone_ci, never a real company/user/booking table.
+root_sql "CREATE TABLE $SOURCE_DB.vta_rc62_restore_probe_ci (id INT PRIMARY KEY,label VARCHAR(120) NOT NULL) ENGINE=InnoDB"
+root_sql "INSERT INTO $SOURCE_DB.vta_rc62_restore_probe_ci(id,label) VALUES(1,'Synthetic-original-business-value')" >/dev/null
+
 python3 deploy/build-integrated-package.py --output "$PRIVATE_DIR/package" >"$PRIVATE_DIR/package.log"
 find "$PRIVATE_DIR/package" -maxdepth 1 -type f -name 'vta-rc62-manifest-*.json' -print >"$PRIVATE_DIR/manifest-paths"
 [[ "$(wc -l <"$PRIVATE_DIR/manifest-paths" | tr -d ' ')" == "1" ]] || fail "EXACT_SHA_MANIFEST_REQUIRED"
@@ -141,7 +148,7 @@ expect_block "CLONE_DATABASE_MISMATCH" "$EXPECTED_SHA" "vta_rc62_other_clone_ci"
 # Enforce actual SQL write denial, not only a PHP-side GRANT regex.
 # A successful UPDATE would be an immediate CI failure (and release blocker).
 if MYSQL_PWD="$RO_PASSWORD" mariadb --protocol=tcp --host=127.0.0.1 --port=3306 \
-    --user="$RO_USER" --database="$CLONE_DB" --execute="UPDATE users SET full_name='unsafe-write-fixture' WHERE id=1" \
+    --user="$RO_USER" --database="$CLONE_DB" --execute="UPDATE vta_rc62_restore_probe_ci SET label='unsafe-write-fixture' WHERE id=1" \
     >"$PRIVATE_DIR/unexpected-write.log" 2>&1; then
   fail "SELECT_ONLY_USER_COULD_MODIFY_CLONE"
 fi
@@ -152,18 +159,16 @@ pass "dedicated preflight MariaDB account rejects UPDATE at the actual SQL autho
 # destroy and reconstruct the clone from the original dump and prove exact
 # value, inventory, row counts and ledger are identical again. Never touch
 # the source schema or keep SQL/PII in CI artifacts.
-USER_ID="$(root_sql "SELECT MIN(id) FROM $CLONE_DB.users")"
-[[ "$USER_ID" =~ ^[0-9]+$ && "$USER_ID" -gt 0 ]] || fail "CLONE_FIXTURE_USER_REQUIRED"
-user_digest() {
-  root_sql "SELECT SHA2(CONCAT_WS('|',id,full_name,email),256) FROM $1.users WHERE id=$USER_ID"
+probe_digest() {
+  root_sql "SELECT SHA2(CONCAT_WS('|',id,label),256) FROM $1.vta_rc62_restore_probe_ci WHERE id=1"
 }
-SOURCE_USER_DIGEST="$(user_digest "$SOURCE_DB")"
-RESTORED_USER_DIGEST="$(user_digest "$CLONE_DB")"
-[[ "$SOURCE_USER_DIGEST" == "$RESTORED_USER_DIGEST" ]] || fail "SOURCE_AND_CLONE_BASELINE_VALUE_MISMATCH"
-root_sql "UPDATE $CLONE_DB.users SET full_name=CONCAT(full_name,'-rollback-probe') WHERE id=$USER_ID" >/dev/null
-CHANGED_USER_DIGEST="$(user_digest "$CLONE_DB")"
-[[ "$CHANGED_USER_DIGEST" != "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_TEST_FAILED_TO_MUTATE_CLONE"
-[[ "$(user_digest "$SOURCE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_TEST_MUTATED_SOURCE"
+SOURCE_PROBE_DIGEST="$(probe_digest "$SOURCE_DB")"
+RESTORED_PROBE_DIGEST="$(probe_digest "$CLONE_DB")"
+[[ -n "$SOURCE_PROBE_DIGEST" && "$SOURCE_PROBE_DIGEST" == "$RESTORED_PROBE_DIGEST" ]] || fail "SOURCE_AND_CLONE_BASELINE_VALUE_MISMATCH"
+root_sql "UPDATE $CLONE_DB.vta_rc62_restore_probe_ci SET label='Synthetic-mutated-clone-value' WHERE id=1" >/dev/null
+CHANGED_PROBE_DIGEST="$(probe_digest "$CLONE_DB")"
+[[ "$CHANGED_PROBE_DIGEST" != "$SOURCE_PROBE_DIGEST" ]] || fail "ROLLBACK_TEST_FAILED_TO_MUTATE_CLONE"
+[[ "$(probe_digest "$SOURCE_DB")" == "$SOURCE_PROBE_DIGEST" ]] || fail "ROLLBACK_TEST_MUTATED_SOURCE"
 pass "synthetic clone value mutation is detected; source MariaDB remains byte-value unchanged"
 
 root_sql "DROP DATABASE $CLONE_DB"
@@ -171,8 +176,8 @@ CLONE_CREATED=0
 root_sql "CREATE DATABASE $CLONE_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 CLONE_CREATED=1
 mariadb --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --database="$CLONE_DB" <"$PRIVATE_DIR/source.sql"
-[[ "$(user_digest "$CLONE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_RESTORE_VALUE_MISMATCH"
-[[ "$(user_digest "$SOURCE_DB")" == "$SOURCE_USER_DIGEST" ]] || fail "ROLLBACK_CHANGED_SOURCE"
+[[ "$(probe_digest "$CLONE_DB")" == "$SOURCE_PROBE_DIGEST" ]] || fail "ROLLBACK_RESTORE_VALUE_MISMATCH"
+[[ "$(probe_digest "$SOURCE_DB")" == "$SOURCE_PROBE_DIGEST" ]] || fail "ROLLBACK_CHANGED_SOURCE"
 root_sql "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$CLONE_DB' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME" >"$PRIVATE_DIR/after-restore.tables"
 diff -u "$PRIVATE_DIR/$SOURCE_DB.tables" "$PRIVATE_DIR/after-restore.tables" >/dev/null || fail "ROLLBACK_TABLE_INVENTORY_MISMATCH"
 : >"$PRIVATE_DIR/after-restore.count-queries"
