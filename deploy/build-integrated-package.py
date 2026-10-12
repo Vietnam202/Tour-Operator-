@@ -36,6 +36,7 @@ REQUIRED = {
     "vta-plus-assist.js", "vta-plus-assist.css",
     "api/lib/TourLibrary.php", "app.js", "unified-workspace.js",
     "tour-library.js", "tour-program-workspace.js", "smart-costing.js",
+    "cost-sheet.js", "document-editor.js",
     "smart-enhancements.js", "smart-enhancements.css", "service-worker.js",
 }
 MIN_FILES = 75
