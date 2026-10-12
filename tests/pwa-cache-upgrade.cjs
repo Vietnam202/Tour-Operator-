@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
 const SCOPE='https://v2quote.vietnamtraveladvisor.com.vn/';
-const CACHE='vta-RC62-COST-SAVE-2-PWA';
+const CACHE='vta-RC62-V5-B2C-NATIVE-1-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
@@ -57,7 +57,7 @@ function request(url,{method='GET',mode='cors'}={}) {
  return answered;
 }
 (async()=>{
- assert.match(source,/const CACHE='vta-RC62-COST-SAVE-2-PWA'/);
+ assert.match(source,/const CACHE='vta-RC62-V5-B2C-NATIVE-1-PWA'/);
  assert(source.includes("'./cost-sheet.js?v=COST-SAVE-1'"),'fallback Cost editor must be precached');
  assert(source.includes("'./vta-cost-editor.js?v=COST-SAVE-2'"),'direct Cost editor must be precached');
  for(const page of ['index.html','preview.html']) {
@@ -92,6 +92,7 @@ function request(url,{method='GET',mode='cors'}={}) {
  // Private resources, API, exports, non-GET, other origins never get intercepted.
  const noIntercept=[
   [SCOPE+'api/index.php?route=tour-library',{}],
+  [SCOPE+'journeys.php',{}],
   [SCOPE+'api/index.php?route=public-proposals/example',{}],
   [SCOPE+'uploads/private.jpg',{}],
   [SCOPE+'other.js',{}],

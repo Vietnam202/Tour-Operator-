@@ -1,3 +1,13 @@
+# Cập nhật phạm vi 12/10/2026 — B2C giữ nguyên, WordPress tùy chọn
+
+Owner đã xác nhận trong phiên làm việc: giữ đầy đủ tính năng B2C; WordPress chỉ hỗ trợ giao diện và có thể bỏ qua nếu không thích ứng. Không hoãn B2C vì WordPress. Bản bổ sung từ PR #62 cung cấp `journeys.php` + inquiry trực tiếp trong runtime RC6.2, dùng chung publication/revision/ảnh/Lead Hub. Xem [RC62_B2C_NATIVE_STOREFRONT_VI.md](RC62_B2C_NATIVE_STOREFRONT_VI.md) cho config, QA và gate hiện hành.
+
+Gate WordPress cron/cache/HMAC áp dụng khi chọn giao diện WordPress. Nếu chọn native, thay bằng nghiệm thu catalogue/detail/inquiry RC6 trực tiếp và cache exclusion `journeys.php` + API/ảnh. Clone dữ liệu thật, role/ACL, 50 chương trình thực, DOCX/PDF, Android/PWA và VIE-11 vẫn bắt buộc. Ready for Review tuân theo VIE-11 hiện hành: cần staging UAT và owner approval, không chỉ CI/artifact.
+
+Phần dưới ghi lại nền PR #62 ngày 11/10; không dùng mốc cũ để chứng nhận HEAD mới.
+
+---
+
 # RC6.2 — Bản bổ sung B2C và điều kiện nghiệm thu
 
 Ngày triển khai: 11/10/2026. Nền tích hợp: PR #61, commit `d203ed67db55af025d77a22275f2d6d4f84a6af3`. Commit mới phải lấy từ HEAD của PR bổ sung; kết quả CI cũ không đại diện cho bản mới. Bản bổ sung giữ Draft, không merge hoặc deploy.

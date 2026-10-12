@@ -1,3 +1,7 @@
+# B2C native storefront — Draft, 12/10/2026
+
+B2C remains part of RC6.2; WordPress is an optional presentation adapter. The native `journeys.php` catalogue/detail/inquiry uses approved RC6 publications and Lead Hub directly. It is disabled until an operator binds a company and active Lead Hub form in private config. See [native B2C scope and staging gate](docs/RC62_B2C_NATIVE_STOREFRONT_VI.md). Existing B2B/cost/quote/booking/operations/finance remain in scope. This source is not staging acceptance or release authorization.
+
 # RC6.2 core-only WordPress Marketing de-scope (draft)
 
 Marketing / Content / Landing Builder UI is moved out of RC6.2 and owned by WordPress. RC6.2 retains Sales inbound Lead Hub, CRM, Tour Workspace, Pricing, Booking, Operations, Documents and tour AI. Front-end Marketing assets are no longer loaded or precached. **No migration, data deletion, merge, production deployment or WordPress webhook setup is included.** Review [release notes and release gate](docs/RC62_WORDPRESS_MARKETING_DESCOPE.md) before staging acceptance.

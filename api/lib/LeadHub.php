@@ -50,19 +50,20 @@ final class LeadHub {
         try { $result=$fn(); $db->commit(); return $result; }
         catch(Throwable $e) { if($db->inTransaction()) $db->rollBack(); throw $e; }
     }
-    public static function submit(PDO $db, string $token, array $b): array {
+    public static function submit(PDO $db, string $token, array $b, ?callable $onAccepted=null): array {
         $payload=self::validateRequest($b);
         $key=self::text($b,'submission_key',80,true);
         if(!preg_match('/^[a-zA-Z0-9_-]{16,80}$/D',$key)) throw new InvalidArgumentException('Invalid submission_key');
         if(self::text($b,'website',255)!=='') throw new InvalidArgumentException('Submission rejected');
         $hash=hash('sha256',json_encode($payload,JSON_THROW_ON_ERROR));
-        return self::transaction($db,function() use($db,$token,$payload,$key,$hash) {
+        return self::transaction($db,function() use($db,$token,$payload,$key,$hash,$onAccepted) {
             // Lock form to serialize retries and the rate-limit counter without trusting client IP headers.
             $form=self::query($db,"SELECT f.*,c.source FROM lead_forms f JOIN campaigns c ON c.id=f.campaign_id AND c.company_id=f.company_id WHERE f.public_token=? AND f.status='ACTIVE' AND c.status='ACTIVE' FOR UPDATE",[$token])->fetch();
             if(!$form) throw new OutOfBoundsException('Form not found');
             $old=self::query($db,'SELECT id,form_id,payload_hash FROM lead_requests WHERE company_id=? AND submission_key=?',[$form['company_id'],$key])->fetch();
             if($old) {
                 if((int)$old['form_id']!==(int)$form['id'] || !hash_equals($old['payload_hash'],$hash)) throw new DomainException('Submission key already used for different content');
+                if($onAccepted)$onAccepted((int)$form['company_id'],(int)$old['id']);
                 return ['accepted'=>true];
             }
             $window=date('Y-m-d H:i:00');
@@ -74,6 +75,7 @@ final class LeadHub {
                 $form['company_id'],$form['id'],$form['campaign_id'],$form['source'],$key,$hash,$payload['contact_name'],$payload['email']?:null,$payload['phone']?:null,$payload['travel_date']?:null,
                 $payload['total_guests'],$payload['paying_pax'],$payload['foc'],$payload['destination'],$payload['hotel_level'],$payload['message'],json_encode($payload['attribution'],JSON_THROW_ON_ERROR)]);
             $id=(int)$db->lastInsertId();
+            if($onAccepted)$onAccepted((int)$form['company_id'],$id);
             Audit::log($db,(int)$form['company_id'],null,'LEAD_REQUEST_RECEIVED','lead_request',$id,null,['form_id'=>$form['id'],'campaign_id'=>$form['campaign_id']]);
             return ['accepted'=>true];
         });
