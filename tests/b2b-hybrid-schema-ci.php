@@ -47,4 +47,15 @@ verifyHybrid(isset($fields['assigned_to_user_id'],$fields['source_quote_version_
 verifyHybrid(in_array('quote_versions',$byTable['b2b_net_requests']??[],true)
     &&in_array('users',$byTable['b2b_net_requests']??[],true),
     'B2B NET provenance and assignee columns are constrained to existing records');
-echo 'B2B migration 038/045 disposable MariaDB schema acceptance complete.'.PHP_EOL;
+$m46=$db->query("SELECT status FROM migration_checksums WHERE version='046_b2b_net_request_idempotency'")->fetchColumn();
+verifyHybrid($m46==='APPLIED','Real 046 NET idempotency migration applied on disposable MariaDB');
+$columns=$db->query('SHOW COLUMNS FROM b2b_net_requests')->fetchAll(PDO::FETCH_ASSOC);
+$columns=array_column($columns,null,'Field');
+verifyHybrid(isset($columns['request_key_hash'],$columns['request_payload_hash'])
+    &&$columns['request_key_hash']['Null']==='YES'&&$columns['request_payload_hash']['Null']==='YES',
+    'Old NET requests are preserved with nullable idempotency metadata');
+$idx=$db->query("SELECT INDEX_NAME,COLUMN_NAME,NON_UNIQUE,SEQ_IN_INDEX FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='b2b_net_requests' AND INDEX_NAME='uq_b2b_net_retry' ORDER BY SEQ_IN_INDEX")->fetchAll(PDO::FETCH_ASSOC);
+verifyHybrid(count($idx)===3&&array_column($idx,'COLUMN_NAME')===['company_id','agency_id','request_key_hash']
+    &&array_sum(array_map('intval',array_column($idx,'NON_UNIQUE')))===0,
+    'Unique retry key scoped to company and agency, not shared between partners');
+echo 'B2B migration 038/045/046 disposable MariaDB schema acceptance complete.'.PHP_EOL;
