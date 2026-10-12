@@ -25,6 +25,13 @@ async function rejects(h,route,body,status){await assert.rejects(post(h,route,bo
   await click(potential,'[data-vs1-status="REJECTED"]');await click(potential,'[data-vs1-action="restore-potential"]');set(potential,'reason','Customer returned');await submit(potential);assert.equal(lastPost(potential).body.expected_version,2);
   console.log('PASS close/restore request UI carries reason, revision and action key');
  }finally{potential.close();}
+const salesPotential=harness();try{
+ await salesPotential.render();await click(salesPotential,'[data-vs1-action="follow-later"]');set(salesPotential,'reason','Later call');set(salesPotential,'next_action_due','2027-01-06T09:00');await submit(salesPotential);
+ assert.equal(lastPost(salesPotential).route,'lead-hub/leads/2/follow-later');await click(salesPotential,'[data-vs1-status="FOLLOW_LATER"]');assert(!salesPotential.d.querySelector('[data-vs1-action="convert"]'));
+ await click(salesPotential,'[data-vs1-action="not-potential"]');set(salesPotential,'reason','BUDGET_MISMATCH');await submit(salesPotential);await click(salesPotential,'[data-vs1-status="NOT_POTENTIAL"]');await click(salesPotential,'[data-vs1-action="restore-potential"]');set(salesPotential,'reason','Returned');await submit(salesPotential);
+ assert.equal(salesPotential.api.leads[0].handover_status,'PENDING');assert.equal(salesPotential.api.leads.length,2);assert.equal(salesPotential.api.tasks.filter(r=>r.entity_type==='lead'&&r.entity_id===2&&r.status==='OPEN').length,1);
+ console.log('PASS handed-over Sales lead defers, closes and restores original stage with singular reminder');
+}finally{salesPotential.close();}
 const later=harness({mode:'marketing',language:'vi'});try{
  await later.render();await click(later,'[data-vs1-action="follow-later"]');set(later,'reason','Customer requested a later call');set(later,'next_action_due','2027-01-03T09:30');await submit(later);
  assert.equal(lastPost(later).body.next_action_due,'2027-01-03 09:30:00');assert.equal(later.api.tasks.filter(r=>r.rule_code==='LEAD_REQUEST_FOLLOWUP'&&r.status==='OPEN').length,1);

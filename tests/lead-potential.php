@@ -35,3 +35,23 @@ rejects(fn()=>LeadSalesHandover::requestFollowLater($db,$user,$request,array_rep
 LeadSalesHandover::requestFollowLater($db,$user,$request,array_replace($defer,['expected_version'=>6,'action_key'=>'defer-again-fixture-001']));
 LeadSalesHandover::requestPotential($db,$user,$request,array_replace($close,['expected_version'=>7,'action_key'=>'close-deferred-fixture-001']));
 check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead_request' AND entity_id=$request AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status='OPEN'")->fetchColumn()===0,'not potential closes deferred reminder');
+
+LeadHub::submit($db,$potentialToken,array_replace($body,['submission_key'=>'potential-sales-fixture-001']));
+$salesRequest=(int)$db->query('SELECT MAX(id) FROM lead_requests')->fetchColumn();
+$salesLead=fixtureQualifyLead($db,$user,$salesRequest,'Confirmed contact');$salesId=$salesLead['id'];
+$salesDefer=['expected_version'=>1,'action_key'=>'sales-defer-fixture-001','reason'=>'Later call','next_action_due'=>'2027-01-06 09:00:00'];
+$paused=LeadSalesHandover::potential($db,$user,$salesId,$salesDefer,'follow-later');
+check($paused['handover_status']==='FOLLOW_LATER','handed-over lead can defer');
+check(LeadSalesHandover::potential($db,$user,$salesId,$salesDefer,'follow-later')===$paused,'deferred Sales command retry is idempotent');
+$closedSales=LeadSalesHandover::potential($db,$user,$salesId,['expected_version'=>2,'action_key'=>'sales-close-fixture-001','reason'=>'BUDGET_MISMATCH'],'not-potential');
+check($closedSales['handover_status']==='NOT_POTENTIAL','Sales closure distinct from inquiry LOST');
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead' AND entity_id=$salesId AND status='OPEN'")->fetchColumn()===0,'closing Sales lead completes reminders');
+$reopened=LeadSalesHandover::potential($db,$user,$salesId,['expected_version'=>3,'action_key'=>'sales-restore-fixture-001','reason'=>'Customer returned'],'restore-potential');
+check($reopened['handover_status']==='PENDING','restoration retains original handover stage');
+check((int)$db->query("SELECT COUNT(*) FROM leads WHERE request_id=$salesRequest")->fetchColumn()===1,'restoration preserves singular lead');
+rejects(fn()=>LeadSalesHandover::potential($db,['id'=>2,'company_id'=>2],$salesId,['expected_version'=>4,'action_key'=>'foreign-sales-fixture-001','reason'=>'OTHER','note'=>'Foreign'],'not-potential'),OutOfBoundsException::class,'foreign company cannot close Sales lead');
+rejects(fn()=>LeadSalesHandover::potential($db,$user,$lead['id'],['expected_version'=>$conversion['handover_version']??3,'action_key'=>'converted-close-fixture-001','reason'=>'SPAM'],'not-potential'),DomainException::class,'converted lead cannot be reopened through potential actions');
+$acceptedPotential=LeadSalesHandover::accept($db,$user,$salesId,['expected_version'=>4,'action_key'=>'accept-potential-fixture-001','next_action_due'=>'2027-01-07 09:00:00']);
+LeadSalesHandover::potential($db,$user,$salesId,['expected_version'=>5,'action_key'=>'close-accepted-fixture-001','reason'=>'SPAM'],'not-potential');
+$restoredAccepted=LeadSalesHandover::potential($db,$user,$salesId,['expected_version'=>6,'action_key'=>'restore-accepted-fixture-001','reason'=>'Verified customer'],'restore-potential');
+check($restoredAccepted['handover_status']==='ACCEPTED'&&$restoredAccepted['sales_owner_user_id']===$acceptedPotential['sales_owner_user_id'],'restore preserves prior Sales acceptance and owner');

@@ -48,11 +48,11 @@ final class LeadSalesHandover {
     }
     private static function history(PDO $db,array $user,array $lead,?string $from,string $action,?string $reason): void {
         $owner=(int)($lead['sales_owner_user_id']?:$lead['owner_user_id']);
-        if(in_array($lead['handover_status'],['RETURNED','PENDING'],true))$owner=(int)$lead['owner_user_id'];
+        if(in_array($lead['handover_status'],['RETURNED','PENDING'],true)||in_array($lead['potential_previous_status']??'', ['RETURNED','PENDING'],true))$owner=(int)$lead['owner_user_id'];
         self::query($db,'INSERT INTO lead_sales_history(company_id,lead_id,handover_version,action_code,from_status,to_status,actor_user_id,owner_user_id,next_action_due,reason) VALUES(?,?,?,?,?,?,?,?,?,?)',[$user['company_id'],$lead['id'],$lead['handover_version'],$action,$from,$lead['handover_status'],$user['id'],$owner,$lead['next_action_due'],$reason]);
     }
     private static function closeLeadTasks(PDO $db,int $company,int $lead): void {
-        self::query($db,"UPDATE tasks SET status='DONE',completed_at=CURRENT_TIMESTAMP WHERE company_id=? AND entity_type='lead' AND entity_id=? AND source='AUTOMATION' AND rule_code IN ('LEAD_SALES_REVIEW','LEAD_SALES_NEXT_ACTION','LEAD_REQUALIFY') AND status IN ('OPEN','SNOOZED')",[$company,$lead]);
+        self::query($db,"UPDATE tasks SET status='DONE',completed_at=CURRENT_TIMESTAMP WHERE company_id=? AND entity_type='lead' AND entity_id=? AND source='AUTOMATION' AND rule_code IN ('LEAD_SALES_REVIEW','LEAD_SALES_NEXT_ACTION','LEAD_REQUALIFY','LEAD_POTENTIAL_FOLLOWUP') AND status IN ('OPEN','SNOOZED')",[$company,$lead]);
     }
     private static function task(array $lead,string $title,string $rule,?int $owner=null): array {
         return ['title'=>$title,'entity_type'=>'lead','entity_id'=>(int)$lead['id'],'owner_user_id'=>$owner??(int)$lead['owner_user_id'],'due_at'=>$lead['next_action_due'],'rule_code'=>$rule];
@@ -121,6 +121,35 @@ final class LeadSalesHandover {
             Audit::log($db,$cid,(int)$user['id'],$restore?'LEAD_REQUEST_RESTORED':'LEAD_REQUEST_NOT_POTENTIAL','lead_request',$requestId,['status'=>$row['status'],'version_no'=>(int)$row['version_no']],$result+['reason'=>$reason,'note'=>$note]);
             DomainOutbox::commandResult($db,$user,$key,$hash,'lead_request',$requestId,$result);
             return $result;
+        });
+    }
+    public static function potential(PDO $db,array $user,int $id,array $b,string $action): array {
+        self::permissions($db,$user,['lead.view','lead.manage']);
+        if(!in_array($action,['not-potential','restore-potential','follow-later','resume'],true))throw new InvalidArgumentException('Invalid potential action');
+        $key=self::action($b);$hash=DomainOutbox::hash(['action'=>$action,'lead_id'=>$id,'body'=>$b]);
+        return self::transaction($db,function()use($db,$user,$id,$b,$action,$key,$hash){
+            $cid=(int)$user['company_id'];[$lead,$request]=self::lock($db,$cid,$id);
+            if($old=DomainOutbox::commandReplay($db,$user,$key,$hash))return $old;
+            self::version($lead,$b,'handover_version');$from=$lead['handover_status'];
+            if($lead['inquiry_id']||$from==='CONVERTED')throw new DomainException('Converted lead must be handled through its inquiry');
+            $restore=in_array($action,['restore-potential','resume'],true);$follow=$action==='follow-later';
+            $allowed=$restore?[$action==='resume'?'FOLLOW_LATER':'NOT_POTENTIAL']:['PENDING','ACCEPTED','RETURNED','FOLLOW_LATER'];
+            if(!in_array($from,$allowed,true))throw new DomainException('INVALID_LEAD_TRANSITION');
+            $reason=self::text($b,'reason',120,true);$note=self::text($b,'note',4000);
+            if($action==='not-potential'&&!in_array($reason,['SPAM','INVALID_CONTACT','UNREACHABLE','PRODUCT_MISMATCH','BUDGET_MISMATCH','UNAVAILABLE','COMPETITOR','REFERENCE_ONLY','OTHER'],true))throw new InvalidArgumentException('Invalid closure reason');
+            if($action==='not-potential'&&$reason==='OTHER'&&$note==='')throw new InvalidArgumentException('Other reason requires a note');
+            $previous=in_array($from,['FOLLOW_LATER','NOT_POTENTIAL'],true)?$lead['potential_previous_status']:$from;
+            if(!in_array($previous,['PENDING','ACCEPTED','RETURNED'],true))throw new DomainException('Missing prior handover stage');
+            $status=$restore?$previous:($follow?'FOLLOW_LATER':'NOT_POTENTIAL');
+            $due=$follow?self::due($b):$lead['next_action_due'];
+            $owner=(int)($previous==='ACCEPTED'?$lead['sales_owner_user_id']:$lead['owner_user_id']);
+            if($status!=='NOT_POTENTIAL'){self::activeUser($db,$cid,$owner);if(!$due)throw new InvalidArgumentException('Follow-up deadline is required');}
+            self::query($db,'UPDATE leads SET handover_status=?,potential_previous_status=?,next_action_due=?,handover_version=handover_version+1 WHERE company_id=? AND id=?',[$status,$restore?null:$previous,$due,$cid,$id]);
+            $changed=self::query($db,'SELECT * FROM leads WHERE company_id=? AND id=?',[$cid,$id])->fetch(PDO::FETCH_ASSOC);
+            self::closeLeadTasks($db,$cid,$id);self::history($db,$user,$changed,$from,strtoupper(str_replace('-','_',$action)),$reason.($note!==''?' — '.$note:''));
+            $rule=$status==='FOLLOW_LATER'?'LEAD_POTENTIAL_FOLLOWUP':($status==='ACCEPTED'?'LEAD_SALES_NEXT_ACTION':($status==='RETURNED'?'LEAD_REQUALIFY':'LEAD_SALES_REVIEW'));
+            DomainOutbox::event($db,$user,'lead.'.str_replace('-','_',$action),'lead',$id,(int)$changed['handover_version'],['from_status'=>$from,'to_status'=>$status],$status==='NOT_POTENTIAL'?null:self::task($changed,'Follow up lead',$rule,$owner));
+            $result=self::summary($changed);Audit::log($db,$cid,(int)$user['id'],'LEAD_'.strtoupper(str_replace('-','_',$action)),'lead',$id,self::summary($lead),$result+['reason'=>$reason,'note'=>$note]);DomainOutbox::commandResult($db,$user,$key,$hash,'lead',$id,$result);return $result;
         });
     }
     public static function accept(PDO $db,array $user,int $id,array $b): array { return self::decision($db,$user,$id,$b,'accept'); }
@@ -218,12 +247,12 @@ final class LeadSalesHandover {
     public static function leads(PDO $db,array $user,array $filters=[]): array {
         self::permissions($db,$user,['lead.view']);$cid=(int)$user['company_id'];$where='l.company_id=?';$args=[$cid];
         foreach(['lead_id'=>'l.id','request_id'=>'l.request_id'] as $key=>$column)if(isset($filters[$key])){$where.=' AND '.$column.'=?';$args[]=self::id($filters,$key,0,true);}
-        $status=self::text($filters,'handover_status',24);if($status!==''){if(!in_array($status,['PENDING','ACCEPTED','RETURNED','CONVERTED'],true))throw new InvalidArgumentException('Invalid handover_status');$where.=' AND l.handover_status=?';$args[]=$status;}
+        $status=self::text($filters,'handover_status',24);if($status!==''){if(!in_array($status,['PENDING','ACCEPTED','RETURNED','CONVERTED','FOLLOW_LATER','NOT_POTENTIAL'],true))throw new InvalidArgumentException('Invalid handover_status');$where.=' AND l.handover_status=?';$args[]=$status;}
         $limit=self::id($filters,'limit',100,true);$offset=self::id($filters,'offset');if($limit>100||$offset>100000)throw new InvalidArgumentException('Invalid pagination');
         $total=(int)self::query($db,'SELECT COUNT(*) FROM leads l WHERE '.$where,$args)->fetchColumn();
         $rows=self::query($db,"SELECT l.*,r.contact_name,r.email,r.phone,r.source,r.campaign_id,r.attribution_json,r.destination,r.travel_date,r.total_guests,r.paying_pax,r.foc,r.message,r.hotel_level,u.full_name owner_name,s.full_name sales_owner_name FROM leads l JOIN lead_requests r ON r.id=l.request_id AND r.company_id=l.company_id LEFT JOIN users u ON u.id=l.owner_user_id AND u.company_id=l.company_id LEFT JOIN users s ON s.id=l.sales_owner_user_id AND s.company_id=l.company_id WHERE $where ORDER BY l.id DESC LIMIT $limit OFFSET $offset",$args)->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$row)$row['history']=self::query($db,'SELECT h.*,u.full_name actor_name FROM lead_sales_history h LEFT JOIN users u ON u.id=h.actor_user_id AND u.company_id=h.company_id WHERE h.company_id=? AND h.lead_id=? ORDER BY h.handover_version',[$cid,$row['id']])->fetchAll(PDO::FETCH_ASSOC);unset($row);
-        $counts=['PENDING'=>0,'ACCEPTED'=>0,'RETURNED'=>0,'CONVERTED'=>0];foreach(self::query($db,'SELECT handover_status,COUNT(*) total FROM leads WHERE company_id=? GROUP BY handover_status',[$cid])->fetchAll(PDO::FETCH_ASSOC) as $r)$counts[$r['handover_status']]=(int)$r['total'];
+        $counts=['FOLLOW_LATER'=>0,'NOT_POTENTIAL'=>0,'PENDING'=>0,'ACCEPTED'=>0,'RETURNED'=>0,'CONVERTED'=>0];foreach(self::query($db,'SELECT handover_status,COUNT(*) total FROM leads WHERE company_id=? GROUP BY handover_status',[$cid])->fetchAll(PDO::FETCH_ASSOC) as $r)$counts[$r['handover_status']]=(int)$r['total'];
         return ['items'=>$rows,'total'=>$total,'counts'=>$counts,'limit'=>$limit,'offset'=>$offset];
     }
 }

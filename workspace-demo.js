@@ -33,7 +33,7 @@
   const company=Number(api.user?.company_id);
   return array(rows).filter(row=>row.company_id===undefined||Number(row.company_id)===company);
  }
- const handoverStates=['PENDING','ACCEPTED','RETURNED','CONVERTED'];
+ const handoverStates=['PENDING','ACCEPTED','RETURNED','CONVERTED','FOLLOW_LATER','NOT_POTENTIAL'];
  const contactEmail=v=>String(v||'').trim().toLowerCase(),contactPhone=v=>String(v||'').replace(/\D/g,'');
  const newId=rows=>array(rows).reduce((max,row)=>Math.max(max,Number(row.id)||0),0)+1;
  function requests(api){return scoped(api,api.leadRequests||api.lead_requests||api.requests);}
@@ -50,12 +50,27 @@
  function permission(can,keys){if(!keys.every(can))fail(403,'This action is not permitted.');}
  function commandKey(api,route,body){const raw=body.action_key;if(typeof raw!=='string'||!/^[a-zA-Z0-9_-]{16,80}$/.test(raw))fail(422,'Invalid action_key.');const key=api.user.company_id+':'+api.user.id+':'+raw,hash=JSON.stringify(body),old=api.leadActions?.[key];if(old&&(old.route!==route||old.hash!==hash))fail(409,'Action key already used for different content.');return {key,hash,old};}
  function remember(api,route,command,result){api.leadActions||={};api.leadActions[command.key]={route,hash:command.hash,result:copy(result)};return {...result,preview_only:true};}
- function closeLeadTasks(api,lead){scoped(api,api.tasks).filter(row=>row.entity_type==='lead'&&Number(row.entity_id)===Number(lead.id)&&row.source==='AUTOMATION'&&['LEAD_SALES_REVIEW','LEAD_SALES_NEXT_ACTION','LEAD_REQUALIFY'].includes(row.rule_code)&&['OPEN','SNOOZED'].includes(row.status)).forEach(row=>row.status='DONE');}
+ function closeLeadTasks(api,lead){scoped(api,api.tasks).filter(row=>row.entity_type==='lead'&&Number(row.entity_id)===Number(lead.id)&&row.source==='AUTOMATION'&&['LEAD_SALES_REVIEW','LEAD_SALES_NEXT_ACTION','LEAD_REQUALIFY','LEAD_POTENTIAL_FOLLOWUP'].includes(row.rule_code)&&['OPEN','SNOOZED'].includes(row.status)).forEach(row=>row.status='DONE');}
  function updateTask(api,lead,owner,deadline){api.tasks||=[];const execution='lead-'+lead.id+'-version-'+lead.handover_version;if(scoped(api,api.tasks).some(row=>row.execution_key===execution))return;closeLeadTasks(api,lead);api.tasks.push({id:newId(api.tasks),company_id:Number(api.user.company_id),entity_type:'lead',entity_id:lead.id,priority:'NORMAL',source:'AUTOMATION',rule_code:lead.handover_status==='PENDING'?'LEAD_SALES_REVIEW':lead.handover_status==='RETURNED'?'LEAD_REQUALIFY':'LEAD_SALES_NEXT_ACTION',execution_key:execution,title:lead.handover_status==='PENDING'?'Review marketing handover':lead.handover_status==='RETURNED'?'Review returned lead':'Follow up accepted lead',owner_user_id:owner,due_at:deadline,status:'OPEN'});}
  function stage(api,lead,status,reason,owner,deadline){const before=lead.handover_status||'PENDING',stamp=clock().as_of;lead.handover_status=status;lead.handover_version=(Number(lead.handover_version)||1)+1;lead.history||=[];lead.history.push({from_status:before,to_status:status,reason:reason||null,actor_user_id:Number(api.user.id),created_at:stamp});if(owner)lead.sales_owner_user_id=status==='ACCEPTED'?owner:lead.sales_owner_user_id;if(deadline)lead.next_action_due=deadline;api.leadEvents||=[];api.leadEvents.push({id:newId(api.leadEvents),company_id:Number(api.user.company_id),entity_type:'lead',entity_id:lead.id,event:status==='ACCEPTED'?'lead.sales_accepted':status==='PENDING'?'lead.qualified':status==='RETURNED'?'lead.sales_returned':'lead.converted',created_at:stamp});if(status==='CONVERTED')closeLeadTasks(api,lead);}
  async function handover(api,path,method,query,body,can){
   let match;
   if(method==='GET'&&(match=/^lead-hub\/leads\/(\d+)\/customer-candidates$/.exec(path))){permission(can,['lead.view','sales.view']);const lead=leads(api).find(row=>Number(row.id)===Number(match[1]));if(!lead)fail(404,'Lead not found.');if(lead.handover_status!=='ACCEPTED')fail(409,'Sales must accept the lead before identity review.');const items=candidates(api,lead),key='preview-review-'+Date.now()+'-'+Math.random().toString(36).slice(2);api.leadIdentityReviews||={};api.leadIdentityReviews[key]={company:Number(api.user.company_id),lead_id:lead.id,actor:Number(api.user.id),version:lead.handover_version,hash:JSON.stringify(items),expires:Date.now()+15*60000};return {ok:true,items,identity_review_key:key,expires_at:new Date(Date.now()+15*60000).toISOString(),handover_version:lead.handover_version,preview_only:true};}
+  if(method==='POST'&&(match=/^lead-hub\/leads\/(\d+)\/(not-potential|restore-potential|follow-later|resume)$/.exec(path))){
+   permission(can,['lead.view','lead.manage']);const lead=scoped(api,api.leads).find(row=>Number(row.id)===Number(match[1]));if(!lead)fail(404,'Lead not found.');
+   const cmd=commandKey(api,path,body);if(cmd.old)return {ok:true,...copy(cmd.old.result),preview_only:true};
+   if(Number(body.expected_version)!==(Number(lead.handover_version)||1))fail(409,'Lead changed. Refresh and retry.');
+   const action=match[2],from=lead.handover_status||'PENDING',restore=['restore-potential','resume'].includes(action),follow=action==='follow-later';
+   if(lead.inquiry_id||from==='CONVERTED'||!(restore?[action==='resume'?'FOLLOW_LATER':'NOT_POTENTIAL']:['PENDING','ACCEPTED','RETURNED','FOLLOW_LATER']).includes(from))fail(409,'Invalid lead transition.');
+   if(typeof body.reason!=='string'||!body.reason.trim()||body.reason.length>120||typeof (body.note??'')!=='string'||(body.note??'').length>4000)fail(422,'A valid reason and note are required.');
+   if(action==='not-potential'&&(!['SPAM','INVALID_CONTACT','UNREACHABLE','PRODUCT_MISMATCH','BUDGET_MISMATCH','UNAVAILABLE','COMPETITOR','REFERENCE_ONLY','OTHER'].includes(body.reason)||(body.reason==='OTHER'&&!String(body.note||'').trim())))fail(422,'Invalid closure reason.');
+   const previous=['FOLLOW_LATER','NOT_POTENTIAL'].includes(from)?lead.potential_previous_status:from;if(!['PENDING','ACCEPTED','RETURNED'].includes(previous))fail(409,'Missing prior stage.');
+   const status=restore?previous:follow?'FOLLOW_LATER':'NOT_POTENTIAL',deadline=follow?due(body.next_action_due):lead.next_action_due;
+   const owner=previous==='ACCEPTED'?lead.sales_owner_user_id:lead.owner_user_id;if(status!=='NOT_POTENTIAL'){requiredOwner(api,owner);due(deadline);}
+   lead.potential_previous_status=restore?null:previous;lead.next_action_due=deadline;stage(api,lead,status,body.reason+(body.note?' — '+body.note:''),null,deadline);closeLeadTasks(api,lead);
+   if(status!=='NOT_POTENTIAL'){updateTask(api,lead,owner,deadline);const task=api.tasks.at(-1);if(status==='FOLLOW_LATER')task.rule_code='LEAD_POTENTIAL_FOLLOWUP';}
+   return {ok:true,...remember(api,path,cmd,{id:lead.id,request_id:lead.request_id,handover_status:status,handover_version:lead.handover_version,next_action_due:deadline})};
+  }
   if(method==='POST'&&(match=/^lead-hub\/requests\/(\d+)\/(not-potential|restore-potential|follow-later|resume)$/.exec(path))){
    permission(can,['lead.view','lead.manage']);const row=requests(api).find(row=>Number(row.id)===Number(match[1]));if(!row)fail(404,'Request not found.');
    const cmd=commandKey(api,path,body);if(cmd.old)return {ok:true,...copy(cmd.old.result),preview_only:true};
