@@ -169,11 +169,31 @@ async function adminScreen(){
  app.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{if(!confirm('Revoke this published version? Existing agency drafts retain their historical snapshots but cannot quote or book.'))return;try{await request('b2b/admin/publications/'+Number(b.dataset.revoke)+'/revoke',{method:'POST',body:{}});render();}catch(e){status(e.message,true);}});
 }
 async function netRequestsScreen(){
- const r=await request('b2b/net-requests');
- const rows=(r.items||[]).map(t=>'<tr><td>#'+t.id+'</td><td>'+t.agency_id+'</td><td>'+esc(t.departure_date)+'</td><td>'+Number(t.paying_pax)+' + '+Number(t.foc_pax)+' FOC</td><td>'+esc(t.mode)+' · H'+esc(t.hotel_level)+'★ · C'+esc(t.cruise_level||'-')+'</td><td>'+esc(t.status)+'</td><td>'+(t.status==='CLOSED'?'Closed':'<button class="hub-btn" data-net="'+t.id+'">Mark In Review</button>')+'</td></tr>').join('');
- shell('NET Requests','Sales B2B queue · Approved NET must originate from reviewed quotations',
- '<div class="hub-box"><div style="overflow:auto"><table class="hub-table"><thead><tr><th>ID</th><th>Agency</th><th>Departure</th><th>PAX</th><th>Options</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>');
- app.querySelectorAll('[data-net]').forEach(b=>b.onclick=async()=>{try{await request('b2b/admin/net-requests/'+b.dataset.net+'/status',{method:'POST',body:{status:'IN_REVIEW'}});await netRequestsScreen();status('Request marked In Review');}catch(e){status(e.message,true);}});
+ const [r,staff]=await Promise.all([request('b2b/net-requests'),request('b2b/admin/net-assignees')]);
+ const assignees=staff.items||[];
+ const rows=(r.items||[]).map(t=>{
+  const id=Number(t.id),closed=t.status==='CLOSED';
+  const owner=Number(t.assigned_to_user_id||0);
+  const selector='<select aria-label="Assigned quotation owner for NET request '+id+'" data-assignee="'+id+'" '+(closed?'disabled':'')+'><option value="">Assign Sales…</option>'+assignees.map(s=>'<option value="'+Number(s.id)+'" '+(Number(s.id)===owner?'selected':'')+'>'+esc(s.name)+'</option>').join('')+'</select>';
+  const assigned=closed?(t.source_quote_version_id?'Linked Quote Version #'+Number(t.source_quote_version_id):'Historical closed · no linked quote'):'<div class="hub-form">'+selector+'<button class="hub-btn" data-net-assign="'+id+'">Assign</button><label>Issued Quote Version ID<input type="number" min="1" step="1" data-net-version="'+id+'" placeholder="Version ID"></label><button class="hub-btn" data-net-resolve="'+id+'">Verify NET & close</button></div>';
+  return '<tr><td>#'+id+'</td><td>'+Number(t.agency_id)+'</td><td>'+esc(t.departure_date)+'</td><td>'+Number(t.paying_pax)+' + '+Number(t.foc_pax)+' FOC</td><td>'+esc(t.mode)+' · H'+esc(t.hotel_level)+'★ · C'+esc(t.cruise_level||'-')+'</td><td>'+esc(t.status)+'</td><td>'+assigned+'</td></tr>';
+ }).join('');
+ shell('NET Requests','Assign a quotation owner; close only against an issued quote matching departure, paying PAX, FOC and Hotel/Cruise. Supplier availability and Booking remain unconfirmed.',
+ '<div class="hub-box"><div style="overflow:auto"><table class="hub-table"><thead><tr><th>ID</th><th>Agency</th><th>Departure</th><th>PAX</th><th>Options</th><th>Status</th><th>Sales review / Approved Quote</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>');
+ app.querySelectorAll('[data-net-assign]').forEach(button=>button.onclick=async()=>{
+  const id=Number(button.dataset.netAssign),selected=app.querySelector('[data-assignee="'+id+'"]');
+  const owner=Number(selected?.value);if(!Number.isSafeInteger(owner)||owner<1)return status('Select an active Sales user to assign',true);
+  button.disabled=true;
+  try{await request('b2b/admin/net-requests/'+id+'/assign',{method:'POST',body:{assigned_to_user_id:owner}});await netRequestsScreen();status('NET request assigned for Sales review');}
+  catch(e){button.disabled=false;status(e.message,true);}
+ });
+ app.querySelectorAll('[data-net-resolve]').forEach(button=>button.onclick=async()=>{
+  const id=Number(button.dataset.netResolve),version=Number(app.querySelector('[data-net-version="'+id+'"]')?.value);
+  if(!Number.isSafeInteger(version)||version<1)return status('Enter a valid SENT/CONFIRMED Quote Version ID',true);
+  button.disabled=true;
+  try{await request('b2b/admin/net-requests/'+id+'/status',{method:'POST',body:{status:'CLOSED',source_quote_version_id:version}});await netRequestsScreen();status('Approved NET source linked. Supplier availability and booking still require review.');}
+  catch(e){button.disabled=false;status(e.message,true);}
+ });
 }
 async function requestsScreen(){
  const r=await request('b2b/admin/requests');
