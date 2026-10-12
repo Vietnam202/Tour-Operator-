@@ -66,6 +66,16 @@ async function runCheck(config,fetchImpl=globalThis.fetch){
   }
   const health=await code('health',200);
   assertResponse(health.data?.ok===true&&health.data.service==='VTA API','BLOCK_STAGING_HEALTH');
+  // A health 200 on the right DNS can still be an old/incorrect PHP tree.
+  // Fail closed until the running API proves it holds the exact candidate
+  // source SHA and inventory hash of the ZIP independently approved offline.
+  const build=health.data?.build;
+  assertResponse(build?.status==='PINNED_PACKAGE'
+    &&build.source_commit===config.sha
+    &&/^[a-f0-9]{64}$/.test(String(build.source_inventory_sha256||''))
+    &&Number.isInteger(build.source_file_count)
+    &&build.source_file_count>=75,'BLOCK_STAGING_BUILD_IDENTITY_MISMATCH');
+  pass('LIVE_RUNTIME_EXACT_CANDIDATE_SHA');
   assertResponse(/no-store/i.test(health.headers.get('cache-control')||''),
     'BLOCK_STAGING_API_CACHE_POLICY');
   pass('STAGING_HTTPS_HEALTH_NO_STORE');
