@@ -223,6 +223,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$VS22_OUTPUT_DIR"
           php tests/vs23-native.php | tee "$VS22_OUTPUT_DIR/handover-native.log"
+          php tests/lead-potential.php | tee "$VS22_OUTPUT_DIR/lead-potential-native.log"
       - name: Domain regression, pricing and official staging safety rules
         run: |
           set -euo pipefail
