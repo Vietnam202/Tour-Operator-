@@ -91,11 +91,22 @@ final class SalesHandover {
                 // the change is IMPLEMENTED/REJECTED. Supplier bookings are untouched.
                 $handover=self::q($db,'SELECT * FROM booking_handovers WHERE booking_id=? FOR UPDATE',[$booking])->fetch(PDO::FETCH_ASSOC);
                 if($handover&&$handover['stage']==='HANDED_TO_OPERATIONS'){
-                    self::q($db,"UPDATE booking_handovers SET stage='HANDOVER_PREPARATION',intake_status='NEEDS_REVIEW',accepted_by=NULL,accepted_at=NULL,revision=revision+1 WHERE booking_id=?",[$booking]);
+                    self::q($db,"UPDATE booking_handovers SET stage='HANDOVER_PREPARATION',intake_status='NEEDS_REVIEW',checklist_json='{}',accepted_by=NULL,accepted_at=NULL,revision=revision+1 WHERE booking_id=?",[$booking]);
                     $review=self::q($db,'SELECT * FROM booking_handovers WHERE booking_id=?',[$booking])->fetch(PDO::FETCH_ASSOC);
                     self::event($db,$u,$review,'BOOKING_CHANGE_REQUIRES_REHANDOVER','New change request #'.$id);
                 }
-            }else{$old=self::q($db,'SELECT * FROM booking_change_requests WHERE booking_id=? AND id=? FOR UPDATE',[$booking,$id])->fetch()?:throw new OutOfBoundsException('Change request not found');if(!isset($b['expected_revision'])||(int)$b['expected_revision']!==(int)$old['revision'])throw new DomainException('STALE_CHANGE_REVISION');$allowed=['OPEN'=>['UNDER_REVIEW'],'UNDER_REVIEW'=>['APPROVED','REJECTED'],'APPROVED'=>['IMPLEMENTED'],'REJECTED'=>[],'IMPLEMENTED'=>[]];$status=$b['status']??'';if(!in_array($status,$allowed[$old['status']],true))throw new DomainException('INVALID_CHANGE_TRANSITION');$reason=QuoteVs2Domain::text($b['reason']??'',1000);self::q($db,'UPDATE booking_change_requests SET status=?,revision=revision+1,updated_by=? WHERE id=?',[$status,$u['id'],$id]);$event='BOOKING_CHANGE_REQUEST_'. $status;}
+            }else{$old=self::q($db,'SELECT * FROM booking_change_requests WHERE booking_id=? AND id=? FOR UPDATE',[$booking,$id])->fetch()?:throw new OutOfBoundsException('Change request not found');if(!isset($b['expected_revision'])||(int)$b['expected_revision']!==(int)$old['revision'])throw new DomainException('STALE_CHANGE_REVISION');$allowed=['OPEN'=>['UNDER_REVIEW'],'UNDER_REVIEW'=>['APPROVED','REJECTED'],'APPROVED'=>['IMPLEMENTED'],'REJECTED'=>[],'IMPLEMENTED'=>[]];$status=$b['status']??'';if(!in_array($status,$allowed[$old['status']],true))throw new DomainException('INVALID_CHANGE_TRANSITION');$reason=QuoteVs2Domain::text($b['reason']??'',1000);self::q($db,'UPDATE booking_change_requests SET status=?,revision=revision+1,updated_by=? WHERE id=?',[$status,$u['id'],$id]);$event='BOOKING_CHANGE_REQUEST_'. $status;
+                if(in_array($status,['IMPLEMENTED','REJECTED'],true)){
+                    // The final change decision is new business information.
+                    // A checklist checked before the decision cannot certify it.
+                    $h=self::q($db,'SELECT * FROM booking_handovers WHERE booking_id=? FOR UPDATE',[$booking])->fetch(PDO::FETCH_ASSOC);
+                    if($h&&$h['stage']==='HANDOVER_PREPARATION'&&$h['intake_status']==='NEEDS_REVIEW'){
+                        self::q($db,"UPDATE booking_handovers SET checklist_json='{}',revision=revision+1 WHERE booking_id=?",[$booking]);
+                        $next=self::q($db,'SELECT * FROM booking_handovers WHERE booking_id=?',[$booking])->fetch(PDO::FETCH_ASSOC);
+                        self::event($db,$u,$next,'BOOKING_CHANGE_SETTLED_REVIEW_REQUIRED','Decision '.$status.' #'.$id);
+                    }
+                }
+            }
             Audit::log($db,(int)$u['company_id'],(int)$u['id'],$event,'booking_change_request',$id,null,['booking_id'=>$booking,'reason'=>$reason??null]);return self::q($db,'SELECT id,booking_id,source,description,commercial_impact,impact_description,status,revision,created_at FROM booking_change_requests WHERE id=?',[$id])->fetch();
         });
     }
