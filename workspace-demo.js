@@ -56,6 +56,21 @@
  async function handover(api,path,method,query,body,can){
   let match;
   if(method==='GET'&&(match=/^lead-hub\/leads\/(\d+)\/customer-candidates$/.exec(path))){permission(can,['lead.view','sales.view']);const lead=leads(api).find(row=>Number(row.id)===Number(match[1]));if(!lead)fail(404,'Lead not found.');if(lead.handover_status!=='ACCEPTED')fail(409,'Sales must accept the lead before identity review.');const items=candidates(api,lead),key='preview-review-'+Date.now()+'-'+Math.random().toString(36).slice(2);api.leadIdentityReviews||={};api.leadIdentityReviews[key]={company:Number(api.user.company_id),lead_id:lead.id,actor:Number(api.user.id),version:lead.handover_version,hash:JSON.stringify(items),expires:Date.now()+15*60000};return {ok:true,items,identity_review_key:key,expires_at:new Date(Date.now()+15*60000).toISOString(),handover_version:lead.handover_version,preview_only:true};}
+  if(method==='POST'&&(match=/^lead-hub\/requests\/(\d+)\/(not-potential|restore-potential|follow-later|resume)$/.exec(path))){
+   permission(can,['lead.view','lead.manage']);const row=requests(api).find(row=>Number(row.id)===Number(match[1]));if(!row)fail(404,'Request not found.');
+   const cmd=commandKey(api,path,body);if(cmd.old)return {ok:true,...copy(cmd.old.result),preview_only:true};
+   if(Number(body.expected_version)!==(Number(row.version_no)||1))fail(409,'Request changed. Refresh and retry.');
+   const action=match[2],restore=action==='restore-potential',resume=action==='resume',follow=action==='follow-later';
+   if(!(restore?['REJECTED']:resume?['FOLLOW_LATER']:['NEW','FOLLOW_LATER']).includes(row.status)||leads(api).some(lead=>Number(lead.request_id)===Number(row.id)))fail(409,'Invalid request transition.');
+   if(typeof body.reason!=='string'||!body.reason.trim()||body.reason.length>120||typeof (body.note??'')!=='string'||(body.note??'').length>4000)fail(422,'A valid reason and note are required.');
+   if(action==='not-potential'&&(!['SPAM','INVALID_CONTACT','UNREACHABLE','PRODUCT_MISMATCH','BUDGET_MISMATCH','UNAVAILABLE','COMPETITOR','REFERENCE_ONLY','OTHER'].includes(body.reason)||(body.reason==='OTHER'&&!String(body.note||'').trim())))fail(422,'Invalid closure reason.');
+   const deadline=follow?due(body.next_action_due):null,owner=follow?requiredOwner(api,body.owner_user_id??api.user.id):null;
+   const before=row.status;row.status=follow?'FOLLOW_LATER':action==='not-potential'?'REJECTED':'NEW';row.version_no=(Number(row.version_no)||1)+1;row.next_action_due=deadline;row.followup_owner_user_id=owner;
+   row.history||=[];row.history.push({from_status:before,to_status:row.status,reason:body.reason.trim(),note:body.note||'',next_action_due:deadline,actor_name:api.user.full_name||'',created_at:clock().as_of});
+   api.tasks||=[];scoped(api,api.tasks).filter(task=>task.entity_type==='lead_request'&&Number(task.entity_id)===Number(row.id)&&task.source==='AUTOMATION'&&task.rule_code==='LEAD_REQUEST_FOLLOWUP'&&['OPEN','SNOOZED'].includes(task.status)).forEach(task=>task.status='DONE');
+   if(follow)api.tasks.push({id:newId(api.tasks),company_id:Number(api.user.company_id),entity_type:'lead_request',entity_id:row.id,source:'AUTOMATION',rule_code:'LEAD_REQUEST_FOLLOWUP',owner_user_id:owner,due_at:deadline,status:'OPEN',title:'Follow up inbound request'});
+   return {ok:true,...remember(api,path,cmd,{id:row.id,status:row.status,version_no:row.version_no,next_action_due:deadline,followup_owner_user_id:owner})};
+  }
   if(method!=='POST'||!(match=/^lead-hub\/(requests|leads)\/(\d+)\/(qualify|accept|return|resubmit|convert)$/.exec(path)))return undefined;
   const [,kind,rawId,action]=match,recordId=Number(rawId);permission(can,['lead.view',...(action==='accept'||action==='return'?['lead.sales_accept']:['lead.manage']),...(action==='convert'?['inquiry.manage','sales.view']:[])]);
   if((action==='qualify')!==(kind==='requests'))fail(404,'Action not found.');const cmd=commandKey(api,path,body);if(cmd.old)return {ok:true,...copy(cmd.old.result),preview_only:true};
@@ -154,7 +169,7 @@
    if(query.has(param))rows=rows.filter(row=>Number(isRequest?row.id:row.request_id)===Number(query.get(param)));
    if(query.has('lead_id')){if(!/^[1-9]\d*$/.test(query.get('lead_id')))fail(422,'Invalid lead_id.');rows=rows.filter(row=>Number(row.id)===Number(query.get('lead_id')));}
    const counts=Object.fromEntries(handoverStates.map(status=>[status,isRequest?0:rows.filter(row=>row.handover_status===status).length]));
-   if(isRequest&&query.has('status')){if(!['NEW','QUALIFIED','REJECTED'].includes(query.get('status')))fail(422,'Invalid request status.');rows=rows.filter(row=>row.status===query.get('status'));}
+   if(isRequest&&query.has('status')){if(!['NEW','QUALIFIED','REJECTED','FOLLOW_LATER'].includes(query.get('status')))fail(422,'Invalid request status.');rows=rows.filter(row=>row.status===query.get('status'));}
    if(!isRequest&&query.has('handover_status')){if(!handoverStates.includes(query.get('handover_status')))fail(422,'Invalid handover status.');rows=rows.filter(row=>row.handover_status===query.get('handover_status'));}
    const page=(key,fallback,max)=>{if(!query.has(key))return fallback;const value=query.get(key);if(!/^\d+$/.test(value)||!Number.isSafeInteger(Number(value))||Number(value)>(max)||Number(value)<(key==='limit'?1:0))fail(422,'Invalid '+key+'.');return Number(value);},limit=page('limit',100,100),offset=page('offset',0,100000);rows.sort((a,b)=>Number(b.id)-Number(a.id));
    return {ok:true,items:copy(rows.slice(offset,offset+limit)),total:rows.length,counts:isRequest?undefined:counts,limit,offset,preview_only:true};

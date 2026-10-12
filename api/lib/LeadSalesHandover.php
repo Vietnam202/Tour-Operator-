@@ -72,6 +72,29 @@ final class LeadSalesHandover {
             Audit::log($db,$cid,(int)$user['id'],'LEAD_QUALIFIED','lead',$id,null,$result+['qualification_note'=>$note]);DomainOutbox::commandResult($db,$user,$key,$hash,'lead',$id,$result);return $result;
         });
     }
+    public static function requestFollowLater(PDO $db,array $user,int $requestId,array $b,bool $resume=false): array {
+        self::permissions($db,$user,['lead.view','lead.manage']);$key=self::action($b);
+        $hash=DomainOutbox::hash(['action'=>$resume?'resume_request':'follow_later','request_id'=>$requestId,'body'=>$b]);
+        return self::transaction($db,function()use($db,$user,$requestId,$b,$resume,$key,$hash){
+            $cid=(int)$user['company_id'];
+            $row=self::query($db,'SELECT * FROM lead_requests WHERE company_id=? AND id=? FOR UPDATE',[$cid,$requestId])->fetch(PDO::FETCH_ASSOC);
+            if(!$row)throw new OutOfBoundsException('Request not found');
+            if($old=DomainOutbox::commandReplay($db,$user,$key,$hash))return $old;
+            self::version($row,$b,'version_no');
+            if(!in_array($row['status'],$resume?['FOLLOW_LATER']:['NEW','FOLLOW_LATER'],true))throw new DomainException('INVALID_REQUEST_TRANSITION');
+            if(self::query($db,'SELECT id FROM leads WHERE company_id=? AND request_id=?',[$cid,$requestId])->fetchColumn())throw new DomainException('REQUEST_HAS_EXISTING_LEAD');
+            $reason=self::text($b,'reason',120,true);$note=self::text($b,'note',4000);
+            $due=$resume?null:self::due($b);$owner=$resume?null:self::id($b,'owner_user_id',(int)$user['id'],true);
+            if($owner!==null)self::activeUser($db,$cid,$owner);
+            $status=$resume?'NEW':'FOLLOW_LATER';$version=(int)$row['version_no']+1;
+            self::query($db,'UPDATE lead_requests SET status=?,next_action_due=?,followup_owner_user_id=?,version_no=version_no+1 WHERE company_id=? AND id=?',[$status,$due,$owner,$cid,$requestId]);
+            self::query($db,"UPDATE tasks SET status='DONE',completed_at=CURRENT_TIMESTAMP WHERE company_id=? AND entity_type='lead_request' AND entity_id=? AND source='AUTOMATION' AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status IN ('OPEN','SNOOZED')",[$cid,$requestId]);
+            $result=['id'=>$requestId,'status'=>$status,'version_no'=>$version,'next_action_due'=>$due,'followup_owner_user_id'=>$owner];
+            DomainOutbox::event($db,$user,$resume?'lead_request.resumed':'lead_request.follow_later','lead_request',$requestId,$version,['status'=>$status],$resume?null:['title'=>'Follow up inbound request','entity_type'=>'lead_request','entity_id'=>$requestId,'owner_user_id'=>$owner,'due_at'=>$due,'rule_code'=>'LEAD_REQUEST_FOLLOWUP']);
+            Audit::log($db,$cid,(int)$user['id'],$resume?'LEAD_REQUEST_RESUMED':'LEAD_REQUEST_FOLLOW_LATER','lead_request',$requestId,['status'=>$row['status'],'version_no'=>(int)$row['version_no']],$result+['reason'=>$reason,'note'=>$note]);
+            DomainOutbox::commandResult($db,$user,$key,$hash,'lead_request',$requestId,$result);return $result;
+        });
+    }
     /** Close an unqualified inbound request without deleting it; restore is explicit. */
     public static function requestPotential(PDO $db,array $user,int $requestId,array $b,bool $restore=false): array {
         self::permissions($db,$user,['lead.view','lead.manage']);
@@ -83,7 +106,7 @@ final class LeadSalesHandover {
             if(!$row)throw new OutOfBoundsException('Request not found');
             if($old=DomainOutbox::commandReplay($db,$user,$key,$hash))return $old;
             self::version($row,$b,'version_no');
-            if($row['status']!==($restore?'REJECTED':'NEW'))throw new DomainException('INVALID_REQUEST_TRANSITION');
+            if(!in_array($row['status'],$restore?['REJECTED']:['NEW','FOLLOW_LATER'],true))throw new DomainException('INVALID_REQUEST_TRANSITION');
             // A legacy rejected request can have a lead: never silently detach or reactivate that Sales record.
             if(self::query($db,'SELECT id FROM leads WHERE company_id=? AND request_id=?',[$cid,$requestId])->fetchColumn())throw new DomainException('REQUEST_HAS_EXISTING_LEAD');
             $reason=self::text($b,'reason',120,true);
@@ -92,7 +115,8 @@ final class LeadSalesHandover {
             $note=self::text($b,'note',4000);
             if(!$restore&&$reason==='OTHER'&&$note==='')throw new InvalidArgumentException('Other reason requires a note');
             $status=$restore?'NEW':'REJECTED';
-            self::query($db,'UPDATE lead_requests SET status=?,version_no=version_no+1 WHERE company_id=? AND id=?',[$status,$cid,$requestId]);
+            self::query($db,'UPDATE lead_requests SET status=?,next_action_due=NULL,followup_owner_user_id=NULL,version_no=version_no+1 WHERE company_id=? AND id=?',[$status,$cid,$requestId]);
+            self::query($db,"UPDATE tasks SET status='DONE',completed_at=CURRENT_TIMESTAMP WHERE company_id=? AND entity_type='lead_request' AND entity_id=? AND source='AUTOMATION' AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status IN ('OPEN','SNOOZED')",[$cid,$requestId]);
             $result=['id'=>$requestId,'status'=>$status,'version_no'=>(int)$row['version_no']+1];
             Audit::log($db,$cid,(int)$user['id'],$restore?'LEAD_REQUEST_RESTORED':'LEAD_REQUEST_NOT_POTENTIAL','lead_request',$requestId,['status'=>$row['status'],'version_no'=>(int)$row['version_no']],$result+['reason'=>$reason,'note'=>$note]);
             DomainOutbox::commandResult($db,$user,$key,$hash,'lead_request',$requestId,$result);

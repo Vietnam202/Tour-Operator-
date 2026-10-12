@@ -182,15 +182,17 @@
  }
  window.mountLeadHandover=async function(host,options={}){
   const c=mounted(host,options);if(!c)return;const {t,can,alive}=c,marketing=options.mode==='marketing';
-  const allowed=can('lead.view'),queues=marketing?['NEW','REJECTED','PENDING','RETURNED','ACCEPTED']:['PENDING','ACCEPTED','RETURNED','CONVERTED'];
-  const names={REJECTED:t('Not potential','Không tiềm năng'),NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Needs lead review','Cần xem lại lead'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
+  const allowed=can('lead.view'),queues=marketing?['NEW','FOLLOW_LATER','REJECTED','PENDING','RETURNED','ACCEPTED']:['PENDING','ACCEPTED','RETURNED','CONVERTED'];
+  const names={FOLLOW_LATER:t('Follow later','Theo dõi sau'),REJECTED:t('Not potential','Không tiềm năng'),NEW:t('Need qualification','Cần đánh giá'),PENDING:t('Waiting for Sales','Chờ Sales nhận'),ACCEPTED:t('Sales accepted','Sales đã nhận'),RETURNED:t('Needs lead review','Cần xem lại lead'),CONVERTED:t('Converted opportunities','Đã tạo cơ hội')};
   let selected=queues.includes(options.initialStatus)?options.initialStatus:queues[0],offset=0,ticket=0,data=null,counts={},command=null;
   const title=marketing?t('Inbound leads → Sales handover','Bàn giao lead đầu vào → Sales'):t('Sales handover queue','Hàng chờ bàn giao Sales');
   function rowHTML(row,index){
-   const state=['NEW','REJECTED'].includes(selected)?selected:row.handover_status,version=['NEW','REJECTED'].includes(selected)?row.version_no:row.handover_version;
+   const state=['NEW','REJECTED','FOLLOW_LATER'].includes(selected)?selected:row.handover_status,version=['NEW','REJECTED','FOLLOW_LATER'].includes(selected)?row.version_no:row.handover_version;
    const valid=id(row.id)&&id(version),actions=[];
    if(selected==='NEW'&&valid&&can('lead.manage'))actions.push(['qualify',t('Qualify & hand over','Đánh giá & bàn giao')]);
-   if(selected==='NEW'&&valid&&can('lead.manage'))actions.push(['not-potential',t('Not potential','Không tiềm năng')]);
+   if(['NEW','FOLLOW_LATER'].includes(selected)&&valid&&can('lead.manage'))actions.push(['not-potential',t('Not potential','Không tiềm năng')]);
+   if(['NEW','FOLLOW_LATER'].includes(selected)&&valid&&can('lead.manage'))actions.push(['follow-later',t('Schedule follow-up','Hẹn theo dõi sau')]);
+   if(selected==='FOLLOW_LATER'&&valid&&can('lead.manage'))actions.push(['resume',t('Resume qualification','Đánh giá lại')]);
    if(selected==='REJECTED'&&valid&&can('lead.manage'))actions.push(['restore-potential',t('Restore','Khôi phục')]);
    if(state==='RETURNED'&&valid&&can('lead.manage'))actions.push(['resubmit',t('Review & resubmit','Xem lại & bàn giao lại')]);
    if(state==='PENDING'&&valid&&can('lead.sales_accept'))actions.push(['accept',t('Accept','Nhận')]);
@@ -199,9 +201,9 @@
    if(id(row.inquiry_id)&&can('sales.view'))actions.push(['inquiry',t('Open inquiry','Mở inquiry')]);
    if(id(row.customer_id)&&can('sales.view'))actions.push(['customer',t('Customer 360','Customer 360')]);
    const campaign=row.campaign_name||(id(row.campaign_id)?'#'+row.campaign_id:'');
-   const owner=state==='ACCEPTED'||state==='CONVERTED'?(row.sales_owner_name||(id(row.sales_owner_user_id)?'#'+row.sales_owner_user_id:'')):(row.owner_name||(id(row.owner_user_id)?'#'+row.owner_user_id:''));
+   const owner=state==='ACCEPTED'||state==='CONVERTED'?(row.sales_owner_name||(id(row.sales_owner_user_id)?'#'+row.sales_owner_user_id:'')):(row.owner_name||(id(row.followup_owner_user_id||row.owner_user_id)?'#'+(row.followup_owner_user_id||row.owner_user_id):''));
    const qualification=row.qualification_note?'<details class="wsc-note"><summary>'+t('Qualification review','Nội dung đánh giá')+'</summary><p>'+esc(row.qualification_note)+'</p></details>':'';
-   const history=array(row.history).length?'<details class="wsc-note"><summary>'+t('Handover history','Lịch sử bàn giao')+'</summary>'+array(row.history).map(item=>'<p>'+esc([names[item.to_status]||item.to_status,item.actor_name,item.created_at,item.reason].filter(Boolean).join(' · '))+'</p>').join('')+'</details>':'';
+   const history=array(row.history).length?'<details class="wsc-note"><summary>'+t('Handover history','Lịch sử bàn giao')+'</summary>'+array(row.history).map(item=>'<p>'+esc([names[item.to_status]||item.to_status,item.actor_name,item.created_at,item.reason,item.note,item.next_action_due].filter(Boolean).join(' · '))+'</p>').join('')+'</details>':'';
    return '<article class="wsc-record wsc-handover-record"><div><strong>'+esc(row.request_ref||row.lead_ref||'#'+row.id)+'</strong><h3>'+esc(row.contact_name||row.full_name||'—')+'</h3><p>'+esc([row.source,campaign].filter(Boolean).join(' · '))+'</p><p>'+esc([row.email,row.phone].filter(Boolean).join(' · '))+'</p><p>'+esc([row.destination,row.travel_date].filter(Boolean).join(' · '))+'</p><p>'+esc(t('Owner: ','Phụ trách: ')+(owner||t('Unassigned','Chưa phân công')))+' · '+esc(t('SLA / next action: ','SLA / việc tiếp theo: ')+(row.next_action_due||t('Needs scheduling','Cần đặt lịch')) )+'</p>'+(row.return_reason?'<p class="wsc-return-reason">'+esc(t('Return reason: ','Lý do trả: ')+row.return_reason)+'</p>':'')+qualification+history+'<span class="wsc-status">'+esc(names[state]||state||'—')+'</span></div><div class="wsc-record-actions">'+actions.map(([action,label])=>'<button class="btn" type="button" data-vs1-action="'+action+'" data-vs1-index="'+index+'">'+esc(label)+'</button>').join('')+'</div></article>';
   }
   function render(){
@@ -218,10 +220,10 @@
    if(!allowed){host.querySelector('[data-vs1-list]').innerHTML=c.empty(t('Lead read permission is required.','Cần quyền xem lead.'));return;}
    try{
     const focus=options.requestId?'&request_id='+id(options.requestId):'';
-    const route=['NEW','REJECTED'].includes(selected)?'lead-hub/requests?status='+selected+'&limit=30&offset='+offset+focus:'lead-hub/leads?handover_status='+selected+'&limit=30&offset='+offset+focus;
+    const route=['NEW','REJECTED','FOLLOW_LATER'].includes(selected)?'lead-hub/requests?status='+selected+'&limit=30&offset='+offset+focus:'lead-hub/leads?handover_status='+selected+'&limit=30&offset='+offset+focus;
     const [result,summary]=await Promise.all([options.api.request(route),selected==='NEW'?options.api.request('lead-hub/leads?limit=1&offset=0'+focus):Promise.resolve(null)]);if(!alive()||n!==ticket)return;
     if(!object(result)||!Array.isArray(result.items))throw Error(t('Handover response is incomplete.','Dữ liệu bàn giao chưa đầy đủ.'));
-    data=result;counts={...counts,...(object(summary?.counts)?summary.counts:{}),...(object(result.counts)?result.counts:{})};if(['NEW','REJECTED'].includes(selected)&&Number.isSafeInteger(result.total))counts[selected]=result.total;
+    data=result;counts={...counts,...(object(summary?.counts)?summary.counts:{}),...(object(result.counts)?result.counts:{})};if(['NEW','REJECTED','FOLLOW_LATER'].includes(selected)&&Number.isSafeInteger(result.total))counts[selected]=result.total;
     render();
    }catch(e){if(alive()&&n===ticket)host.querySelector('[data-vs1-list]').innerHTML=c.error(e);}
   }
@@ -232,6 +234,14 @@
   }
   async function openCommand(action,row){
    if(!alive()||!row||!id(row.id))return;
+   if(['follow-later','resume'].includes(action)){
+    if(!can('lead.view')||!can('lead.manage'))return;
+    const section=host.querySelector('[data-vs1-command]'),marker={};command=marker;
+    const fresh=()=>alive()&&command===marker&&section.isConnected,resume=action==='resume';
+    section.innerHTML='<section class="wsc-command"><h3>'+t(resume?'Resume qualification':'Follow later',resume?'Đánh giá lại':'Theo dõi sau')+'</h3><form data-vs1-form><label>'+t('Reason','Lý do')+'<input name="reason" required maxlength="120"></label><label>'+t('Note','Ghi chú')+'<textarea name="note" maxlength="4000"></textarea></label>'+(!resume?'<label>'+t('Follow-up date (company timezone)','Ngày nhắc (múi giờ công ty)')+'<input name="next_action_due" type="datetime-local" required value="'+esc(c.dateInput(row.next_action_due))+'"></label>':'')+'<div data-vs1-form-error></div><button class="btn primary" type="submit">'+t('Apply','Áp dụng')+'</button><button class="btn" type="button" data-cancel-follow>'+t('Cancel','Hủy')+'</button></form></section>';
+    const form=section.querySelector('form'),key=c.actionKey();section.querySelector('[data-cancel-follow]').onclick=()=>{command=null;section.innerHTML='';};
+    form.onsubmit=async e=>{e.preventDefault();if(!fresh()||!can('lead.manage')||!can('lead.view')||!form.reportValidity())return;const values=Object.fromEntries(new FormData(form));if(values.next_action_due)values.next_action_due=c.dateBody(values.next_action_due);await submit(form,'lead-hub/requests/'+id(row.id)+'/'+action,{...values,expected_version:Number(row.version_no),action_key:key},fresh,()=>load(selected,offset));};return;
+   }
    if(['not-potential','restore-potential'].includes(action)){
     if(!can('lead.view')||!can('lead.manage'))return;
     const section=host.querySelector('[data-vs1-command]'),marker={};command=marker;

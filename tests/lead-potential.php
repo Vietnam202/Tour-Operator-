@@ -16,3 +16,22 @@ $restore=['expected_version'=>2,'action_key'=>'restore-potential-fixture-001','r
 $restored=LeadSalesHandover::requestPotential($db,$user,$request,$restore,true);
 check($restored['status']==='NEW'&&$restored['version_no']===3,'restore preserves request identity and advances version');
 check((int)$db->query("SELECT COUNT(*) FROM audit_logs WHERE entity_type='lead_request' AND entity_id=$request AND action_code IN ('LEAD_REQUEST_NOT_POTENTIAL','LEAD_REQUEST_RESTORED')")->fetchColumn()===2,'close and restore retain audit history');
+
+$defer=['expected_version'=>3,'action_key'=>'follow-later-fixture-001','reason'=>'Customer needs more time','next_action_due'=>'2027-01-03 09:30:00'];
+rejects(fn()=>LeadSalesHandover::requestFollowLater($db,$user,$request,array_replace($defer,['next_action_due'=>'2027-02-30 09:30:00'])),InvalidArgumentException::class,'invalid follow-up calendar date blocked');
+rejects(fn()=>LeadSalesHandover::requestFollowLater($db,$user,$request,array_replace($defer,['owner_user_id'=>2])),InvalidArgumentException::class,'foreign follow-up owner blocked');
+$later=LeadSalesHandover::requestFollowLater($db,$user,$request,$defer);
+check($later['status']==='FOLLOW_LATER'&&$later['version_no']===4,'follow later preserves identity');
+check(LeadSalesHandover::requestFollowLater($db,$user,$request,$defer)===$later,'follow-up retry is idempotent');
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead_request' AND entity_id=$request AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status='OPEN'")->fetchColumn()===1,'one reminder for deferred request');
+$reschedule=array_replace($defer,['expected_version'=>4,'action_key'=>'reschedule-fixture-001','next_action_due'=>'2027-01-05 10:00:00']);
+LeadSalesHandover::requestFollowLater($db,$user,$request,$reschedule);
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead_request' AND entity_id=$request AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status='OPEN'")->fetchColumn()===1,'rescheduling replaces active reminder');
+$resume=['expected_version'=>5,'action_key'=>'resume-request-fixture-001','reason'=>'Ready for qualification'];
+$active=LeadSalesHandover::requestFollowLater($db,$user,$request,$resume,true);
+check($active['status']==='NEW'&&$active['version_no']===6&&$active['next_action_due']===null,'resume clears deadline and advances version');
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead_request' AND entity_id=$request AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status='OPEN'")->fetchColumn()===0,'resume closes reminder');
+rejects(fn()=>LeadSalesHandover::requestFollowLater($db,$user,$request,array_replace($defer,['action_key'=>'stale-defer-fixture-001'])),DomainException::class,'stale changed command blocked');
+LeadSalesHandover::requestFollowLater($db,$user,$request,array_replace($defer,['expected_version'=>6,'action_key'=>'defer-again-fixture-001']));
+LeadSalesHandover::requestPotential($db,$user,$request,array_replace($close,['expected_version'=>7,'action_key'=>'close-deferred-fixture-001']));
+check((int)$db->query("SELECT COUNT(*) FROM tasks WHERE entity_type='lead_request' AND entity_id=$request AND rule_code='LEAD_REQUEST_FOLLOWUP' AND status='OPEN'")->fetchColumn()===0,'not potential closes deferred reminder');

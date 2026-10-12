@@ -105,9 +105,11 @@ final class LeadHub {
                     $where.=' AND id=?';$args[]=$id;
                 }
                 if($route==='lead-hub/requests'){
-                    if(isset($_GET['status'])){$status=self::text($_GET,'status',24,true);if(!in_array($status,['NEW','QUALIFIED','REJECTED'],true))throw new InvalidArgumentException('Invalid status');$where.=' AND status=?';$args[]=$status;}
+                    if(isset($_GET['status'])){$status=self::text($_GET,'status',24,true);if(!in_array($status,['NEW','QUALIFIED','REJECTED','FOLLOW_LATER'],true))throw new InvalidArgumentException('Invalid status');$where.=' AND status=?';$args[]=$status;}
                     $limit=filter_var($_GET['limit']??100,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>100]]);$offset=filter_var($_GET['offset']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>100000]]);if($limit===false||$offset===false)throw new InvalidArgumentException('Invalid pagination');
-                    $total=(int)self::query($db,"SELECT COUNT(*) FROM $table WHERE $where",$args)->fetchColumn();Http::json(['ok'=>true,'items'=>self::query($db,"SELECT * FROM $table WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $offset",$args)->fetchAll(),'total'=>$total,'limit'=>$limit,'offset'=>$offset]);
+                    $total=(int)self::query($db,"SELECT COUNT(*) FROM $table WHERE $where",$args)->fetchColumn();$items=self::query($db,"SELECT * FROM $table WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $offset",$args)->fetchAll();
+                    foreach($items as &$item){$item['history']=[];foreach(self::query($db,"SELECT a.after_json,a.created_at,u.full_name actor_name FROM audit_logs a LEFT JOIN users u ON u.company_id=a.company_id AND u.id=a.user_id WHERE a.company_id=? AND a.entity_type='lead_request' AND a.entity_id=? AND a.action_code IN ('LEAD_REQUEST_NOT_POTENTIAL','LEAD_REQUEST_RESTORED','LEAD_REQUEST_FOLLOW_LATER','LEAD_REQUEST_RESUMED') ORDER BY a.id DESC LIMIT 20",[$cid,$item['id']])->fetchAll() as $entry){$after=json_decode($entry['after_json']??'{}',true)?:[];$item['history'][]=['to_status'=>$after['status']??null,'reason'=>$after['reason']??null,'note'=>$after['note']??null,'next_action_due'=>$after['next_action_due']??null,'actor_name'=>$entry['actor_name'],'created_at'=>$entry['created_at']];}}unset($item);
+                    Http::json(['ok'=>true,'items'=>$items,'total'=>$total,'limit'=>$limit,'offset'=>$offset]);
                 }
                 Http::json(['ok'=>true,'items'=>self::query($db,"SELECT * FROM $table WHERE $where ORDER BY id DESC LIMIT 300",$args)->fetchAll()]);
             }
@@ -132,6 +134,7 @@ final class LeadHub {
                 });Http::json(['ok'=>true]+$result,201);
             }
             if($method==='POST' && preg_match('#^lead-hub/requests/(\d+)/qualify$#',$route,$m)) Http::json(['ok'=>true]+self::qualify($db,$user,(int)$m[1],Http::body()));
+            if($method==='POST' && preg_match('#^lead-hub/requests/(\d+)/(follow-later|resume)$#',$route,$m)) Http::json(['ok'=>true]+LeadSalesHandover::requestFollowLater($db,$user,(int)$m[1],Http::body(),$m[2]==='resume'));
             if($method==='POST' && preg_match('#^lead-hub/requests/(\d+)/(not-potential|restore-potential)$#',$route,$m)){
                 Http::json(['ok'=>true]+LeadSalesHandover::requestPotential($db,$user,(int)$m[1],Http::body(),$m[2]==='restore-potential'));
             }
