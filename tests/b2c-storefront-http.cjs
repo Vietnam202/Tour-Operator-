@@ -9,7 +9,8 @@ if(process.env.VTA_V5_HTTP_URL!==origin||!process.env.VTA_V5_TEST_PASSWORD)throw
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/journeys.php?utm_source=native-browser&utm_campaign=fixture');
   const link=page.locator('.journey-card h2 a').first();assert(await link.count());const detail=await link.getAttribute('href');
-  await page.goto(origin+'/'+detail+'&utm_source=native-browser&utm_campaign=fixture');
+  assert(new URL(detail,origin).searchParams.get('utm_source')==='native-browser','catalogue link preserves campaign attribution');
+  await link.click();
   await page.locator('form[data-vta-b2c-inquiry]').waitFor();assert.equal(await page.locator('link[rel=canonical]').count(),1);
   for(const width of [1440,820,390,360]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'native page overflow '+width);}
   const image=await page.locator('.itinerary img').first().getAttribute('src');assert.equal((await context.request.get(origin+'/'+image)).status(),200);

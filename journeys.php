@@ -18,6 +18,8 @@ try{
 }catch(OutOfBoundsException|InvalidArgumentException $e){http_response_code(404);exit('This tour collection is unavailable.');}
 catch(Throwable $e){http_response_code(503);exit('Tour collection is temporarily unavailable.');}
 if(empty($_SESSION['b2c_inquiry_csrf']))$_SESSION['b2c_inquiry_csrf']=bin2hex(random_bytes(32));
+$tracking=[];foreach(['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ad_id','adset_id'] as $key)if(is_string($_GET[$key]??null))$tracking[$key]=substr($_GET[$key],0,1000);
+$journeyUrl=static fn(array $query=[])=>'journeys.php'.(($query+$tracking)?'?'.http_build_query($query+$tracking,'','&',PHP_QUERY_RFC3986):'');
 $base=rtrim((string)$config['app']['base_url'],'/');
 $canonical=$base.'/journeys.php'.($publication?'?publication='.(int)$publication['id']:($page>1?'?page='.$page:''));
 $title=$snapshot?$snapshot['title'].' | Vietnam Travel Advisor':'Journeys | Vietnam Travel Advisor';
@@ -49,8 +51,8 @@ $description=$snapshot?'Explore '.$snapshot['title'].' in '.$snapshot['destinati
 <?php else: ?>
 <section class="intro"><p class="eyebrow">Explore Vietnam</p><h1>Your next journey starts here</h1><p>Discover our tour programmes. Every quotation is reviewed for your dates and group.</p></section>
 <section class="journey-grid" aria-label="Tour programmes">
-<?php foreach($collection['items'] as $item): ?><article class="journey-card"><p class="eyebrow"><?= $escape($item['destination']) ?></p><h2><a href="journeys.php?publication=<?= $item['publication_id'] ?>"><?= $escape($item['title']) ?></a></h2><p>Request a tailored quotation</p><a class="view" href="journeys.php?publication=<?= $item['publication_id'] ?>">View programme →</a></article><?php endforeach; ?>
+<?php foreach($collection['items'] as $item): ?><article class="journey-card"><p class="eyebrow"><?= $escape($item['destination']) ?></p><h2><a href="<?= $escape($journeyUrl(['publication'=>$item['publication_id']])) ?>"><?= $escape($item['title']) ?></a></h2><p>Request a tailored quotation</p><a class="view" href="<?= $escape($journeyUrl(['publication'=>$item['publication_id']])) ?>">View programme →</a></article><?php endforeach; ?>
 <?php if(!$collection['items']): ?><p>New journeys are being prepared. Please check back soon.</p><?php endif; ?></section>
-<nav class="pagination" aria-label="Pagination"><?php if($page>1): ?><a href="journeys.php?page=<?= $page-1 ?>">← Previous</a><?php endif; ?><?php if($collection['has_more']): ?><a href="journeys.php?page=<?= $page+1 ?>">Next →</a><?php endif; ?></nav>
+<nav class="pagination" aria-label="Pagination"><?php if($page>1): ?><a href="<?= $escape($journeyUrl(['page'=>$page-1])) ?>">← Previous</a><?php endif; ?><?php if($collection['has_more']): ?><a href="<?= $escape($journeyUrl(['page'=>$page+1])) ?>">Next →</a><?php endif; ?></nav>
 <?php endif; ?>
 </main><footer>Vietnam Travel Advisor · Availability and bookings require staff confirmation.</footer></body></html>
