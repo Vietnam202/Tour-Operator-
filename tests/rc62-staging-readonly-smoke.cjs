@@ -24,6 +24,8 @@ function guard(config){
       ||/^\d+\.\d+\.\d+\.\d+$/.test(u.hostname))
     throw Error('BLOCK_STAGING_HOST_NOT_INDEPENDENTLY_PINNED');
   if(!EXPECTED_PIN.test(String(config.sha||'')))throw Error('BLOCK_CANDIDATE_SHA_PIN_REQUIRED');
+  if(!/^[a-f0-9]{64}$/.test(String(config.inventorySha||'')))
+    throw Error('BLOCK_SOURCE_INVENTORY_PIN_REQUIRED');
   if(config.approval!==APPROVAL)throw Error('BLOCK_OPERATOR_READ_ONLY_APPROVAL_REQUIRED');
   if(config.auth&&config.loginApproval!==LOGIN_APPROVAL)
     throw Error('BLOCK_LOGIN_AUDIT_WRITE_CONSENT_REQUIRED');
@@ -72,6 +74,7 @@ async function runCheck(config,fetchImpl=globalThis.fetch){
   const build=health.data?.build;
   assertResponse(build?.status==='PINNED_PACKAGE'
     &&build.source_commit===config.sha
+    &&build.source_inventory_sha256===config.inventorySha
     &&/^[a-f0-9]{64}$/.test(String(build.source_inventory_sha256||''))
     &&Number.isInteger(build.source_file_count)
     &&build.source_file_count>=75,'BLOCK_STAGING_BUILD_IDENTITY_MISMATCH');
@@ -164,7 +167,9 @@ function configFromEnv(env=process.env,auth=process.argv.includes('--auth')){
     email:env['VTA_STAGE_'+role+'_EMAIL'],
     password:env['VTA_STAGE_'+role+'_PASSWORD']};
   return {base:env.VTA_STAGE_URL,hostPin:env.VTA_STAGE_APPROVED_HOST,
-    sha:env.VTA_STAGE_APPROVED_SHA,approval:env.VTA_STAGE_READONLY_APPROVAL,
+    sha:env.VTA_STAGE_APPROVED_SHA,
+    inventorySha:env.VTA_STAGE_APPROVED_SOURCE_INVENTORY_SHA256,
+    approval:env.VTA_STAGE_READONLY_APPROVAL,
     loginApproval:env.VTA_STAGE_LOGIN_APPROVAL,auth,credentials,
     agencyA:env.VTA_STAGE_AGENCY_A_ID,agencyB:env.VTA_STAGE_AGENCY_B_ID,
     commonPublication:env.VTA_STAGE_COMMON_PUBLICATION_ID,
