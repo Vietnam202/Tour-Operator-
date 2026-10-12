@@ -38,4 +38,13 @@ $net=$db->query('SHOW COLUMNS FROM b2b_net_requests')->fetchAll();
 $net=array_column($net,null,'Field');
 verifyHybrid(isset($net['paying_pax'],$net['foc_pax'],$net['hotel_level'],$net['cruise_level'],$net['departure_date'],$net['status']),
     'NET request dimensions retain paying PAX, FOC, hotel/cruise and departure date');
-echo 'B2B migration 038 disposable MariaDB schema acceptance complete.'.PHP_EOL;
+$m45=$db->query("SELECT status FROM migration_checksums WHERE version='045_b2b_net_request_resolution'")->fetchColumn();
+verifyHybrid($m45==='APPLIED','Real 045 B2B NET resolution migration applied and checksummed on disposable MariaDB');
+$fields=$db->query('SHOW COLUMNS FROM b2b_net_requests')->fetchAll(PDO::FETCH_ASSOC);
+$fields=array_column($fields,null,'Field');
+verifyHybrid(isset($fields['assigned_to_user_id'],$fields['source_quote_version_id'],$fields['resolved_by_user_id'],$fields['resolved_at']),
+    'B2B NET request preserves assignee, issued quote link and resolver audit fields');
+verifyHybrid(in_array('quote_versions',$byTable['b2b_net_requests']??[],true)
+    &&in_array('users',$byTable['b2b_net_requests']??[],true),
+    'B2B NET provenance and assignee columns are constrained to existing records');
+echo 'B2B migration 038/045 disposable MariaDB schema acceptance complete.'.PHP_EOL;

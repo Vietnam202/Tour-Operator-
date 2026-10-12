@@ -46,4 +46,26 @@ $serialized=json_encode($doc);
 assertB2b(str_contains($serialized,'115.00')&&!str_contains($serialized,'net_per_pax')&&!str_contains($serialized,'100.00'),'Client Word/PDF source blocks contain only selling price, no NET');
 $itinerary=$outputMethod->invoke(null,['id'=>2,'content_json'=>json_encode($out),'markup_type'=>'PERCENT','markup_value'=>'15'],$agency,['status'=>'PUBLISHED','version_no'=>1,'rate_json'=>'{"cells":[]}'],[],'itinerary');
 assertB2b(!str_contains(json_encode($itinerary),'Client Price Offer'),'Unpriced itinerary exports allowed without a rate');
+// VIE-13: NET request closure must refer to an approved commercial snapshot
+// for the same departure, 6 paying + 1 FOC and independent Hotel/Cruise mix.
+$requested=['departure_date'=>'2027-01-10','paying_pax'=>6,'foc_pax'=>1,'mode'=>'PRIVATE','hotel_level'=>'3','cruise_level'=>'5'];
+$sourceVersion=['start_date'=>'2027-01-10','paying_pax'=>6,'foc'=>1];
+$netEvidence=['valid_until'=>'2099-12-31','cells'=>[
+ ['mode'=>'PRIVATE','hotel'=>'3','cruise'=>'5','pax_min'=>6,'pax_max'=>8,'net_per_pax'=>100,'currency'=>'USD'],
+ ['mode'=>'PRIVATE','hotel'=>'4','cruise'=>'4','pax_min'=>6,'pax_max'=>8,'net_per_pax'=>120,'currency'=>'USD']
+]];
+$match=new ReflectionMethod(PartnerHub::class,'matchNetRequest');
+$match->invoke(null,$requested,$netEvidence,$sourceVersion);
+assertB2b(true,'Matching 6 paying + 1 FOC, Hotel 3★ Cruise 5★ may link an issued source');
+function refuseNetRequest(ReflectionMethod $method,array $request,array $rates,array $version,string $label):void {
+ try{$method->invoke(null,$request,$rates,$version);}
+ catch(DomainException $e){assertB2b(true,$label);return;}
+ throw new RuntimeException('FAIL: '.$label);
+}
+refuseNetRequest($match,array_replace($requested,['foc_pax'=>2]),$netEvidence,$sourceVersion,'Mismatched FOC blocks NET closure');
+refuseNetRequest($match,array_replace($requested,['departure_date'=>'2027-01-11']),$netEvidence,$sourceVersion,'Different departure blocks stale NET quote reuse');
+refuseNetRequest($match,array_replace($requested,['paying_pax'=>7]),$netEvidence,$sourceVersion,'Different paying PAX blocks NET quote reuse');
+refuseNetRequest($match,array_replace($requested,['cruise_level'=>'4']),$netEvidence,$sourceVersion,'Hotel/Cruise mismatch cannot close request');
+refuseNetRequest($match,$requested,['cells'=>array_merge($netEvidence['cells'],[$netEvidence['cells'][0]])],$sourceVersion,'Ambiguous duplicate NET band rejected');
+refuseNetRequest($match,$requested,['cells'=>[]],$sourceVersion,'Missing NET evidence cannot close request');
 echo "B2B partner hub domain assertions passed.\n";
