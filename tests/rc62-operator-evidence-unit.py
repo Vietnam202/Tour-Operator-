@@ -49,7 +49,7 @@ def fake_packet(artifact):
             "rollback_rehearsed":True,"migration_ledgers_equal":True,
             "read_only_preflight":"READ_ONLY_PREFLIGHT_PASS",
             "preflight_release_authorized":False,"clone_db":"vta_rc62_clone_fixture",
-            "evidence_ref":ref("restore")},
+            "evidence_ref":ref("restore"),"preflight_ref":ref("actual-readonly-preflight")},
         "roles":{name:item("role-"+str(i)) for i,name in enumerate(gate.REQUIRED_ROLES)},
         "scenarios":{name:item("scenario-"+str(i)) for i,name in enumerate(gate.REQUIRED_SCENARIOS)},
         "cost":{"paying_pax":6,"foc_pax":1,"hotel_stars":3,"cruise_stars":5,
@@ -69,13 +69,21 @@ def synth_doc(index):
         z.writestr("[Content_Types].xml","<Types/>")
         z.writestr("word/document.xml","<document>Only synthetic CI fixture %d</document>"%index)
     return stream.getvalue()
-def make_local_index(root,packet):
+def make_local_index(root,packet,artifact):
     (root/"refs").mkdir(parents=True,exist_ok=True)
     (root/"originals").mkdir(parents=True,exist_ok=True)
     sources={d["source_ref"]:(i,d) for i,d in enumerate(packet["real_documents"])}
     index={}
     for n,reference in enumerate(sorted(gate.all_evidence_refs(packet))):
-        if reference in sources:
+        if reference==packet["recovery"]["preflight_ref"]:
+            rel="refs/readonly-preflight.json"
+            data=json.dumps({"ok":True,"status":"READ_ONLY_PREFLIGHT_PASS",
+                "source_commit":artifact["sha"],
+                "runtime_files":artifact["runtime_files"],
+                "migrations_checked":artifact["migration_files"],
+                "release_authorized":False,
+                "requires":["restore_rehearsal","multirole_staging_uat","operator_approval"]}).encode()
+        elif reference in sources:
             i,entry=sources[reference]
             ext="docx" if entry["format"]=="DOCX" else "pdf"
             rel="originals/file-%03d.%s"%(i,ext)
@@ -111,11 +119,11 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
     packet=fake_packet(artifacts)
     private_root=directory/"private-evidence"
     private_root.mkdir()
-    make_local_index(private_root,packet)
+    make_local_index(private_root,packet,artifacts)
     gate.verify_evidence(packet,artifacts)
-    bound=gate.verify_private_evidence(packet,private_root)
-    yes(bound["attachment_count"]==119 and bound["real_original_count"]==50,
-        "119 operator references bind to private proof bytes and 50 synthetic DOCX/PDF original hashes")
+    bound=gate.verify_private_evidence(packet,private_root,artifacts)
+    yes(bound["attachment_count"]==120 and bound["real_original_count"]==50,
+        "120 operator references, actual preflight JSON and 50 synthetic DOCX/PDF original hashes bound")
     yes(True,"synthetic structurally complete packet still has release_authorized=false")
     packet_file=directory/"synthetic-operator-evidence.json"
     packet_file.write_text(json.dumps(packet))
@@ -125,6 +133,26 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
         "--evidence-root",str(private_root)],capture_output=True,text=True)
     yes(cli.returncode==0 and json.loads(cli.stdout)["release_authorized"] is False,
         "offline operator CLI verifies local evidence bytes but never authorizes release")
+    # Changing a preflight *and updating its SHA index* must still fail
+    # against the independently pinned candidate SHA and migration count.
+    ref_pre=packet["recovery"]["preflight_ref"]
+    pre_path=private_root/packet["evidence_index"][ref_pre]["path"]
+    pre_original=pre_path.read_bytes()
+    pre_sha=packet["evidence_index"][ref_pre]["sha256"]
+    for field,bad_value in (("source_commit","b"*40),
+                            ("runtime_files",109),
+                            ("migrations_checked",34),
+                            ("release_authorized",True)):
+        tampered=json.loads(pre_original)
+        tampered[field]=bad_value
+        changed_bytes=json.dumps(tampered).encode()
+        pre_path.write_bytes(changed_bytes)
+        packet["evidence_index"][ref_pre]["sha256"]=sha(changed_bytes)
+        rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
+            "PREFLIGHT_EXACT_SHA_OR_LEDGER_MISMATCH",
+            "fabricated preflight "+field+" refused even with valid file hash")
+    pre_path.write_bytes(pre_original)
+    packet["evidence_index"][ref_pre]["sha256"]=pre_sha
     def changed(f):
         p=json.loads(json.dumps(packet))
         f(p)
@@ -174,25 +202,25 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
         result="GO_PRODUCTION")),artifacts),"OPERATOR_REVIEW_PACKET_INCOMPLETE",
         "structural gate never accepts a GO_PRODUCTION field")
     def bound_negative(fail,reason,label):
-        rejected(lambda:(fail(),gate.verify_private_evidence(packet,private_root)),reason,label)
+        rejected(lambda:(fail(),gate.verify_private_evidence(packet,private_root,artifacts)),reason,label)
     refkey=packet["roles"]["Admin"]["evidence_ref"]
     orig_path=private_root/packet["evidence_index"][refkey]["path"]
     orig=orig_path.read_bytes()
     orig_path.write_bytes(b"tampered-but-still-synthetic")
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "PRIVATE_EVIDENCE_CHECKSUM_MISMATCH","modified private operator log bytes rejected")
     orig_path.write_bytes(orig)
     backup=packet["evidence_index"][refkey]
     packet["evidence_index"][refkey]={"path":"../outside.txt","sha256":backup["sha256"]}
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "PRIVATE_EVIDENCE_PATH_UNSAFE","path traversal cannot escape evidence root")
     packet["evidence_index"][refkey]=backup
     packet["evidence_index"].pop(refkey)
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "PRIVATE_EVIDENCE_INDEX_INCOMPLETE","absent evidence source reference blocks release")
     packet["evidence_index"][refkey]=backup
     packet["evidence_index"]["private://extra-unused-proof"]={"path":"unused.txt","sha256":sha(b"anything")}
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "PRIVATE_EVIDENCE_INDEX_INCOMPLETE","extraneous/unreviewed private evidence reference blocked")
     del packet["evidence_index"]["private://extra-unused-proof"]
     source=packet["real_documents"][0]
@@ -203,13 +231,13 @@ with tempfile.TemporaryDirectory(prefix="vta-rc62-evidence-fixture-") as temp:
     item=packet["evidence_index"][source["source_ref"]]
     old_digest=item["sha256"];old_source_digest=source["source_sha256"]
     item["sha256"]=sha(fake_pdf);source["source_sha256"]=sha(fake_pdf)
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "DOCUMENT_SOURCE_FORMAT_MISMATCH","PDF bytes cannot masquerade as a DOCX original")
     src_path.write_bytes(src_bytes);item["sha256"]=old_digest;source["source_sha256"]=old_source_digest
     link=private_root/packet["evidence_index"][refkey]["path"]
     link.unlink()
     link.symlink_to(packet_file)
-    rejected(lambda:gate.verify_private_evidence(packet,private_root),
+    rejected(lambda:gate.verify_private_evidence(packet,private_root,artifacts),
         "PRIVATE_EVIDENCE_PATH_UNSAFE","symlink to private document rejected")
     link.unlink();link.write_bytes(orig)
     yes(True,"VIE-11 private-byte evidence checker negative tests complete; never contacts DB or hosting")
