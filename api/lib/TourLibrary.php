@@ -254,23 +254,31 @@ final class TourLibrary {
         if(!class_exists('ZipArchive'))throw new RuntimeException('ZIP import requires PHP ZipArchive');
         $zip=new ZipArchive();
         if($zip->open($file['tmp_name'])!==true)throw new InvalidArgumentException('Invalid ZIP archive');
-        $items=[];$seen=[];$seenHashes=[];$total=0;$count=0;
+        $items=[];$seenHashes=[];$entries=[];$names=[];$total=0;
         try{
             if($zip->numFiles>250)throw new InvalidArgumentException('ZIP has too many archive entries');
+            // Plan the whole batch before extracting or staging any source:
+            // a 51st document, duplicate filename, unsafe path or compressed
+            // bomb cannot leave 50 invisible pending uploads behind.
             for($i=0;$i<$zip->numFiles;$i++){
                 $stat=$zip->statIndex($i);if(!$stat)continue;
                 $path=(string)($stat['name']??'');
-                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
                 if(str_contains($path,"\0")||str_contains($path,'\\')||str_contains($path,'../')||str_starts_with($path,'/'))
                     throw new InvalidArgumentException('Unsafe ZIP entry name');
+                if(str_ends_with($path,'/')||str_starts_with(basename($path),'.')||str_contains($path,'__MACOSX'))continue;
                 $name=self::filename(basename($path));$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
                 if(!in_array($ext,['docx','pdf','txt'],true))continue;
-                if(++$count>50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
-                if(isset($seen[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
-                $seen[strtolower($name)]=true;
+                if(count($entries)>=50)throw new InvalidArgumentException('ZIP contains more than 50 document files');
+                if(isset($names[strtolower($name)]))throw new InvalidArgumentException('Duplicate filename in ZIP: '.$name);
+                $names[strtolower($name)]=true;
                 $size=(int)($stat['size']??0);$packed=(int)($stat['comp_size']??0);$total+=$size;
                 if($size<1||$size>self::MAX_FILE_BYTES||$total>209715200||$size/max(1,$packed)>150)
                     throw new InvalidArgumentException('ZIP file limit or unsafe compression ratio: '.$name);
+                $entries[]=['path'=>$path,'name'=>$name,'ext'=>$ext,'size'=>$size];
+            }
+            if(!$entries)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
+            foreach($entries as $entry){
+                ['path'=>$path,'name'=>$name,'ext'=>$ext,'size'=>$size]=$entry;
                 $temp=tempnam(sys_get_temp_dir(),'vta-b2b-');
                 if($temp===false)throw new RuntimeException('Cannot create temporary import file');
                 try {
@@ -280,8 +288,6 @@ final class TourLibrary {
                     $copied=stream_copy_to_stream($stream,$output,self::MAX_FILE_BYTES+1);fclose($stream);fclose($output);
                     if($copied!==$size)throw new InvalidArgumentException('ZIP member decompression did not match expected size');
                     self::validateFile($temp,$ext);
-                    // Different names must not silently create duplicate Master tours
-                    // from the exact same binary within a 50-file ZIP.
                     $digest=hash_file('sha256',$temp);
                     if(isset($seenHashes[$digest]))throw new DomainException('Duplicate content already in this ZIP: '.$seenHashes[$digest]);
                     $seenHashes[$digest]=$name;
@@ -289,7 +295,7 @@ final class TourLibrary {
                     if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Document too long');
                     $item=self::previewText($r['text'],$name,'PC','');
                     $item['warnings'][]=$r['note'];
-                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original Word source is retained.';
+                    $item['warnings'][]='Review tables, images, policies and source prices. Original file is kept for Word re-import.';
                     $item['extraction_quality']=$r['quality'];
                     $item['import_token']=self::stage($db,$cfg,$u,$temp,$name,$ext,'PC','');
                     $item['has_source']=true;
@@ -299,8 +305,7 @@ final class TourLibrary {
                 }finally{if(is_file($temp))unlink($temp);}
             }
         }finally{$zip->close();}
-        if($count===0)throw new InvalidArgumentException('ZIP contains no DOCX/PDF/TXT');
-        return ['items'=>$items,'total'=>$count,'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
+        return ['items'=>$items,'total'=>count($entries),'ready'=>count(array_filter($items,fn($row)=>$row['status']==='READY')),'requires_review'=>true];
     }
     /**
      * Reopen an original file already preserved by Tour Library without asking
