@@ -8,6 +8,8 @@ const response=(data,ok=true)=>({ok,json:async()=>data});
 async function harness({sales=false}={}){
  const dom=new JSDOM('<span id="account"></span><button id="logout" hidden></button><div id="hub"></div>',{url:'https://vta.test/partner.html',runScripts:'outside-only'});
  const w=dom.window,calls=[];let attempts=0,sequence=0;
+ // jsdom lacks HTMLElement.innerText; a real browser exposes this API.
+ Object.defineProperty(w.HTMLElement.prototype,'innerText',{configurable:true,get(){return this.textContent;},set(value){this.textContent=value;}});
  Object.defineProperty(w.crypto,'randomUUID',{configurable:true,value:()=>('retry-key-'+(++sequence)).padEnd(24,'x')});
  w.alert=()=>{};
  w.fetch=async(url,opts={})=>{
@@ -50,7 +52,7 @@ async function harness({sales=false}={}){
  h.root.querySelector('#quoteForm').elements.cruise.value='5';
  form.dispatchEvent(new h.w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  const first=h.calls.filter(x=>x.route==='b2b/net-requests').at(-1);
- assert(first,'First NET attempt captured');
+ assert(first,'First NET attempt captured; calls='+JSON.stringify(h.calls.map(x=>x.route))+' status='+h.root.querySelector('[data-hub-status]')?.textContent);
  assert.equal(first.body.foc,1);
  assert.equal(first.body.hotel,'3');assert.equal(first.body.cruise,'5');
  assert(h.root.textContent.includes('Temporary gateway loss'),'Transient failure should remain visible');
