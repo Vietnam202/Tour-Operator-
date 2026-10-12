@@ -14,7 +14,7 @@ Trong PR #79, bộ kiểm thử staging đã sẵn sàng nhưng RuntimeGuard ch�
 2. `security.allowed_origin` phải khớp hoàn toàn origin chuẩn, `security.approved_staging_host` phải khớp hostname.
 3. Biến môi trường **chỉ server operator kiểm soát** `VTA_RC62_STAGING_HOST_PIN` phải khớp 100% hostname trong cấu hình private. Không tự trích pin từ URL hoặc header request.
 4. Database: `db.host=127.0.0.1`, `db.database` là tên tách biệt được đánh dấu clone/staging/test, không chứa prod/live hoặc tên database v2quote. `VTA_RC62_STAGING_DB_PIN` phải khớp chính xác tên DB trong cấu hình private.
-5. `storage.driver=local` cần `storage.local_path` đã tồn tại và realpath nằm **ngoài source/webroot**. Với FPM phải nhận `HTTP_HOST` đúng host và `HTTPS=on` hoặc `1`; tuyệt đối không tin `X-Forwarded-Host` của client hay coi Host header là nguồn pin độc lập.
+5. **Bắt buộc** `storage.driver=local`, thư mục `storage.local_path` đã tồn tại, nằm ngoài source/webroot và có nhãn `stage`/`staging` rõ ràng. Biến môi trường **`VTA_RC62_STAGING_STORAGE_PIN`** phải khớp đúng đường dẫn `realpath` đã duyệt độc lập. Cấm `public_html`, `www`, `htdocs`, các thư mục `v2quote` và việc dùng lại production Google Drive OAuth/storage, kể cả khi đường dẫn cũ nằm ngoài docroot. Với FPM phải nhận `HTTP_HOST` đúng host và `HTTPS=on` hoặc `1`; tuyệt đối không tin `X-Forwarded-Host` của client hay coi Host header là nguồn pin độc lập.
 
 **Không đặt cả hai pin chỉ trong cùng `config.php` rồi tuyên bố đã phê duyệt độc lập**. Pin môi trường phải được operator xác nhận qua quy trình riêng, cấu hình tại PHP-FPM/service và CLI trong private server, không lưu GitHub, public_html hay client JS. Nếu PHP-FPM đứng sau proxy và không có `HTTPS` được xác lập đáng tin cậy, request sẽ bị từ chối; cần kiểm tra và phê duyệt proxy/trust boundary riêng, không tắt kiểm soát.
 
@@ -39,7 +39,7 @@ Trong PR #79, bộ kiểm thử staging đã sẵn sàng nhưng RuntimeGuard ch�
 ]
 ```
 
-Hai biến server operator phải provision riêng sau khi chốt host và clone. **Không được sao chép giá trị mẫu trên vào hệ thống thật**. Tất cả cấu hình khác (session, upload, secrets, database user, company isolation) vẫn cần xem xét riêng.
+**Ba biến** host pin, DB pin và storage pin phải được operator provision riêng sau khi chốt host, database clone và kho tệp staging. **Không được sao chép giá trị mẫu trên vào hệ thống thật**. Tất cả cấu hình khác (session, upload, secrets, database user, company isolation) vẫn cần xem xét riêng.
 
 ## Kiểm thử và bằng chứng
 
@@ -54,4 +54,4 @@ Sau khi được cấp riêng HTTPS staging/clone/backup phục hồi, operator 
 - Không thay đổi application DB, không cài SQL, không tắt RuntimeGuard, không tạo staging subdomain DNS, không upload CyberPanel. Chưa có phê duyệt hạ tầng từ operator.
 - E2E-01 đến E2E-08, 50 DOCX/PDF thật, real-auth A/B, 6 paying + 1 FOC Hotel 3★ + Cruise 5★ và rollback trên clone dữ liệu thật vẫn **BLOCKED_ENV**.
 
-**Kết luận: code có đường opt-in an toàn; môi trường và release_authorized vẫn NO-GO cho đến khi có phê duyệt hạ tầng, nghiệm thu độc lập và chữ ký owner.**
+**Kết luận: code có đường opt-in ba pin mặc định từ chối; môi trường và release_authorized vẫn NO-GO cho đến khi có phê duyệt hạ tầng, nghiệm thu độc lập và chữ ký owner.**
