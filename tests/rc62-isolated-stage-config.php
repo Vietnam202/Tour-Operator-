@@ -53,7 +53,7 @@ file_put_contents($routerOut, "<?php\n".
     "  if(getenv('GITHUB_ACTIONS')!=='true' || strlen(\$pin)<32 ||\n".
     "     !hash_equals(\$pin,\$present) || (\$_SERVER['REMOTE_ADDR']??'')!=='127.0.0.1'){\n".
     "    http_response_code(503);header('Content-Type: application/json');\n".
-    "    echo '{\\"ok\\":false,\\"error\\":\\"UNSAFE_STAGING_CONFIGURATION\\"}';return true;\n".
+    "    echo json_encode(['ok'=>false,'error'=>'UNSAFE_STAGING_CONFIGURATION']);return true;\n".
     "  }\n".
     "  unset(\$_SERVER['HTTP_X_VTA_CI_TLS_TOKEN']);\n".
     "  \$_SERVER['HTTPS']='on';\n".
@@ -61,4 +61,4 @@ file_put_contents($routerOut, "<?php\n".
     "  return true;\n".
     "}\nreturn false;\n");
 chmod($routerOut,0600);
-echo "PASS disposable stage config: new HTTPS host+DB+media pins; no actual TLS or staging host\n";
+echo "PASS disposable stage config: new HTTPS host+DB+media pins; real TLS proxy required, no actual staging host\n";
