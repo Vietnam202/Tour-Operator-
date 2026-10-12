@@ -17,6 +17,9 @@ on:
       - 'tests/rc62-release-readiness-unit.php'
       - 'deploy/check-rc62-evidence.py'
       - 'tests/rc62-operator-evidence-unit.py'
+      - 'api/lib/RuntimeBuildIdentity.php'
+      - 'tests/rc62-runtime-build-identity-unit.php'
+      - 'docs/RC62_RUNTIME_BUILD_IDENTITY_VI.md'
       - 'tests/rc62-staging-readonly-smoke.cjs'
       - 'tests/rc62-staging-readonly-smoke-unit.cjs'
       - 'api/lib/RuntimeGuard.php'
@@ -83,6 +86,8 @@ jobs:
           php -l api/bin/rc62-release-readiness.php
           php tests/rc62-release-readiness-unit.php
           php -l api/lib/RuntimeGuard.php
+          php -l api/lib/RuntimeBuildIdentity.php
+          php tests/rc62-runtime-build-identity-unit.php
           php -l tests/rc62-isolated-host-pin-unit.php
           php tests/rc62-isolated-host-pin-unit.php
           python3 tests/rc62-operator-evidence-unit.py
@@ -120,6 +125,16 @@ jobs:
           assert m['source_commit'] == subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           assert len(glob.glob('dist/vta-rc62-integrated-staging-*.zip')) == 1
           assert m['migration_execution'] == 'NOT_PERFORMED'
+          assert 'api/runtime-build-identity.json' in m['sha256']
+          import zipfile, hashlib
+          with zipfile.ZipFile(glob.glob('dist/vta-rc62-integrated-staging-*.zip')[0]) as arc:
+              identity=json.loads(arc.read('runtime/api/runtime-build-identity.json'))
+          sources={k:v for k,v in m['sha256'].items() if k!='api/runtime-build-identity.json'}
+          inventory=hashlib.sha256(json.dumps(sources,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          assert identity['source_commit']==m['source_commit']
+          assert identity['source_inventory_sha256']==inventory
+          assert identity['source_file_count']==len(sources)
+          print('PASS packaged running-build identity equals the approved source inventory')
           for path in ('cost-sheet.js', 'document-editor.js', 'vta-cost-editor.js'):
               assert path in m['sha256'], f'Missing reviewed workspace asset: {path}'
           print('PASS exact SHA release manifest')
