@@ -68,7 +68,13 @@ final class VTA_B2C_Publications {
         $out='<section class="vta-journeys">';foreach(get_posts(['post_type'=>'vta_journey','post_status'=>'publish','numberposts'=>100]) as $p)$out.='<article><h2><a href="'.esc_url(get_permalink($p)).'">'.esc_html($p->post_title).'</a></h2><p>'.esc_html($p->post_excerpt).'</p><p>Request a quotation</p></article>';return $out.'</section>';
     }
     public static function node(array $n,string $imageBase): string {
-        $type=$n['type']??'';if($type==='text')return esc_html($n['text']??'');
+        $type=$n['type']??'';if($type==='text'){
+            $text=esc_html($n['text']??'');$tags=['bold'=>'strong','italic'=>'em','underline'=>'u','strike'=>'s','code'=>'code'];
+            foreach($n['marks']??[] as $mark){$t=$mark['type']??'';
+                if(isset($tags[$t]))$text='<'.$tags[$t].'>'.$text.'</'.$tags[$t].'>';
+                elseif($t==='link'){$url=$mark['attrs']['href']??'';if(is_string($url)&&filter_var($url,FILTER_VALIDATE_URL)&&in_array(strtolower((string)parse_url($url,PHP_URL_SCHEME)),['https','http'],true))$text='<a href="'.esc_url($url).'" rel="nofollow noopener noreferrer">'.$text.'</a>';}
+            }return $text;
+        }
         if($type==='image'){$id=(int)($n['attrs']['assetId']??0);return $id?'<img loading="lazy" src="'.esc_url($imageBase.$id).'" alt="'.esc_attr($n['attrs']['alt']??'Tour image').'">':'';}
         $inner='';foreach($n['content']??[] as $child)$inner.=self::node($child,$imageBase);
         if($type==='doc')return $inner;if($type==='hardBreak')return '<br>';
@@ -80,7 +86,7 @@ final class VTA_B2C_Publications {
         $s=get_post_meta($id,'_vta_b2c_snapshot',true);if(!is_array($s))return '';
         wp_enqueue_script('vta-b2c-inquiry',plugins_url('../assets/b2c-inquiry.js',__FILE__),[],'0.2.0',true);
         $out='<article class="vta-journey"><h1>'.esc_html($s['title']).'</h1>'.self::node($s['document']['content'],(string)get_post_meta($id,'_vta_b2c_image_base',true)).'<p>Request a reviewed quotation. Availability and booking require staff confirmation.</p>';
-        return $out.'<form data-vta-b2c-inquiry data-api="'.esc_url(rest_url('vta-connect/v1/lead')).'" data-publication="'.(int)get_post_meta($id,'_vta_b2c_publication',true).'"><label>Name<input name="contact_name" required maxlength="190"></label><label>Email<input name="email" type="email" required maxlength="190"></label><label>Travellers<input name="total_guests" type="number" min="1" max="1000" value="2" required></label><label>Dates and requirements<textarea name="message" maxlength="8000"></textarea></label><label><input name="consent" type="checkbox" required>I agree to be contacted about this request.</label><button type="submit">Request quotation</button><p role="status"></p></form></article>';
+        return $out.'<form data-vta-b2c-inquiry data-api="'.esc_url(rest_url('vta-connect/v1/lead')).'" data-publication="'.(int)get_post_meta($id,'_vta_b2c_publication',true).'"><label>Name<input name="contact_name" required maxlength="190"></label><label>Email<input name="email" type="email" required maxlength="190"></label><label>Phone / WhatsApp (optional)<input name="phone" type="tel" maxlength="64"></label><label>Travel date (optional)<input name="travel_date" type="date"></label><label>Flexible dates until (optional)<input name="travel_date_end" type="date"></label><label>Travellers<input name="total_guests" type="number" min="1" max="1000" value="2" required></label><label>Dates and requirements<textarea name="message" maxlength="7400"></textarea></label><label><input name="consent" type="checkbox" required>I agree to be contacted about this request.</label><button type="submit">Request quotation</button><p role="status"></p></form></article>';
     }
     public static function adminSync(): void {
         if(!current_user_can('manage_options'))wp_die('Forbidden');check_admin_referer('vta_b2c_sync');self::sync();wp_safe_redirect(admin_url('options-general.php?page=vta-connect'));exit;

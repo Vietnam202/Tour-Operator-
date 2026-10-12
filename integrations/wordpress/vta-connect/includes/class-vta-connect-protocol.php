@@ -86,7 +86,15 @@ final class VTA_Connect_Protocol {
             'destination'=>self::clean($input['destination']??'',500,'destination'),
             'message'=>self::clean($input['message']??'',8000,'message')
         ] + self::attribution(is_array($input['attribution']??null)?$input['attribution']:[]);
-        if(isset($input['b2c_publication_id'])){$id=filter_var($input['b2c_publication_id'],FILTER_VALIDATE_INT);if(!$id||$id<1)throw new InvalidArgumentException('Invalid publication');$lead['b2c_publication_id']=$id;}
+        if(isset($input['b2c_publication_id'])){
+            $id=filter_var($input['b2c_publication_id'],FILTER_VALIDATE_INT);if(!$id||$id<1)throw new InvalidArgumentException('Invalid publication');
+            if(($input['consent']??false)!==true)throw new InvalidArgumentException('Contact consent required');
+            $date=self::clean($input['travel_date']??'',10,'travel_date');$end=self::clean($input['travel_date_end']??'',10,'travel_date_end');
+            foreach([$date,$end] as $value)if($value!==''){$d=DateTimeImmutable::createFromFormat('!Y-m-d',$value);if(!$d||$d->format('Y-m-d')!==$value)throw new InvalidArgumentException('Invalid travel date');}
+            if($end!==''&&($date===''||$end<$date))throw new InvalidArgumentException('Invalid date range');
+            $lead['b2c_publication_id']=$id;$lead['travel_date']=$date;
+            $lead['message']="Contact consent: yes.\n".($end!==''?'Travel date range: '.$date.' to '.$end.".\n":'').self::clean($input['message']??'',7400,'message');
+        }
         return [
             'event_type'=>'lead.created',
             'event_id'=>hash('sha256',$external.':lead:'.$request),

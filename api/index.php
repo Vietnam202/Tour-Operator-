@@ -121,6 +121,7 @@ try {
 
     QuoteProposal::publicHandle($route,$method,$db,$config);
     B2CPublicationBridge::publicHandle($route,$method,$db,$config);
+    B2CStorefront::publicHandle($route,$method,$db,$config);
     WebhookCenter::publicHandle($route,$method,$db,$config);
     WebsiteInbox::publicHandle($route,$method,$db,$config);
     MetaInbox::publicHandle($route,$method,$db,$config);
