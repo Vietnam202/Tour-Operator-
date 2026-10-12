@@ -2,7 +2,8 @@
 const app=document.getElementById('hub'), account=document.getElementById('account'),logout=document.getElementById('logout');
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>JSON.parse(JSON.stringify(x));
-let user=null,portal=null,tab=['library','my','agency','admin','net','requests'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
+let user=null,portal=null,tab=['library','my','agency','admin','net','requests','sales'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
+let netRequestDraft=null;
 const status=(msg,error=false)=>{const el=document.querySelector('[data-hub-status]');if(el){el.textContent=msg;el.className='hub-status '+(error?'error':'success');}else if(error)alert(msg);};
 async function request(route,opt={}){
  const method=opt.method||'GET',headers={'Accept':'application/json'};let body;
@@ -15,7 +16,7 @@ async function request(route,opt={}){
  return data;
 }
 function shell(title,description,content){
- const options=[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],...(portal?.admin?[['admin','VTA Publishing'],['net','NET Requests'],['requests','Booking Requests']]:[])];
+ const options=portal?.sales?[['sales','My NET Tasks']]:[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],...(portal?.admin?[['admin','VTA Publishing'],['net','NET Requests'],['requests','Booking Requests']]:[])];
  app.innerHTML='<header class="hub-intro"><div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div></header><nav class="hub-tabs" aria-label="Partner workspace">'+options.map(([k,n])=>'<button data-tab="'+k+'" class="'+(tab===k?'current':'')+'">'+esc(n)+'</button>').join('')+'</nav>'+content+'<p data-hub-status class="hub-status" role="status"></p>';
  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;draft=null;activeQuote=null;render();});
 }
@@ -24,7 +25,7 @@ function agencyFilter(){return '<label class="hub-label">Agency<select id="hubAg
 function agencyName(){return portal?.agencies?.find(x=>x.id===selectedAgency)?.brand_name||'Your Agency';}
 function noAgency(){return '<div class="hub-empty">No agency is assigned to this login. Contact VTA Admin for PARTNER role and agency membership.</div>';}
 async function boot(){
- try{const x=await request('auth/me');user=x.user;account.textContent=user.full_name;logout.hidden=false;portal=await request('b2b/me');selectedAgency=portal.agencies[0]?.id||0;logout.onclick=async()=>{try{await request('auth/logout',{method:'POST',body:{}});}finally{user=null;portal=null;loginScreen();}};
+ try{const x=await request('auth/me');user=x.user;account.textContent=user.full_name;logout.hidden=false;portal=await request('b2b/me');if(portal.sales)tab='sales';selectedAgency=portal.agencies[0]?.id||0;logout.onclick=async()=>{try{await request('auth/logout',{method:'POST',body:{}});}finally{user=null;portal=null;loginScreen();}};
  await render();
  }catch(e){user=null;portal=null;account.textContent='';logout.hidden=true;loginScreen();}
 }
@@ -35,6 +36,8 @@ function loginScreen(){
 async function render(){
  if(!user)return loginScreen();
  try{
+ if(tab==='sales'&&portal.sales)return await salesNetQueue();
+ if(portal.sales){tab='sales';return await salesNetQueue();}
  if(tab==='library')return await library();
  if(tab==='my')return await myTours();
  if(tab==='agency')return await agencyScreen();
@@ -133,10 +136,19 @@ async function openDraft(id){
  function wireRemove(){app.querySelectorAll('[data-remove-day]').forEach(b=>b.onclick=()=>{readDraft();if(draft.content.days.length<=1)return status('A tour needs at least one day',true);b.closest('[data-day]').remove();readDraft();});}wireRemove();
  app.querySelector('#calculateQuote').onclick=calculate;
  app.querySelector('#requestNetForm').onsubmit=async e=>{
-  e.preventDefault();try{await saveWorking();const b=Object.fromEntries(new FormData(e.target).entries());
-    const r=await request('b2b/net-requests',{method:'POST',body:{...quoteParams(),...b,partner_tour_id:draft.id,foc:Number(b.foc||0)}});
-    status('NET Request #'+r.id+' sent to VTA Sales B2B.');e.target.reset();
+  e.preventDefault();const form=e.target,button=form.querySelector('button[type="submit"]');button.disabled=true;
+  try{
+    await saveWorking();
+    const b=Object.fromEntries(new FormData(form).entries());
+    const payload={...quoteParams(),...b,partner_tour_id:draft.id,foc:Number(b.foc||0)};
+    const fingerprint=JSON.stringify(payload);
+    if(!netRequestDraft||netRequestDraft.payload!==fingerprint)
+      netRequestDraft={payload:fingerprint,key:crypto.randomUUID()};
+    const r=await request('b2b/net-requests',{method:'POST',body:{...payload,request_id:netRequestDraft.key}});
+    status('NET Request #'+r.id+(r.reused?' already received; no duplicate created.':' sent to VTA Sales B2B.'));
+    netRequestDraft=null;form.reset();
   }catch(err){status(err.message,true);}
+  finally{button.disabled=false;}
  };
  app.querySelectorAll('[data-export]').forEach(btn=>btn.onclick=async()=>{
   const [audience,format]=btn.dataset.export.split(':');
@@ -167,6 +179,12 @@ async function adminScreen(){
  app.querySelector('#agencyCreate').onsubmit=async e=>{e.preventDefault();try{await request('b2b/admin/agencies',{method:'POST',body:Object.fromEntries(new FormData(e.target).entries())});portal=await request('b2b/me');status('Agency created');setTimeout(render,700);}catch(e){status(e.message,true);}};
  app.querySelector('#memberForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.target).entries());await request('b2b/admin/agencies/'+Number(b.agency_id)+'/members',{method:'POST',body:{user_id:Number(b.user_id)}});status('Agency member assigned');}catch(e){status(e.message,true);}};
  app.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{if(!confirm('Revoke this published version? Existing agency drafts retain their historical snapshots but cannot quote or book.'))return;try{await request('b2b/admin/publications/'+Number(b.dataset.revoke)+'/revoke',{method:'POST',body:{}});render();}catch(e){status(e.message,true);}});
+}
+async function salesNetQueue(){
+ const result=await request('b2b/sales/net-requests');
+ const rows=(result.items||[]).map(t=>'<tr><td>#'+Number(t.id)+'</td><td>'+Number(t.agency_id)+'</td><td>'+esc(t.departure_date)+'</td><td>'+Number(t.paying_pax)+' + '+Number(t.foc_pax)+' FOC</td><td>'+esc(t.mode)+' · Hotel '+esc(t.hotel_level)+'★ / Cruise '+esc(t.cruise_level||'none')+'</td><td>'+esc(t.notes)+'</td><td>'+esc(t.status)+'</td></tr>').join('');
+ shell('My NET Tasks','Requests assigned to your Sales account. Prepare a reviewed quotation in VTA OS; Admin links the issued Quote Version. This queue does not confirm prices or suppliers.',
+ '<div class="hub-box"><p><a href="./index.html">Open VTA OS to work on quotations</a></p><div style="overflow:auto"><table class="hub-table"><thead><tr><th>NET ID</th><th>Agency</th><th>Departure</th><th>Guests</th><th>Options</th><th>Notes</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="hub-note">No assigned NET task? Contact VTA Admin. Supplier confirmation and Booking remain separate review gates.</p></div>');
 }
 async function netRequestsScreen(){
  const [r,staff]=await Promise.all([request('b2b/net-requests'),request('b2b/admin/net-assignees')]);
