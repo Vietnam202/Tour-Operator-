@@ -73,6 +73,8 @@ def verify_artifact(manifest_path:Path,archive_path:Path,sums_path:Path,pin:str)
     require(sum(name.startswith("api/migrations/") and name.endswith(".sql") for name in files)
         ==m["migration_count"],"ARTIFACT_MIGRATIONS_MISMATCH")
     try:
+        require(archive_path.stat().st_size<=200*1024*1024,
+            "ARTIFACT_ZIP_SIZE_LIMIT")
         manifest_bytes=manifest_path.read_bytes()
         zip_digest=sha(archive_path.read_bytes())
         manifest_digest=sha(manifest_bytes)
@@ -92,10 +94,16 @@ def verify_artifact(manifest_path:Path,archive_path:Path,sums_path:Path,pin:str)
             require(len(names)==len(set(names)),"ZIP_DUPLICATE_ENTRY")
             require(set(names)=={"runtime/"+k for k in files}|{"REVIEW_STAGING_ONLY.txt"},
                 "ZIP_CONTENT_MISMATCH")
+            total_uncompressed=0
             for info in infos:
+                total_uncompressed+=info.file_size
                 require(not info.is_dir() and info.file_size<=50*1024*1024
                     and (info.external_attr>>16)&0o170000 not in (0o120000,),
                     "ZIP_UNSAFE_ENTRY")
+                require(total_uncompressed<=200*1024*1024
+                    and (info.file_size<=1024*1024
+                        or (info.compress_size>0 and info.file_size/info.compress_size<=150)),
+                    "ZIP_UNSAFE_COMPRESSION")
             for name,digest in files.items():
                 require(sha(z.read("runtime/"+name))==digest,"ZIP_RUNTIME_HASH_MISMATCH")
     except (OSError,zipfile.BadZipFile,RuntimeError,ValueError):
@@ -136,7 +144,9 @@ def verify_evidence(packet:dict,artifact:dict)->None:
         and recovery.get("read_only_preflight")=="READ_ONLY_PREFLIGHT_PASS"
         and recovery.get("preflight_release_authorized") is False
         and recovery.get("clone_db")==db
-        and private_ref(recovery.get("evidence_ref")),"RECOVERY_OPERATOR_EVIDENCE_MISSING")
+        and private_ref(recovery.get("evidence_ref"))
+        and private_ref(recovery.get("preflight_ref")),
+        "RECOVERY_OPERATOR_EVIDENCE_MISSING")
     roles=packet.get("roles")
     require(isinstance(roles,dict) and set(roles)==set(REQUIRED_ROLES)
         and all(evidence_item(item,pin) for item in roles.values()),"AUTHENTIC_ROLE_SESSIONS_MISSING")
@@ -179,7 +189,8 @@ def all_evidence_refs(packet:dict)->set[str]:
     """Fail closed on missing/duplicate role and scenario evidence references."""
     refs=[
         packet["staging"]["evidence_ref"],packet["recovery"]["evidence_ref"],
-        packet["cost"]["evidence_ref"],packet["operator_review"]["evidence_ref"]
+        packet["recovery"]["preflight_ref"],packet["cost"]["evidence_ref"],
+        packet["operator_review"]["evidence_ref"]
     ]
     refs.extend(r["evidence_ref"] for r in packet["roles"].values())
     refs.extend(r["evidence_ref"] for r in packet["scenarios"].values())
@@ -201,7 +212,7 @@ def sha256_file(path:Path)->tuple[str,int]:
     require(size>=8,"PRIVATE_EVIDENCE_FILE_EMPTY")
     return digest.hexdigest(),size
 
-def verify_private_evidence(packet:dict,root:Path)->dict:
+def verify_private_evidence(packet:dict,root:Path,artifact:dict)->dict:
     """Verify operator-held file bytes, not just free-form private:// placeholders.
 
     This proves evidence files *exist* and bind to their claimed SHA, NOT that
@@ -239,6 +250,28 @@ def verify_private_evidence(packet:dict,root:Path)->dict:
         current,_=sha256_file(dest)
         require(current==recorded,"PRIVATE_EVIDENCE_CHECKSUM_MISMATCH")
         verified[ref]=dest
+    # Read the *actual* JSON from the read-only PHP preflight, rather than
+    # trusting the self-reported PASS string in the operator packet.
+    # This is still a file-level integrity check, not an authenticity
+    # attestation; the operator must independently verify where it came from.
+    preflight_ref=packet["recovery"]["preflight_ref"]
+    raw_preflight=verified[preflight_ref].read_bytes()
+    require(len(raw_preflight)<=65536,"PREFLIGHT_LOG_SIZE_LIMIT")
+    try:
+        preflight=json.loads(raw_preflight)
+    except (ValueError,UnicodeDecodeError):
+        raise Stop("PREFLIGHT_JSON_INVALID") from None
+    require(isinstance(preflight,dict)
+        and preflight.get("ok") is True
+        and preflight.get("status")=="READ_ONLY_PREFLIGHT_PASS"
+        and preflight.get("source_commit")==packet["candidate_sha"]
+        and preflight.get("runtime_files")==artifact["runtime_files"]
+        and preflight.get("migrations_checked")==artifact["migration_files"]
+        and preflight.get("release_authorized") is False
+        and isinstance(preflight.get("requires"),list)
+        and set(preflight["requires"])=={
+            "restore_rehearsal","multirole_staging_uat","operator_approval"},
+        "PREFLIGHT_EXACT_SHA_OR_LEDGER_MISMATCH")
     for d in packet["real_documents"]:
         ref=d["source_ref"]
         require(index[ref]["sha256"]==d["source_sha256"],"DOCUMENT_SOURCE_HASH_MISMATCH")
@@ -267,7 +300,7 @@ def main(argv:list[str])->int:
         artifact=verify_artifact(Path(args.manifest),Path(args.zip),Path(args.sha256sums),args.expected_sha)
         packet=load(Path(args.evidence))
         verify_evidence(packet,artifact)
-        bound=verify_private_evidence(packet,Path(args.evidence_root))
+        bound=verify_private_evidence(packet,Path(args.evidence_root),artifact)
         print(json.dumps({"ok":True,"status":"EVIDENCE_PACKET_STRUCTURALLY_COMPLETE",
             "source_commit":artifact["sha"],"runtime_files":artifact["runtime_files"],
             "migration_files":artifact["migration_files"],
