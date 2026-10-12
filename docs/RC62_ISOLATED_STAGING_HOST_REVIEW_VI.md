@@ -55,6 +55,14 @@ Bộ thử xác minh: (1) đúng ba pin mới có health 200, (2) Host productio
 
 **Quan trọng:** bộ thử dùng một PHP router giả lập `$_SERVER['HTTPS']=on` trên kết nối HTTP loopback. Do đó nó **không chứng minh TLS thực tế, reverse proxy cấu hình đúng, DNS/staging thật hay an toàn CyberPanel**. Các login trong CI chỉ thay đổi audit/last_login_at trên database giả `vta_test_*` và được huỷ sau job. Không đưa tên miền `.invalid`, DB hoặc biến PIN test lên VPS thật. Phải kiểm tra **TLS/Host/IP/nguồn trusted proxy ngoài CI** trên máy chủ staging được cấp phép.
 
+## Bước 2O — bắt tay TLS thực sự trên loopback (không phải TLS CyberPanel)
+
+Test tích hợp `tests/rc62-isolated-stage-http.cjs` nay tạo một chứng chỉ tự ký có SAN `staging-fixture.example.invalid` và khóa riêng **tạm thời** bằng OpenSSL bên trong thư mục riêng chỉ có trên GitHub Actions. Node.js mở một HTTPS server trên `127.0.0.1:18873` và reverse-proxy các request API đến PHP 8.3 ở loopback; client Node bắt buộc `rejectUnauthorized=true`, trust chính xác cert thử nghiệm của phiên CI và sử dụng SNI `staging-fixture.example.invalid`.
+
+Bài thử kiểm tra **một bắt tay TLS thật** đi tới `health`, kiểm chứng không chấp nhận chứng chỉ tự ký nếu không có CA pin, từ chối SNI sai, từ chối Host production giả mạo tại TLS terminator (421), Origin giả mạo tại PHP (403), bỏ qua `X-Forwarded-Host` do client gửi, và chạy đăng nhập/tách KPI Partner A/B qua TLS. Chứng chỉ và key chỉ tồn tại trong private temp, bị xóa khi runner kết thúc; **không đưa vào runtime artifact hoặc server thật**.
+
+Giới hạn cực kỳ quan trọng: `stage-router.php` ở tầng PHP vẫn đặt `$_SERVER['HTTPS']='on'` bằng cơ chế giả lập, không phải PHP-FPM/nginx/OpenLiteSpeed thực tế. HTTPS proxy trong CI là Node.js, không phải CyberPanel. Vì vậy bài này **không chứng minh cấu hình TLS của VPS, chain chứng chỉ thật, HSTS, header proxy hoặc việc cổng PHP backend thực sự không thể truy cập từ internet**. Muốn qua gate staging thật, operator phải kiểm tra reverse proxy/trusted listener, DNS, SNI, cert public CA, request Host, HTTP→HTTPS redirect, private DB/docroot, và không bao giờ bỏ `RuntimeGuard` để vượt test.
+
 ## Ranh giới bảo vệ
 
 - Bổ sung một allowlist có điều kiện vào code **không mở máy chủ staging** khi thiếu config/pin/SSL/clone thực tế.
