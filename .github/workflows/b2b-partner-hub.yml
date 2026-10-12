@@ -4,6 +4,7 @@ on:
     paths:
       - 'api/lib/PartnerHub.php'
       - 'api/lib/TourLibrary.php'
+      - 'tests/tour-library-rich-docx-unit.php'
       - 'tour-library.js'
       - 'api/index.php'
       - 'api/bootstrap.php'
@@ -40,6 +41,7 @@ jobs:
           php -l api/bootstrap.php
           php -l api/index.php
           php -l tests/b2b-partner-hub-unit.php
+          php -l tests/tour-library-rich-docx-unit.php
           php -l tests/b2b-hybrid-isolation-unit.php
           php -l tests/b2b-hybrid-schema-ci.php
       - name: JavaScript syntax and real NET portal DOM regression
@@ -53,6 +55,7 @@ jobs:
           php tests/b2b-partner-hub-unit.php
           php tests/b2b-hybrid-isolation-unit.php
           php tests/tour-library.php
+          php tests/tour-library-rich-docx-unit.php
   disposable-mariadb-hybrid-migration:
     runs-on: ubuntu-latest
     services:

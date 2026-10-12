@@ -143,4 +143,26 @@ check(v2q('SELECT * FROM booking_quote_snapshots WHERE booking_id=?',[$bookingId
         ===$sentBundle,
     'V5 template: saving and revising does not change historical SENT or Booking snapshots');
 
+// Real MariaDB persistence of imported typed Word blocks from the new DOCX preview.
+$richImport=TourLibrary::richDocxDraft(['blocks'=>[
+    ['type'=>'heading','level'=>2,'runs'=>[['text'=>'Hà Nội 7D6N','bold'=>true]]],
+    ['type'=>'paragraph','runs'=>[['text'=>'Cruise and Hotel are separate services','italic'=>true]]],
+    ['type'=>'table','rows'=>[
+        [[['text'=>'Day']],[['text'=>'Included']]],
+        [[['text'=>'1']],[['text'=>'Private transfer']]]
+    ]]
+],'images'=>[]], 'Synthetic Word Program');
+check(isset($richImport['proposal']['document']),'V5 native: DOCX produces typed Word document without guessing supplier prices');
+$richSource=TourLibrary::save($db,$user,[
+    'title'=>'Synthetic Word Program','destination'=>'Hanoi, Ha Long','language'=>'vi',
+    'status'=>'DRAFT','days'=>[],'source_type'=>'MANUAL','proposal'=>$richImport['proposal']
+]);
+$richSaved=TourLibrary::publicProgram(TourProgramWorkspace::program($db,$user,(int)$richSource['id']));
+check($richSaved['has_document']===true&&$richSaved['status']==='DRAFT'
+    &&$richSaved['proposal']['document']===$richImport['proposal']['document'],
+    'V5 native: imported Word headings, styled text and table persist and reopen losslessly on MariaDB');
+check(empty($richSaved['proposal']['private_prices'])
+    &&empty($richSaved['proposal']['group_prices'])
+    &&$richSaved['has_source']===false,
+    'V5 native: imported Word remains unpriced DRAFT; no fake source binary claim');
 echo "RC6.2 V5 native template Save/Reopen/Isolation acceptance complete; CI fixture only.\n";

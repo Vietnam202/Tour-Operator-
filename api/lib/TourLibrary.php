@@ -201,6 +201,80 @@ final class TourLibrary {
         $language=preg_match('/^\s*Ngày\s*\d/miu',$text)?'vi':'en';
         return ['title'=>$title!==''?$title:'Imported tour program','language'=>$language,'source_name'=>self::filename($name),'source_type'=>$type,'source_url'=>$url,'status'=>'DRAFT']+$out;
     }
+    /**
+     * DOCX-only, best-effort editable Word canvas preview. Text, headings,
+     * supported inline marks, simple lists and rectangular tables survive;
+     * embedded images remain ONLY in the private original until a reviewer
+     * imports/approves them through the existing Media Library workflow.
+     * Never promote imported commercial values into approved rates.
+     */
+    public static function richDocxDraft(array $parsed,string $title): array {
+        $blocks=$parsed['blocks']??[];
+        if(!is_array($blocks)||!array_is_list($blocks))throw new InvalidArgumentException('Invalid DOCX blocks');
+        $warnings=$parsed['warnings']??[];
+        if(!is_array($warnings))$warnings=[];
+        $imageCount=count($parsed['images']??[]);
+        if($imageCount>0)$warnings[]=$imageCount.' embedded DOCX images remain in the private original; add approved images to the editable Word canvas manually.';
+        $runs=function($source):array {
+            if(!is_array($source))throw new InvalidArgumentException('Invalid DOCX text runs');
+            $nodes=[];
+            foreach($source as $run){
+                if(!is_array($run))throw new InvalidArgumentException('Invalid DOCX text run');
+                $value=$run['text']??'';
+                if(!is_string($value)||$value==='')continue;
+                $marks=[];
+                foreach(['bold','italic','underline'] as $mark)if(!empty($run[$mark]))$marks[]=['type'=>$mark];
+                $style=[];
+                if(!empty($run['color'])&&preg_match('/^#[a-f0-9]{6}$/iD',(string)$run['color']))$style['color']=strtolower($run['color']);
+                if(isset($run['font_size'])&&(int)$run['font_size']>=8&&(int)$run['font_size']<=72)
+                    $style['fontSize']=(int)$run['font_size'].'pt';
+                if($style)$marks[]=['type'=>'textStyle','attrs'=>$style];
+                $nodes[]=['type'=>'text','text'=>$value]+($marks?['marks'=>$marks]:[]);
+            }
+            return $nodes;
+        };
+        $paragraph=static fn($source)=>['type'=>'paragraph','content'=>$runs($source)];
+        $nodes=[];
+        foreach($blocks as $block){
+            if(!is_array($block))throw new InvalidArgumentException('Invalid DOCX block');
+            $type=$block['type']??'';
+            if($type==='paragraph'||$type==='heading'){
+                $item=['type'=>$type,'content'=>$runs($block['runs']??[])];
+                $attrs=[];
+                if($type==='heading')$attrs['level']=max(1,min(6,(int)($block['level']??2)));
+                if(in_array($block['alignment']??'',['left','center','right','justify'],true))
+                    $attrs['textAlign']=$block['alignment'];
+                if($attrs)$item['attrs']=$attrs;
+                $nodes[]=$item;
+            }elseif($type==='list'){
+                $items=[];
+                foreach($block['items']??[] as $item)$items[]=['type'=>'listItem','content'=>[$paragraph($item)]];
+                if($items)$nodes[]=['type'=>!empty($block['ordered'])?'orderedList':'bulletList','content'=>$items];
+            }elseif($type==='table'){
+                $rows=[];
+                foreach($block['rows']??[] as $row){
+                    if(!is_array($row))throw new InvalidArgumentException('Invalid DOCX table row');
+                    $cells=[];
+                    foreach($row as $cell)$cells[]=['type'=>'tableCell','content'=>[$paragraph($cell)]];
+                    if($cells)$rows[]=['type'=>'tableRow','content'=>$cells];
+                }
+                if($rows)$nodes[]=['type'=>'table','content'=>$rows];
+            }elseif($type==='image_candidate'){
+                // No unowned image IDs and no base64 sent to the browser.
+                continue;
+            }else $warnings[]='Unsupported DOCX layout element skipped; review the preserved original.';
+        }
+        $result=['warnings'=>array_values(array_unique($warnings))];
+        if(!$nodes)return $result;
+        try {
+            $result['proposal']=['document'=>TourProgramWorkspace::reusableDocument(
+                ['schema'=>'VTA_DOC_2','title'=>$title,'content'=>['type'=>'doc','content'=>$nodes]])];
+            $result['warnings'][]='Editable Word draft is prepared (headings, styled text, lists and simple tables). Review the original DOCX and all images, prices, layout and policies before publishing.';
+        }catch(InvalidArgumentException|DomainException $e){
+            $result['warnings'][]='Editable Word structure needs manual review; the original DOCX and extracted text remain available.';
+        }
+        return $result;
+    }
     private static function stage(PDO $db,array $config,array $u,string $path,string $name,string $ext,string $type,string $url): string {
         $base=rtrim((string)($config['storage']['local_path']??''),'/\\');if($base==='')throw new RuntimeException('Private local storage is required to preserve tour program source files');
         $directory=$base.'/tour-library';if(!is_dir($directory)&&!mkdir($directory,0770,true)&&!is_dir($directory))throw new RuntimeException('Cannot create private tour library storage');
@@ -236,8 +310,9 @@ final class TourLibrary {
             return self::previewText($text,self::text($b['source_name']??'Pasted itinerary',255,'source name'));
         }
         try {
-            self::validateFile($path,$ext);$r=DocumentParser::extract($path,$ext);if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Extracted text is too long; split the document before importing');
+            self::validateFile($path,$ext);$r=$ext==='docx'?DocumentParser::proposal($path,$ext,true):DocumentParser::extract($path,$ext);if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Extracted text is too long; split the document before importing');
             $out=self::previewText($r['text'],$name,$type,$url);$out['warnings'][]=$r['note'];$out['extraction_quality']=$r['quality'];
+            if($ext==='docx'){$rich=self::richDocxDraft($r,$out['title']);$out['warnings']=array_values(array_unique([...$out['warnings'],...$rich['warnings']]));if(isset($rich['proposal']))$out['proposal']=$rich['proposal'];}
             $out['import_token']=self::stage($db,$config,$u,$path,$name,$ext,$type,$url);$out['has_source']=true;return $out;
         }finally {if($type==='GOOGLE_DRIVE'&&is_file($path))unlink($path);}
     }
@@ -254,7 +329,7 @@ final class TourLibrary {
         if(!class_exists('ZipArchive'))throw new RuntimeException('ZIP import requires PHP ZipArchive');
         $zip=new ZipArchive();
         if($zip->open($file['tmp_name'])!==true)throw new InvalidArgumentException('Invalid ZIP archive');
-        $items=[];$seen=[];$total=0;$count=0;
+        $items=[];$seen=[];$seenHashes=[];$total=0;$count=0;
         try{
             if($zip->numFiles>250)throw new InvalidArgumentException('ZIP has too many archive entries');
             for($i=0;$i<$zip->numFiles;$i++){
@@ -280,12 +355,16 @@ final class TourLibrary {
                     $copied=stream_copy_to_stream($stream,$output,self::MAX_FILE_BYTES+1);fclose($stream);fclose($output);
                     if($copied!==$size)throw new InvalidArgumentException('ZIP member decompression did not match expected size');
                     self::validateFile($temp,$ext);
-                    $r=DocumentParser::extract($temp,$ext);
+                    $sha=hash_file('sha256',$temp);
+                    if(isset($seenHashes[$sha]))throw new DomainException('Duplicate document bytes in ZIP (same content as '.$seenHashes[$sha].'); only one copy can be staged.');
+                    $seenHashes[$sha]=$name;
+                    $r=$ext==='docx'?DocumentParser::proposal($temp,$ext,true):DocumentParser::extract($temp,$ext);
                     if(strlen($r['text'])>=250000)throw new InvalidArgumentException('Document too long');
                     $item=self::previewText($r['text'],$name,'PC','');
                     $item['warnings'][]=$r['note'];
-                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original Word source is retained.';
+                    $item['warnings'][]='Review tables, pictures, policies and imported historical prices before approval. Original DOCX/PDF/TXT source is retained.';
                     $item['extraction_quality']=$r['quality'];
+                    if($ext==='docx'){$rich=self::richDocxDraft($r,$item['title']);$item['warnings']=array_values(array_unique([...$item['warnings'],...$rich['warnings']]));if(isset($rich['proposal']))$item['proposal']=$rich['proposal'];}
                     $item['import_token']=self::stage($db,$cfg,$u,$temp,$name,$ext,'PC','');
                     $item['has_source']=true;
                     $items[]=['name'=>$name,'status'=>'READY','preview'=>$item];
