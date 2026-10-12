@@ -1,12 +1,14 @@
 'use strict';
-/** Disposable CI only: real PHP bootstrap/MariaDB, simulated TLS flag.
- * This does NOT test live HTTPS, CyberPanel or an existing-data database.
+/** Disposable CI only: verified TLS (ephemeral CA) -> strict local proxy ->
+ * real PHP bootstrap/MariaDB. NOT live CyberPanel, public CA, or a customer DB.
  */
 const assert=require('node:assert/strict');
 const http=require('node:http');
+const https=require('node:https');
+const {randomBytes}=require('node:crypto');
 const path=require('node:path');
 const fs=require('node:fs');
-const {spawn}=require('node:child_process');
+const {spawn,spawnSync}=require('node:child_process');
 const host='staging-fixture.example.invalid';
 const fixtureUrl='http://127.0.0.1:18869';
 const env=process.env;
@@ -24,13 +26,48 @@ assert(!privateDir.startsWith(root+path.sep),'fixture config must be outside che
 assert(env.VTA_RC62_STAGING_HOST_PIN===host
  &&/^vta_test_[a-f0-9]{10}$/.test(env.VTA_RC62_STAGING_DB_PIN||'')
  &&env.VTA_RC62_STAGING_STORAGE_PIN===fs.realpathSync(mediaDir),'all synthetic fixture pins required');
-const servers=[];
+const servers=[],proxies=[];
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const proxyToken=randomBytes(32).toString('hex');
+const certFile=path.join(privateDir,'ci-stage-tls.pem');
+const keyFile=path.join(privateDir,'ci-stage-tls-key.pem');
+const generated=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-sha256',
+  '-nodes','-days','1','-subj','/CN='+host,
+  '-addext','subjectAltName=DNS:'+host,
+  '-keyout',keyFile,'-out',certFile],{stdio:'ignore',timeout:15000});
+assert.equal(generated.status,0,'ephemeral TLS certificate generation failed');
+fs.chmodSync(keyFile,0o600);
+const localCert=fs.readFileSync(certFile);
+const localKey=fs.readFileSync(keyFile);
 function start(port,pins){
  const proc=spawn('php',['-S','127.0.0.1:'+port,'-t',root,router],{
-   cwd:root,env:{...env,VTA_CONFIG_FILE:privateConfig,...pins},
+   cwd:root,env:{...env,VTA_CONFIG_FILE:privateConfig,
+     VTA_STAGE_CI_PROXY_TOKEN:proxyToken,...pins},
    stdio:['ignore','ignore','ignore']});
  servers.push(proc);
+ // Terminate actual client TLS here, then forward to loopback PHP. Strip ALL
+ // user-supplied forwarding headers. Inject an unpredictable private header
+ // only at this trusted boundary. PHP's CI-only router will refuse direct HTTP.
+ const front=https.createServer({key:localKey,cert:localCert,minVersion:'TLSv1.2'},
+   (incoming,outgoing)=>{
+     const headers={...incoming.headers};
+     for(const name of ['x-vta-ci-tls-token','x-forwarded-host','x-forwarded-proto',
+       'forwarded','x-forwarded-for','x-forwarded-port'])
+       delete headers[name];
+     headers['x-vta-ci-tls-token']=proxyToken;
+     const upstream=http.request({hostname:'127.0.0.1',port,
+       method:incoming.method,path:incoming.url,headers},up=>{
+         outgoing.writeHead(up.statusCode,up.headers);up.pipe(outgoing);
+       });
+     upstream.on('error',()=>{
+       if(!outgoing.headersSent)outgoing.writeHead(502,{'Content-Type':'application/json'});
+       outgoing.end('{"ok":false,"error":"CI_PROXY_UPSTREAM_UNAVAILABLE"}');
+     });
+     incoming.pipe(upstream);
+   });
+ front.on('tlsClientError',()=>{}); // Expected for plaintext probes; never log cert/private data.
+ front.listen(port+3,'127.0.0.1');
+ proxies.push(front);
  return proc;
 }
 function query(port,route,opts={}){
@@ -45,7 +82,11 @@ function query(port,route,opts={}){
      ...(opts.forwarded?{'X-Forwarded-Host':opts.forwarded}:{}),
      ...(opts.scheme?{'X-Forwarded-Proto':opts.scheme}:{})
    };
-   const req=http.request({hostname:'127.0.0.1',port,
+   const req=https.request({hostname:'127.0.0.1',port:port+3,
+     servername:opts.servername||host,
+     ca:opts.ca===undefined?localCert:opts.ca,
+     rejectUnauthorized:true,
+     minVersion:'TLSv1.2',
      path:'/api/index.php?route='+encodeURIComponent(route.split('?')[0])+
         (route.includes('?')?'&'+route.split('?').slice(1).join('?'):''),
      method:body===null?'GET':'POST',headers,timeout:5000},res=>{
@@ -57,7 +98,9 @@ function query(port,route,opts={}){
      res.on('end',()=>{
        const raw=Buffer.concat(parts).toString('utf8');
        let value=null;try{value=JSON.parse(raw)}catch{}
-       resolve({status:res.statusCode,data:value,headers:res.headers});
+       resolve({status:res.statusCode,data:value,headers:res.headers,
+         tlsVerified:res.socket.authorized===true,
+         negotiatedProtocol:res.socket.getProtocol()});
      });
    });
    req.on('timeout',()=>req.destroy(Error('FIXTURE_HTTP_TIMEOUT')));
@@ -86,7 +129,36 @@ function code(r,status,label){
  start(port,{});
  await ready(port);
  const accepted=await query(port,'health');
- code(accepted,200,'real PHP bootstrap accepts three-pinned isolated host with fixture MariaDB');
+ code(accepted,200,'verified self-signed TLS -> proxy -> real PHP bootstrap with three pins');
+ assert.equal(accepted.tlsVerified,true,'client must validate certificate chain and SAN');
+ assert(['TLSv1.2','TLSv1.3'].includes(accepted.negotiatedProtocol));
+ console.log('PASS STAGE TLS verified TLSv1.2+ and exact fixture DNS SAN, no insecure override');
+ // Untrusted certificate and wrong DNS SAN MUST fail before even contacting PHP.
+ await assert.rejects(query(port,'health',{ca:Buffer.from('not-an-authorized-CA')}),
+   /.+/,'untrusted fixture CA unexpectedly accepted');
+ await assert.rejects(query(port,'health',{servername:'wrong-stage.example.invalid'}),
+   /.+/,'wrong TLS server identity unexpectedly accepted');
+ console.log('PASS STAGE TLS untrusted CA and wrong DNS certificate identity refused');
+ // Direct cleartext HTTP MUST fail at the router (even with forged forwarded
+ // headers), and plaintext at the TLS listener MUST NOT produce health 200.
+ const direct=await new Promise((resolve,reject)=>{
+   http.get({host:'127.0.0.1',port,headers:{
+     Host:host,'X-Forwarded-Proto':'https'}},
+    response=>{
+      let raw='';response.on('data',x=>raw+=x.toString());
+      response.on('end',()=>resolve({status:response.statusCode,data:JSON.parse(raw)}));
+    }).on('error',reject);
+ });
+ code(direct,503,'direct HTTP cannot assert a TLS security context to PHP router');
+ await assert.rejects(new Promise((resolve,reject)=>{
+   const req=http.get({host:'127.0.0.1',port:port+3,path:'/api/index.php?route=health',
+     timeout:1500},response=>{
+       response.resume();resolve(response.statusCode);
+     });
+   req.on('timeout',()=>req.destroy(Error('plaintext TLS probe timed out')));
+   req.on('error',reject);
+ }),/./,'plaintext HTTP unexpectedly handled as TLS');
+ console.log('PASS STAGE TLS unencrypted HTTP cannot enter HTTPS listener');
  assert.equal(accepted.data?.ok,true);
  code(await query(port,'health',{host:'quote.vietnamtraveladvisor.com.vn'}),503,
    'production Host cannot route a pinned isolated staging configuration');
@@ -95,7 +167,7 @@ function code(r,status,label){
  code(await query(port,'health',{origin:'https://untrusted.example.invalid'}),403,
    'origin rejected after RuntimeGuard bootstrap');
  const spoof=await query(port,'health',{forwarded:'quote.vietnamtraveladvisor.com.vn',scheme:'http'});
- code(spoof,200,'X-Forwarded Host/Proto never override pinned Host/HTTPS server context');
+ code(spoof,200,'proxy strips forged X-Forwarded Host/Proto at TLS termination');
  code(await query(port,'auth/me'),401,'anonymous users denied private auth/me');
  code(await query(port,'b2b/me'),401,'anonymous users denied B2B portal');
  const noPinPort=18871;
@@ -130,6 +202,10 @@ function code(r,status,label){
  code(await query(port,'b2b/kpi?agency_id='+aid,{cookie:a}),200,
    'Partner A KPI allowed for own agency');
  console.log('PASS STAGE HTTP disposable MariaDB+PHP isolated bootstrap and Partner A/B contract');
- console.log('PASS_CI_FIXTURE_SIMULATED_HTTPS_ONLY; release_authorized=false');
+ console.log('PASS_CI_VERIFIED_EPHEMERAL_TLS_PROXY_FIXTURE_ONLY; release_authorized=false');
 })().catch(e=>{console.error('FAIL_CI_STAGE_HTTP '+String(e.message||e).slice(0,200));process.exitCode=1})
-.finally(async()=>{for(const proc of servers)proc.kill('SIGTERM');await sleep(100)});
+.finally(async()=>{
+ for(const front of proxies){front.closeAllConnections();front.close();}
+ for(const proc of servers)proc.kill('SIGTERM');
+ await sleep(100);
+});
