@@ -10,10 +10,10 @@ for(const [name,source] of [['index',html],['preview',preview]]) {
   assert(source.includes('vta-approved-ui.css?v=APPROVED1'),name+' includes approved style');
   assert(source.indexOf('vta-approved-ui.css')>source.indexOf('vta-ui-refresh.css'),name+' loads approved style last');
 }
-assert(html.includes('vta-cost-editor.js?v=DEMO-PARITY-1'),'uses versioned real costing editor');
-assert(sw.includes("const CACHE='vta-RC62-COST-SAVE-1-PWA'"),'PWA cache version changed');
+assert(html.includes('vta-cost-editor.js?v=COST-SAVE-2'),'uses versioned real costing editor');
+assert(sw.includes("const CACHE='vta-RC62-COST-SAVE-2-PWA'"),'PWA cache version changed');
 assert(sw.includes("'./vta-approved-ui.css?v=APPROVED1'"),'PWA precaches approved stylesheet');
-assert(sw.includes("'./vta-cost-editor.js?v=DEMO-PARITY-1'"),'PWA precaches new costing code');
+assert(sw.includes("'./vta-cost-editor.js?v=COST-SAVE-2'"),'PWA precaches new costing code');
 for(const feature of ['data-vta-option-stay','data-option-rate','data-option-property','data-mix-hotel','data-mix-cruise','vta-advanced-stays','data-vta-summary','data-add','data-remove','data-undo','data-vta-status'])assert(js.includes(feature),'preserve '+feature);
 assert(js.includes("base+'/price-matrix'"),'pax groups use server pricing matrix');
 assert(js.includes('data-private-groups'),'private tour groups always visible');
