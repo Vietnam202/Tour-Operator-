@@ -73,6 +73,9 @@ foreach(['UNDER_REVIEW','APPROVED'] as $status){
 $cr=SalesHandover::changeRequest($db,$user,$bid,['expected_revision'=>(int)$cr['revision'],'status'=>'IMPLEMENTED','reason'=>'Reviewed change; source remains immutable'],(int)$cr['id']);
 check(SalesHandover::context($db,$user,$bid)['pending_change_requests']===0,
     'VS23 implemented change clears hold, without automatically approving supplier availability');
+rejects(fn()=>$transition('submit'),DomainException::class,
+    'VS23 implemented customer change invalidates Sales checklist completed before the decision');
+$transition('prepare',['checklist'=>$checklist,'sales_notes'=>'Reviewed after change implemented']);
 $transition('submit');
 $accepted=SalesHandover::context($db,$user,$bid);
 check($accepted['handover']['intake_status']==='NEW_HANDOVER'&&!$accepted['ready_to_book'],
