@@ -37,6 +37,13 @@ INSERT INTO b2b_partner_tours VALUES
 (16,1,20,4,'{}','2026-01-01',1),
 (17,2,99,5,'{}','2026-01-01',1),
 (18,1,30,1,'{}','2026-01-01',1);");
+// Additional disposable KPI fixtures deliberately give A/B different results.
+$db->exec("ALTER TABLE b2b_publications ADD COLUMN program_id INTEGER");
+$db->exec("UPDATE b2b_publications SET program_id=id");
+$db->exec("CREATE TABLE b2b_net_requests(company_id INTEGER,agency_id INTEGER,status TEXT);
+CREATE TABLE b2b_booking_requests(company_id INTEGER,agency_id INTEGER,status TEXT)");
+$db->exec("INSERT INTO b2b_net_requests VALUES(1,10,'REQUESTED'),(1,10,'IN_REVIEW'),(1,20,'CLOSED'),(2,99,'REQUESTED')");
+$db->exec("INSERT INTO b2b_booking_requests VALUES(1,10,'REQUESTED'),(1,20,'CONFIRMED'),(2,99,'REJECTED')");
 $pub=new ReflectionMethod(PartnerHub::class,'publication');
 $work=new ReflectionMethod(PartnerHub::class,'working');
 $list=new ReflectionMethod(PartnerHub::class,'listWorking');
@@ -53,7 +60,31 @@ $ids=static fn(array $u)=>array_map('intval',array_column($list->invoke(null,$db
 okB2B($ids($a)===[11,13],'A lists only assigned common and exclusive copies');
 okB2B($ids($b)===[12,16],'B list hides exclusive A, revoked copies and other agencies');
 okB2B($ids($other)===[17],'Other company lists only its own active working copies');
+$kpiA=PartnerHub::agencyKpis($db,$a,10);
+$kpiB=PartnerHub::agencyKpis($db,$b,20);
+$kpiOther=PartnerHub::agencyKpis($db,$other,99);
+okB2B($kpiA['published_tours']===2&&$kpiB['published_tours']===2&&$kpiOther['published_tours']===1,
+    'KPI catalog recognizes only COMMON and own EXCLUSIVE publications, company scoped');
+okB2B($kpiA['active_copies']===2&&$kpiB['active_copies']===2&&$kpiOther['active_copies']===1,
+    'KPI counts only active-access agency copies, not revoked or unauthorized copies');
+okB2B($kpiA['net_requests']===['REQUESTED'=>1,'IN_REVIEW'=>1,'CLOSED'=>0]
+    &&$kpiB['net_requests']===['REQUESTED'=>0,'IN_REVIEW'=>0,'CLOSED'=>1],
+    'KPI NET queue is not shared between partner A and B');
+okB2B($kpiA['booking_requests']['REQUESTED']===1&&$kpiA['booking_requests']['CONFIRMED']===0
+    &&$kpiB['booking_requests']['REQUESTED']===0&&$kpiB['booking_requests']['CONFIRMED']===1,
+    'KPI booking-request states are agency-scoped, not actual supplier bookings');
+okB2B(!str_contains(json_encode($kpiA),'net_per_pax')&&!str_contains(json_encode($kpiA),'guest_')
+    &&!str_contains(json_encode($kpiA),'agency_id":20'),
+    'Partner KPI response contains no NET, guest PII or competitor agency ID');
+deniedB2B(fn()=>PartnerHub::agencyKpis($db,$a,20),'Partner A cannot request Partner B KPI by forged agency_id');
+deniedB2B(fn()=>PartnerHub::agencyKpis($db,$b,10),'Partner B cannot request Partner A KPI by forged agency_id');
+deniedB2B(fn()=>PartnerHub::agencyKpis($db,$b,99),'Partner B cannot request cross-company KPI');
+okB2B(PartnerHub::agencyKpis($db,['id'=>900,'company_id'=>1],20)['agency']['id']===20,
+    'Authorized company Admin may inspect Partner B KPI without entering Partner B session');
 $db->exec("UPDATE b2b_publications SET status='REVOKED' WHERE id=4");
 okB2B($ids($b)===[12],'Revocation removes formerly accessible exclusive tour from list');
 deniedB2B(fn()=>$work->invoke(null,$db,$b,16),'Revoked exclusive tour direct access denied');
+okB2B(PartnerHub::agencyKpis($db,$b,20)['published_tours']===1
+    &&PartnerHub::agencyKpis($db,$b,20)['active_copies']===1,
+    'Revocation immediately removes EXCLUSIVE catalog and copy counts from partner KPI');
 echo 'B2B partner tenant/access isolation fixture complete.'.PHP_EOL;
