@@ -39,7 +39,7 @@ for(const html of [index,preview]){
   assert.match(html,/smart-enhancements\.js\?v=P1-1/);
   assert.ok(html.indexOf('smart-enhancements.js')<html.indexOf('app.js?v=PROGRAM-1'),'P1 script must load before RC app boot');
 }
-assert.match(sw,/vta-RC62-B2C-1-PWA/);
+assert.match(sw,/vta-RC62-COST-SAVE-1-PWA/);
 assert.match(sw,/smart-enhancements\.css\?v=P1-1/);
 assert.match(sw,/smart-enhancements\.js\?v=P1-1/);
 assert.match(app,/VTASmartEnhancements\?\.mount/);
