@@ -22,12 +22,12 @@ Cấu trúc JSON yêu cầu:
 |---|---|
 | Metadata | `schema="vta.rc62.operator-evidence.v1"`, `source_kind="OPERATOR_COLLECTED_NOT_CI"`, `release_authorized=false`, `candidate_sha`, `artifact_zip_sha256`, `manifest_sha256` |
 | `staging` | `url` HTTPS hostname riêng chứa `stag`, `docroot_isolated=true`, `tls_verified=true`, `private_config_outside_webroot=true`, `php_83_extensions_checked=true`, `clone_db`, `evidence_ref` |
-| `recovery` | `encrypted_backup_sha256`, `source_and_clone_isolated=true`, `restore_verified=true`, `rollback_rehearsed=true`, `migration_ledgers_equal=true`, `read_only_preflight="READ_ONLY_PREFLIGHT_PASS"`, `preflight_release_authorized=false`, `clone_db`, `evidence_ref` |
+| `recovery` | `encrypted_backup_sha256`, `source_and_clone_isolated=true`, `restore_verified=true`, `rollback_rehearsed=true`, `migration_ledgers_equal=true`, `read_only_preflight="READ_ONLY_PREFLIGHT_PASS"`, `preflight_release_authorized=false`, `clone_db`, `evidence_ref`, **`preflight_ref`** trỏ tới JSON stdout thực tế của `api/bin/rc62-release-readiness.php`, không phải dòng chữ tự nhập |
 | `roles` | Đúng 7 khóa: `Admin`, `Sales`, `Operations`, `Finance`, `Read-only`, `Agency A`, `Agency B` |
 | `scenarios` | Đúng 8 khóa `E2E-01` tới `E2E-08` (đối chiếu `docs/RC62_E2E_WORKFLOW_ACCEPTANCE.md`) |
 | `cost` | `paying_pax=6`, `foc_pax=1`, `hotel_stars=3`, `cruise_stars=5`, `supplier_availability_reviewed=true`, `net_price_source_approved=true`, `evidence_ref` |
 | `real_documents` | Đúng **50 mục** DOCX/PDF thật, hash nguồn SHA-256 duy nhất, có ít nhất 1 DOCX và 1 PDF; từng mục phải xác nhận `saved_reopened`, `images_tables_reviewed`, `docx_export_checked`, `pdf_export_checked`, `source_kind="REAL_OPERATOR_SUPPLIED"`, `evidence_ref`, `source_ref` (tệp DOCX/PDF gốc, hash phải đúng `source_sha256`). Không ghi tên file chứa PII |
-| `evidence_index` | Bảng ánh xạ từng `private://...` tham chiếu (kể cả `source_ref` của 50 tài liệu) tới `{ "path": "refs/ma-so.bin", "sha256": "<64_hex>" }`. `path` tương đối với `--evidence-root`, không chứa đường dẫn tuyệt đối, `..` hoặc symlink. Mỗi tham chiếu cần 1 tệp chứng cứ riêng; không được bỏ sót hoặc thêm bản ghi thừa |
+| `evidence_index` | Bảng ánh xạ từng `private://...` tham chiếu (kể cả `source_ref` của 50 tài liệu và **`preflight_ref`**) tới `{ "path": "refs/ma-so.bin", "sha256": "<64_hex>" }`. `path` tương đối với `--evidence-root`, không chứa đường dẫn tuyệt đối, `..` hoặc symlink. Mỗi tham chiếu cần 1 tệp chứng cứ riêng; không được bỏ sót hoặc thêm bản ghi thừa |
 | `operator_review` | `result="READY_FOR_INDEPENDENT_RELEASE_REVIEW"`, `candidate_sha`, `change_window_reviewed=true`, `rollback_responsible_person_named=true`, `evidence_ref`. **Không có trường GO_PRODUCTION** |
 
 Mỗi mục `roles` và `scenarios` yêu cầu **giá trị** `status="PASS_STAGING_REAL_AUTH"`, `candidate_sha`, `origin="OPERATOR_HTTPS_STAGING"`, `evidence_ref="private://..."`, `reviewer`, và `observed_at` chuẩn ISO-8601 có múi giờ (ví dụ định dạng `YYYY-MM-DDTHH:MM:SS+07:00`).
@@ -65,6 +65,14 @@ python3 deploy/check-rc62-evidence.py \
 
 **Điều kiện GO độc lập:** Người phụ trách xác thực nguồn bằng chứng, độ tin cậy backup/restore thực tế, UAT nguyên bản, chữ ký/ủy quyền và kế hoạch rollback, rồi quyết định bằng quy trình thay đổi production riêng. Giữ nguyên `RuntimeGuard` và pin `codex/Vietnam/rc6.2-testing` cho đến khi có phê duyệt thay đổi đúng quy trình. Namecheap full-server restore có thể ghi đè toàn bộ website/database/email: **không dùng làm clone phục hồi không mất dữ liệu**.
 
+
+### Ràng buộc kết quả preflight thực tế
+
+Bộ hồ sơ từ bước 2J phải lưu **JSON stdout thực tế** từ `api/bin/rc62-release-readiness.php` vào thư mục bằng chứng riêng của operator và khai báo `recovery.preflight_ref` trong `evidence_index`. Không chấp nhận một dòng ký tay `READ_ONLY_PREFLIGHT_PASS` thay cho tệp.
+
+Công cụ kiểm tra tập tin này có nội dung `ok=true`, `status=READ_ONLY_PREFLIGHT_PASS`, `source_commit` bằng commit được ghim độc lập, `runtime_files` và `migrations_checked` bằng **manifest runtime đã xác minh**, `release_authorized=false`, và chính xác ba yêu cầu `restore_rehearsal`, `multirole_staging_uat`, `operator_approval`. Tệp JSON phải có checksum riêng; sửa số migration hoặc giả kết quả cho SHA khác sẽ bị từ chối kể cả khi đã cập nhật checksum trong chỉ mục. ZIP cũng bị chặn nếu kích thước vượt ngưỡng an toàn hoặc tỷ lệ nén bất thường.
+
+**Giới hạn bằng chứng:** SHA/JSON đúng chỉ xác nhận tính nhất quán giữa tệp và báo cáo, không chứng minh preflight đã được chạy trên database clone thật. Người nghiệm thu độc lập phải đối chiếu dấu vết phiên chạy, người vận hành, account SELECT-only, thời điểm, thông tin DB, và backup/rollback trước khi ký duyệt.
 
 ### Kiểm tra bytes chứng cứ riêng tư
 
