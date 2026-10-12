@@ -24,7 +24,15 @@ $db=new PDO('mysql:host=127.0.0.1;port=33317;dbname='.$database.';charset=utf8mb
   [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,
    PDO::ATTR_EMULATE_PREPARES=>false]);
 $role=$db->query("SELECT id FROM roles WHERE company_id=1 AND code='PARTNER'")->fetchColumn();
-if(!$role)throw new RuntimeException('B2B PARTNER role absent from migration 037');
+// The fixture inserts synthetic companies *after* all migrations, whereas
+// production company-onboarding creates per-company roles at company creation.
+// Create only the two synthetic users' necessary PARTNER role inside vta_test_*.
+if(!$role){
+    $db->exec("INSERT INTO roles(company_id,code,name,is_system) VALUES(1,'PARTNER','B2B Fixture Partner',1)");
+    $role=(int)$db->lastInsertId();
+}
+$db->prepare("INSERT IGNORE INTO role_permissions(role_id,permission_id)
+    SELECT ?,id FROM permissions WHERE code='b2b.portal'")->execute([(int)$role]);
 $permission=$db->query("SELECT COUNT(*) FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id WHERE rp.role_id=".(int)$role." AND p.code='b2b.portal'")->fetchColumn();
 if((int)$permission!==1)throw new RuntimeException('Partner role missing scoped portal grant');
 $secret=password_hash($password,PASSWORD_DEFAULT);
