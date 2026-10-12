@@ -11,6 +11,8 @@ on:
       - 'tests/b2b-real-auth-http.cjs'
       - 'tests/rc62-isolated-stage-config.php'
       - 'tests/rc62-isolated-stage-http.cjs'
+      - 'tests/rc62-stage-real-tls-fpm.cjs'
+      - 'tests/rc62-stage-real-tls-fpm-ci.sh'
       - 'partner-hub.js'
       - 'partner.html'
       - 'tests/rc62-v5-http-fixture-setup.php'
@@ -51,6 +53,10 @@ jobs:
           npm ci --prefix tests
           npm install --prefix tests --no-save --package-lock=false playwright@1.62.1
           tests/node_modules/.bin/playwright install --with-deps chromium
+      - name: Provision isolated local TLS nginx and PHP-FPM fixture
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx php8.3-fpm
       - name: Syntax and pure public content validation
         run: |
           php -l journeys.php
@@ -59,6 +65,8 @@ jobs:
           php tests/b2c-storefront-unit.php
           php -l tests/rc62-isolated-stage-config.php
           node --check tests/rc62-isolated-stage-http.cjs
+          node --check tests/rc62-stage-real-tls-fpm.cjs
+          bash -n tests/rc62-stage-real-tls-fpm-ci.sh
           php tests/b2c-wordpress-mirror-unit.php
           node --check b2c-storefront.js
           node tests/b2c-inquiry-ui.cjs
@@ -101,6 +109,7 @@ jobs:
           export VTA_RC62_STAGING_DB_PIN
           export VTA_RC62_STAGING_STORAGE_PIN="$PRIVATE_DIR/staging-documents"
           node tests/rc62-isolated-stage-http.cjs | tee tests/test-results/native-b2c/isolated-stage-http.log
+          bash tests/rc62-stage-real-tls-fpm-ci.sh "$PRIVATE_DIR" | tee tests/test-results/native-b2c/isolated-stage-real-tls.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
