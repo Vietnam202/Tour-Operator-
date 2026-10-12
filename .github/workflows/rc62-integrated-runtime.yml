@@ -17,6 +17,9 @@ on:
       - 'tests/rc62-release-readiness-unit.php'
       - 'deploy/check-rc62-evidence.py'
       - 'tests/rc62-operator-evidence-unit.py'
+      - 'tests/rc62-staging-readonly-smoke.cjs'
+      - 'tests/rc62-staging-readonly-smoke-unit.cjs'
+      - 'docs/RC62_STAGING_HTTP_OPERATOR_SMOKE_VI.md'
       - 'tests/rc62-golden-path-continuity-native.php'
       - 'tests/rc62-v5-template-persistence-native.php'
       - 'tests/tour-library-saved-source-unit.php'
@@ -77,6 +80,8 @@ jobs:
           php -l api/bin/rc62-release-readiness.php
           php tests/rc62-release-readiness-unit.php
           python3 tests/rc62-operator-evidence-unit.py
+          node --check tests/rc62-staging-readonly-smoke.cjs
+          node tests/rc62-staging-readonly-smoke-unit.cjs
           php tests/tour-library-saved-source-unit.php
           node --check app.js
           node --check tour-proposal-studio.js
