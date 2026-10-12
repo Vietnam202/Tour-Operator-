@@ -19,11 +19,13 @@ PRIVATE_DIR="$(mktemp -d "$RUNNER_TEMP/vta-rc62-restore.XXXXXXXX")"
 chmod 700 "$PRIVATE_DIR"
 CLONE_CREATED=0
 USER_CREATED=0
+CI_IDENTITY_CREATED=0
 cleanup() {
   rc=$?
   set +e
   if [[ "$USER_CREATED" == "1" ]]; then root_sql "DROP USER IF EXISTS '$RO_USER'@'%'" >/dev/null 2>&1; fi
   if [[ "$CLONE_CREATED" == "1" ]]; then root_sql "DROP DATABASE IF EXISTS $CLONE_DB" >/dev/null 2>&1; fi
+  if [[ "$CI_IDENTITY_CREATED" == "1" ]]; then rm -f -- api/runtime-build-identity.json; fi
   rm -rf -- "$PRIVATE_DIR"
   exit "$rc"
 }
@@ -48,6 +50,26 @@ find "$PRIVATE_DIR/package" -maxdepth 1 -type f -name 'vta-rc62-manifest-*.json'
 cp -- "$(cat "$PRIVATE_DIR/manifest-paths")" "$PRIVATE_DIR/manifest.json"
 chmod 600 "$PRIVATE_DIR/manifest.json"
 EXPECTED_SHA="$(git rev-parse HEAD)"
+# The real staged runtime includes a generated identity file INSIDE the ZIP.
+# The source checkout does not. Materialize only that member for the isolated
+# CI rehearsal, then delete it unconditionally in cleanup. Do not teach the
+# read-only release gate to ignore missing runtime files on actual staging.
+[[ ! -e api/runtime-build-identity.json && ! -L api/runtime-build-identity.json ]] || fail "CI_RUNTIME_IDENTITY_ALREADY_PRESENT"
+python3 - "$PRIVATE_DIR/package" "$PRIVATE_DIR/manifest.json" <<'PY'
+import glob,hashlib,json,pathlib,sys,zipfile
+package_dir=pathlib.Path(sys.argv[1])
+manifest=json.loads(pathlib.Path(sys.argv[2]).read_text())
+packages=list(package_dir.glob('vta-rc62-integrated-staging-*.zip'))
+assert len(packages)==1
+with zipfile.ZipFile(packages[0]) as arc:
+    identity=arc.read('runtime/api/runtime-build-identity.json')
+expected=manifest['sha256']['api/runtime-build-identity.json']
+assert hashlib.sha256(identity).hexdigest()==expected
+assert json.loads(identity)['source_commit']==manifest['source_commit']
+pathlib.Path('api/runtime-build-identity.json').write_bytes(identity)
+print('PASS_CI synthetic preflight materialized SHA-verified generated identity only')
+PY
+CI_IDENTITY_CREATED=1
 EXPECTED_MIGRATIONS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["migration_count"])' "$PRIVATE_DIR/manifest.json")"
 
 mariadb-dump --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --single-transaction --routines --triggers --events --hex-blob --skip-comments "$SOURCE_DB" >"$PRIVATE_DIR/source.sql"
@@ -129,6 +151,15 @@ grep -F '"status":"READ_ONLY_PREFLIGHT_PASS"' "$PRIVATE_DIR/pass.json" >/dev/nul
 grep -F '"release_authorized":false' "$PRIVATE_DIR/pass.json" >/dev/null || fail "CI_MUST_NOT_AUTHORIZE_RELEASE"
 grep -F '"migrations_checked":' "$PRIVATE_DIR/pass.json" >/dev/null || fail "MIGRATION_LEDGER_NOT_CHECKED"
 pass "exact-SHA preflight accepts the restored clone through a read-only MariaDB account and keeps release NO-GO"
+# Even a single altered byte of the deployed identity is a release blocker.
+cp -- api/runtime-build-identity.json "$PRIVATE_DIR/pristine-build-identity.json"
+printf '\\n' >>api/runtime-build-identity.json
+if run_preflight "$EXPECTED_SHA" "$CLONE_DB" >"$PRIVATE_DIR/identity-tamper.json" 2>&1; then
+  fail "PREFLIGHT_DID_NOT_REJECT_TAMPERED_RUNTIME_IDENTITY"
+fi
+grep -F '"reason":"RUNTIME_HASH_MISMATCH"' "$PRIVATE_DIR/identity-tamper.json" >/dev/null || fail "PREFLIGHT_WRONG_TAMPER_REASON"
+cp -- "$PRIVATE_DIR/pristine-build-identity.json" api/runtime-build-identity.json
+pass "modified generated build identity blocked by exact SHA runtime preflight"
 
 expect_block() {
   reason="$1"

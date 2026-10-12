@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {guard,runCheck,APPROVAL,LOGIN_APPROVAL,ROLE_KEYS}=require('./rc62-staging-readonly-smoke.cjs');
 const cfg={base:'https://staging-fixture.example.invalid/',hostPin:'staging-fixture.example.invalid',
-  sha:'a'.repeat(40),approval:APPROVAL,auth:false};
+  sha:'a'.repeat(40),inventorySha:'c'.repeat(64),approval:APPROVAL,auth:false};
 const creds={};ROLE_KEYS.forEach((role,i)=>creds[role]={
   email:'fixture-role-'+i+'@example.invalid',
   password:'fixture-only-secret-'+i+'-never-live'});
@@ -14,7 +14,8 @@ function response(status,data,extras={}){
  return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json',
    'Cache-Control':'no-store',...extras}});
 }
-function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false}={}){
+function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false,
+  missingBuild=false,wrongSha=false,invalidInventory=false}={}){
  const calls=[],userByCookie=new Map(),loginByEmail=new Map(Object.entries(creds)
    .map(([role,c],i)=>[c.email,{role,i,id:i+1,company_id:1}]));
  const f=async (url,opt)=>{
@@ -24,7 +25,12 @@ function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false}={})
    assert(parsed.protocol==='https:'&&parsed.hostname===cfg.hostPin,'unexpected fake outbound URL');
    if(redirect&&route==='health')return response(302,{ok:false},{Location:'https://prod.example.invalid/'});
    if(opt.headers.Origin)return response(403,{ok:false,error:'ORIGIN_NOT_ALLOWED'});
-   if(route==='health')return response(200,{ok:true,service:'VTA API'});
+   if(route==='health')return response(200,{ok:true,service:'VTA API',
+     build:missingBuild?{status:'UNPACKAGED_SOURCE'}:{
+       status:'PINNED_PACKAGE',source_commit:wrongSha?'b'.repeat(40):cfg.sha,
+       source_inventory_sha256:invalidInventory?'no-hash':'c'.repeat(64),
+       source_file_count:251
+     }});
    if(route==='auth/login'){
      assert.equal(opt.method,'POST');
      const body=JSON.parse(opt.body),user=loginByEmail.get(body.email);
@@ -70,6 +76,7 @@ function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false}={})
    'BLOCK_STAGING_HOST_NOT_INDEPENDENTLY_PINNED');
  expectBlocked(()=>guard({...cfg,approval:''}),'BLOCK_OPERATOR_READ_ONLY_APPROVAL_REQUIRED');
  expectBlocked(()=>guard({...cfg,sha:'not-a-git-sha'}),'BLOCK_CANDIDATE_SHA_PIN_REQUIRED');
+ expectBlocked(()=>guard({...cfg,inventorySha:'wrong-inventory'}),'BLOCK_SOURCE_INVENTORY_PIN_REQUIRED');
  expectBlocked(()=>guard({...cfg,auth:true}),'BLOCK_LOGIN_AUDIT_WRITE_CONSENT_REQUIRED');
  const readonly=fakeServer();
  const unauth=await runCheck(cfg,readonly.fetch);
@@ -77,6 +84,12 @@ function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false}={})
  assert.equal(unauth.release_authorized,false);
  assert(readonly.calls.every(c=>c.method==='GET'),'no unauthenticated writes');
  assert(unauth.checks.includes('UNAPPROVED_ORIGIN_REJECTED'));
+ assert(unauth.checks.includes('LIVE_RUNTIME_EXACT_CANDIDATE_SHA'));
+ for(const args of [{missingBuild:true},{wrongSha:true},{invalidInventory:true}]){
+   await assert.rejects(()=>runCheck(cfg,fakeServer(args).fetch),
+     e=>e.message==='BLOCK_STAGING_BUILD_IDENTITY_MISMATCH');
+ }
+ console.log('PASS_CI health 200 fails if runtime unpackaged, wrong exact SHA or malformed inventory');
  console.log('PASS_CI anonymous probe only GET health, origin and unauthenticated denials');
  const withAuth={...cfg,auth:true,loginApproval:LOGIN_APPROVAL,credentials:creds,
    agencyA:11,agencyB:22,commonPublication:33,exclusiveA:44};
