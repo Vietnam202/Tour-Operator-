@@ -19,6 +19,7 @@ on:
       - 'vta-cost-editor.js'
       - 'vta-cost-editor.css'
       - 'tests/document-cost-ui.cjs'
+      - 'tests/vta-cost-editor-ui.cjs'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
       - 'tests/v5-parity-recovery.cjs'
@@ -65,6 +66,7 @@ jobs:
           node --check app.js
           node --check tour-proposal-studio.js
           node --check cost-sheet.js
+          node --check vta-cost-editor.js
           node --check document-editor.js
           node --check smart-enhancements.js
           node --check service-worker.js
@@ -75,6 +77,7 @@ jobs:
           node tests/vta-approved-ui.cjs
           node tests/tour-proposal-studio.cjs
           node tests/document-cost-ui.cjs
+          node tests/vta-cost-editor-ui.cjs
           node tests/v5-template-gallery-ui.cjs
           node tests/v5-parity-recovery.cjs
       - name: Package real RC6.2 PHP/MariaDB runtime with SHA256 manifest
@@ -89,7 +92,7 @@ jobs:
           assert m['source_commit'] == subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           assert len(glob.glob('dist/vta-rc62-integrated-staging-*.zip')) == 1
           assert m['migration_execution'] == 'NOT_PERFORMED'
-          for path in ('cost-sheet.js', 'document-editor.js'):
+          for path in ('cost-sheet.js', 'document-editor.js', 'vta-cost-editor.js'):
               assert path in m['sha256'], f'Missing reviewed workspace asset: {path}'
           print('PASS exact SHA release manifest')
           PY
