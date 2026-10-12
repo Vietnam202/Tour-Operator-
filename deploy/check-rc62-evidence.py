@@ -3,6 +3,7 @@
 
 Usage: python3 deploy/check-rc62-evidence.py --manifest ... --zip ... --sha256sums ...
        --expected-sha <independently-approved-40-hex> --evidence <private/redacted.json>
+       --evidence-root <private/operator-only/evidence-files>
 
 The operator controls all evidence assertions. Passing this structural gate
 does NOT authenticate claims, complete real staging UAT, or authorize release.
@@ -15,6 +16,7 @@ import json
 import re
 import sys
 import zipfile
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -158,30 +160,119 @@ def verify_evidence(packet:dict,artifact:dict)->None:
             and entry.get("format") in ("DOCX","PDF")
             and entry.get("source_kind")=="REAL_OPERATOR_SUPPLIED"
             and all(entry.get(k) is True for k in ("saved_reopened","images_tables_reviewed","docx_export_checked","pdf_export_checked"))
-            and private_ref(entry.get("evidence_ref")),"RICH_DOCUMENT_REVIEW_INCOMPLETE")
+            and private_ref(entry.get("evidence_ref")) and private_ref(entry.get("source_ref"))
+            and entry["source_ref"]!=entry["evidence_ref"],
+            "RICH_DOCUMENT_REVIEW_INCOMPLETE")
         digest=entry["source_sha256"]
         require(digest not in digests,"DUPLICATE_SOURCE_EVIDENCE")
         digests.add(digest)
         extensions.add(entry["format"])
     require(extensions=={"DOCX","PDF"},"REAL_DOCX_PDF_COVERAGE_MISSING")
+    require(len({d["source_ref"] for d in docs})==50,"DUPLICATE_PRIVATE_SOURCE_REFERENCE")
     signed=packet.get("operator_review")
     require(isinstance(signed,dict) and signed.get("result")=="READY_FOR_INDEPENDENT_RELEASE_REVIEW"
         and signed.get("candidate_sha")==pin and signed.get("change_window_reviewed") is True
         and signed.get("rollback_responsible_person_named") is True
         and private_ref(signed.get("evidence_ref")),"OPERATOR_REVIEW_PACKET_INCOMPLETE")
 
+def all_evidence_refs(packet:dict)->set[str]:
+    """Fail closed on missing/duplicate role and scenario evidence references."""
+    refs=[
+        packet["staging"]["evidence_ref"],packet["recovery"]["evidence_ref"],
+        packet["cost"]["evidence_ref"],packet["operator_review"]["evidence_ref"]
+    ]
+    refs.extend(r["evidence_ref"] for r in packet["roles"].values())
+    refs.extend(r["evidence_ref"] for r in packet["scenarios"].values())
+    for d in packet["real_documents"]:
+        refs.extend((d["evidence_ref"],d["source_ref"]))
+    require(len(refs)==len(set(refs)),"PRIVATE_EVIDENCE_REFERENCES_REUSED")
+    return set(refs)
+
+def sha256_file(path:Path)->tuple[str,int]:
+    digest=hashlib.sha256()
+    size=0
+    with path.open("rb") as handle:
+        while True:
+            block=handle.read(1024*1024)
+            if not block: break
+            size+=len(block)
+            require(size<=50*1024*1024,"PRIVATE_EVIDENCE_FILE_TOO_LARGE")
+            digest.update(block)
+    require(size>=8,"PRIVATE_EVIDENCE_FILE_EMPTY")
+    return digest.hexdigest(),size
+
+def verify_private_evidence(packet:dict,root:Path)->dict:
+    """Verify operator-held file bytes, not just free-form private:// placeholders.
+
+    This proves evidence files *exist* and bind to their claimed SHA, NOT that
+    their real-world content, role attribution or signatures are authentic.
+    No file content is printed, copied, exported, nor placed in the release ZIP.
+    """
+    require(not root.is_symlink() and root.is_dir(),"PRIVATE_EVIDENCE_ROOT_MISSING")
+    resolved=root.resolve(strict=True)
+    source_dir=Path(__file__).resolve().parents[1]
+    require(not (resolved==source_dir or source_dir in resolved.parents),
+        "PRIVATE_EVIDENCE_ROOT_INSIDE_REPOSITORY")
+    index=packet.get("evidence_index")
+    refs=all_evidence_refs(packet)
+    require(isinstance(index,dict) and set(index)==refs,
+        "PRIVATE_EVIDENCE_INDEX_INCOMPLETE")
+    paths=set()
+    verified={}
+    for ref in sorted(refs):
+        item=index[ref]
+        require(isinstance(item,dict) and set(item)=={"path","sha256"},
+            "PRIVATE_EVIDENCE_INDEX_INVALID")
+        rel=item["path"];recorded=item["sha256"]
+        require(isinstance(rel,str) and SAFE_REL.fullmatch(rel) is not None
+            and not rel.startswith(".") and ".." not in rel.split("/")
+            and isinstance(recorded,str) and SHA64.fullmatch(recorded) is not None,
+            "PRIVATE_EVIDENCE_PATH_UNSAFE")
+        dest=resolved
+        for part in rel.split("/"):
+            dest=dest/part
+            require(not dest.is_symlink(),"PRIVATE_EVIDENCE_PATH_UNSAFE")
+        require(dest.is_file() and dest.resolve().is_relative_to(resolved),
+            "PRIVATE_EVIDENCE_FILE_MISSING")
+        require(str(dest) not in paths,"PRIVATE_EVIDENCE_FILE_REUSED")
+        paths.add(str(dest))
+        current,_=sha256_file(dest)
+        require(current==recorded,"PRIVATE_EVIDENCE_CHECKSUM_MISMATCH")
+        verified[ref]=dest
+    for d in packet["real_documents"]:
+        ref=d["source_ref"]
+        require(index[ref]["sha256"]==d["source_sha256"],"DOCUMENT_SOURCE_HASH_MISMATCH")
+        target=verified[ref]
+        with target.open("rb") as handle: magic=handle.read(8)
+        if d["format"]=="PDF":
+            require(magic.startswith(b"%PDF-"),"DOCUMENT_SOURCE_FORMAT_MISMATCH")
+        else:
+            require(magic.startswith(b"PK\x03\x04"),"DOCUMENT_SOURCE_FORMAT_MISMATCH")
+            try:
+                with zipfile.ZipFile(target) as arc:
+                    require("word/document.xml" in arc.namelist()
+                        and "[Content_Types].xml" in arc.namelist(),
+                        "DOCUMENT_SOURCE_FORMAT_MISMATCH")
+                    require(arc.testzip() is None,"DOCUMENT_SOURCE_FORMAT_MISMATCH")
+            except (OSError,zipfile.BadZipFile,RuntimeError):
+                raise Stop("DOCUMENT_SOURCE_FORMAT_MISMATCH") from None
+    return {"attachment_count":len(verified),"real_original_count":50}
+
 def main(argv:list[str])->int:
     parser=argparse.ArgumentParser(description=__doc__)
-    for name in ("manifest","zip","sha256sums","expected-sha","evidence"):
+    for name in ("manifest","zip","sha256sums","expected-sha","evidence","evidence-root"):
         parser.add_argument("--"+name,required=True)
     args=parser.parse_args(argv)
     try:
         artifact=verify_artifact(Path(args.manifest),Path(args.zip),Path(args.sha256sums),args.expected_sha)
         packet=load(Path(args.evidence))
         verify_evidence(packet,artifact)
+        bound=verify_private_evidence(packet,Path(args.evidence_root))
         print(json.dumps({"ok":True,"status":"EVIDENCE_PACKET_STRUCTURALLY_COMPLETE",
             "source_commit":artifact["sha"],"runtime_files":artifact["runtime_files"],
             "migration_files":artifact["migration_files"],
+            "private_evidence_files_verified":bound["attachment_count"],
+            "real_original_file_hashes_verified":bound["real_original_count"],
             "release_authorized":False,"requires":"independent_operator_authenticity_review_and_separate_release_approval"}))
         return 0
     except Stop as exc:
