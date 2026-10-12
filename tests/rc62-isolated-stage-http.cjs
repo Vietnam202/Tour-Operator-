@@ -131,7 +131,7 @@ function tlsQuery(route,opts={}){
      path:'/api/index.php?route='+encodeURIComponent(route.split('?')[0])+
        (route.includes('?')?'&'+route.split('?').slice(1).join('?'):''),
      method:body===null?'GET':'POST',
-     ca:fs.readFileSync(certFile),rejectUnauthorized:true,headers,timeout:5000},res=>{
+     ca:opts.trustCert===false?undefined:fs.readFileSync(certFile),rejectUnauthorized:true,headers,timeout:5000},res=>{
        const chunks=[];let length=0;
        res.on('data',chunk=>{
          length+=chunk.length;
@@ -175,6 +175,10 @@ function code(r,status,label){
  await startTlsProxy(port);
  const tlsHealth=await tlsQuery('health');
  code(tlsHealth,200,'actual loopback TLS handshake/SNI with pinned certificate reaches PHP health');
+ await assert.rejects(tlsQuery('health',{trustCert:false}),error=>
+   error && ['DEPTH_ZERO_SELF_SIGNED_CERT','SELF_SIGNED_CERT_IN_CHAIN'].includes(error.code),
+   'untrusted self-signed certificate must never be accepted');
+ console.log('PASS STAGE TLS unsigned trust chain refused without independently provided CA');
  code(await tlsQuery('health',{host:'quote.vietnamtraveladvisor.com.vn'}),421,
    'TLS terminator blocks spoofed production Host before forwarding to PHP');
  code(await tlsQuery('health',{origin:'https://attacker.example.invalid'}),403,
