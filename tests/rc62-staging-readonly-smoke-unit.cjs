@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {guard,runCheck,APPROVAL,LOGIN_APPROVAL,ROLE_KEYS}=require('./rc62-staging-readonly-smoke.cjs');
 const cfg={base:'https://staging-fixture.example.invalid/',hostPin:'staging-fixture.example.invalid',
-  sha:'a'.repeat(40),approval:APPROVAL,auth:false};
+  sha:'a'.repeat(40),inventorySha:'c'.repeat(64),approval:APPROVAL,auth:false};
 const creds={};ROLE_KEYS.forEach((role,i)=>creds[role]={
   email:'fixture-role-'+i+'@example.invalid',
   password:'fixture-only-secret-'+i+'-never-live'});
@@ -76,6 +76,7 @@ function fakeServer({kpiLeaked=false,exclusiveBAllowed=false,redirect=false,
    'BLOCK_STAGING_HOST_NOT_INDEPENDENTLY_PINNED');
  expectBlocked(()=>guard({...cfg,approval:''}),'BLOCK_OPERATOR_READ_ONLY_APPROVAL_REQUIRED');
  expectBlocked(()=>guard({...cfg,sha:'not-a-git-sha'}),'BLOCK_CANDIDATE_SHA_PIN_REQUIRED');
+ expectBlocked(()=>guard({...cfg,inventorySha:'wrong-inventory'}),'BLOCK_SOURCE_INVENTORY_PIN_REQUIRED');
  expectBlocked(()=>guard({...cfg,auth:true}),'BLOCK_LOGIN_AUDIT_WRITE_CONSENT_REQUIRED');
  const readonly=fakeServer();
  const unauth=await runCheck(cfg,readonly.fetch);
