@@ -50,7 +50,7 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
         if(b.paying_pax!==undefined)ctx.guests.paying_pax=b.paying_pax;
       }
       if(b.action==='mix'){
-        d.items.push({...d.items[0],variant_id:99,variant_key:'mixed-3-5',cruise_level:5,pricing:{cost_total_vnd:'36000000'}});
+        if(!optionsUnavailable)d.items.push({...d.items[0],variant_id:99,variant_key:'mixed-3-5',cruise_level:5,pricing:{cost_total_vnd:'36000000'}});
         return {costing_revision:ctx.costing_revision,variant_id:99};
       }
       if(b.action==='remove')ctx.requirements.find(x=>x.id===b.requirement_id).requirement_state='NOT_APPLICABLE';
@@ -206,6 +206,22 @@ async function harness({locked=false,cost=true,beforeWrite=null}={}){
   h.root.querySelector('[data-next]').click();await settle();
   assert.equal(h.root.dataset.sheetStep,'price','confirmed write and recovered refresh must not block Price');
   console.log('PASS direct Cost editor confirms write despite failed refresh, retains revision and recovers Price navigation');
+  h.dom.window.close();
+  // A new Hotel 3★ / Cruise 5★ server variant can be persisted even when its
+  // updated options list cannot be retrieved. Keep the old UI usable, do not
+  // render an undefined package, and require a fresh GET before selecting it.
+  h=await harness();h.setOptionsUnavailable(true);
+  const unlistedMix=h.root.querySelector('[data-mix-cruise="0"]');
+  unlistedMix.value='5';
+  unlistedMix.dispatchEvent(new h.w.Event('change'));
+  await settle();
+  assert.equal(h.calls.filter(c=>c.body?.action==='mix').length,1);
+  assert.equal(h.root.querySelectorAll('[data-vta-summary]').length,3);
+  assert(h.root.querySelector('[data-vta-status]').textContent.includes('Combination saved on server'));
+  assert(!h.root.dataset.vtaCostVariants || !h.root.dataset.vtaCostVariants.includes('99'));
+  h.root.querySelector('[data-next]').click();await settle();
+  assert.equal(h.root.dataset.sheetStep,'price','committed mix must not trap operator after refresh failure');
+  console.log('PASS saved mixed Hotel/Cruise option avoids stale variant render after GET failure');
   h.dom.window.close();
   h=await harness({locked:true});assert(!h.root.querySelector('[data-add]'));
   assert([...h.root.querySelectorAll('[data-rate]')].every(x=>x.disabled));
