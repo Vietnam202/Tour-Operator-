@@ -35,7 +35,8 @@ function request(port,route,{method='GET',body,hostHeader=host,
     const req=https.request({hostname:'127.0.0.1',port,servername,
       rejectUnauthorized:true,ca:trustAnchor,method,headers,path,timeout:8000},
     res=>{
-      verified=!!res.socket.authorized;
+      verified=!!res.socket?.authorized;
+      const negotiatedProtocol=res.socket?.getProtocol()||null;
       const chunks=[];let total=0;
       res.on('data',b=>{total+=b.length;
         if(total>512000){req.destroy(Error('BLOCK_TLS_BODY_TOO_LARGE'));return;}
@@ -45,7 +46,7 @@ function request(port,route,{method='GET',body,hostHeader=host,
         let data=null;
         try{data=JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{}
         resolve({status:res.statusCode,data,headers:res.headers,verified,
-          protocol:res.socket.getProtocol()});
+          protocol:negotiatedProtocol});
       });
     });
     req.on('error',reject);
