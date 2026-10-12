@@ -27,7 +27,7 @@ ASSET_EXTS = {".css", ".js", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico", "
 REQUIRED = {
     ".htaccess", "index.html", "preview.html", "partner.html",
     "api/index.php", "api/bootstrap.php", "api/bin/healthcheck.php",
-    "api/lib/RuntimeGuard.php", "api/lib/Migrations.php",
+    "api/lib/RuntimeGuard.php", "api/lib/RuntimeBuildIdentity.php", "api/lib/Migrations.php",
     "api/lib/SmartEnhancements.php", "api/lib/PartnerHub.php",
     "api/bin/rc62-release-readiness.php",
     "api/vendor/tfpdf/font/unifont/DejaVuSans.ttf",
@@ -41,6 +41,22 @@ REQUIRED = {
     "smart-enhancements.js", "smart-enhancements.css", "service-worker.js",
 }
 MIN_FILES = 75
+IDENTITY_PATH = "api/runtime-build-identity.json"
+IDENTITY_SCHEMA = "vta.rc62.runtime.identity.v1"
+
+def source_inventory_sha256(source_hashes: dict[str,str]) -> str:
+    return sha256(json.dumps(source_hashes,sort_keys=True,separators=(",",":")).encode("utf-8"))
+
+def generated_identity(source_commit: str,source_hashes: dict[str,str]) -> bytes:
+    value = {
+        "schema": IDENTITY_SCHEMA,
+        "source_commit": source_commit,
+        "source_file_count": len(source_hashes),
+        "source_inventory_sha256": source_inventory_sha256(source_hashes),
+        "release_type": "STAGING_CANDIDATE_NOT_PRODUCTION",
+    }
+    return (json.dumps(value,sort_keys=True,separators=(",",":"))+"\n").encode("utf-8")
+
 
 
 def git(*args: str) -> str:
@@ -53,7 +69,7 @@ def managed(name: str) -> bool:
         return False
     if any(v in BLOCKED_SEGMENTS or v == ".env" or v.startswith(".env.") for v in p.parts):
         return False
-    if name in REQUIRED_PDF_ASSETS:
+    if name == IDENTITY_PATH or name in REQUIRED_PDF_ASSETS:
         return True
     if name in {"api/config.php", "api/config.example.php"}:
         return False
@@ -100,6 +116,16 @@ def make(output: Path) -> tuple[Path, Path]:
             raise RuntimeError("Source changed or smudged: " + p)
         digest[p] = sha256(blob)
         data[p] = blob
+    # The identity is generated from *tracked source bytes* before packaging.
+    # Its digest is placed in the manifest. Never include a tracked copy of
+    # the generated identity, or a reused runner could supply a stale commit.
+    if IDENTITY_PATH in digest:
+        raise RuntimeError("Generated build identity cannot be tracked")
+    identity = generated_identity(head,digest)
+    digest[IDENTITY_PATH] = sha256(identity)
+    data[IDENTITY_PATH] = identity
+    names.append(IDENTITY_PATH)
+    names.sort()
     migration_names = [p for p in names if p.startswith("api/migrations/") and p.endswith(".sql")]
     if not any("038_b2b_hybrid_distribution" in p for p in migration_names):
         raise RuntimeError("B2B hybrid migration is missing")
@@ -149,7 +175,7 @@ def verify(package: Path, manifest_file: Path) -> None:
     entries = manifest["sha256"]
     if not isinstance(entries, dict) or len(entries) != manifest["file_count"] or len(entries) < MIN_FILES:
         raise RuntimeError("Manifest file count mismatch")
-    if set(REQUIRED) - set(entries):
+    if set(REQUIRED | {IDENTITY_PATH}) - set(entries):
         raise RuntimeError("Release missing essential files")
     with zipfile.ZipFile(package) as archive:
         if archive.testzip() is not None:
@@ -161,6 +187,14 @@ def verify(package: Path, manifest_file: Path) -> None:
         for p, expected in entries.items():
             if not managed(p) or sha256(archive.read("runtime/" + p)) != expected:
                 raise RuntimeError("Unsafe path or digest mismatch: " + p)
+        # Compare the embedded identity against the manifest SOURCE inventory,
+        # not merely the self-reported SHA inside the generated identity.
+        identity = json.loads(archive.read("runtime/" + IDENTITY_PATH))
+        source_entries = {p:d for p,d in entries.items() if p != IDENTITY_PATH}
+        if identity != json.loads(generated_identity(manifest["source_commit"],source_entries)):
+            raise RuntimeError("Embedded build identity differs from source SHA or inventory")
+        if identity["source_file_count"] + 1 != manifest["file_count"]:
+            raise RuntimeError("Embedded build identity file count mismatch")
         html = archive.read("runtime/index.html").decode()
         preview = archive.read("runtime/preview.html").decode()
         for content in (html, preview):
