@@ -12,6 +12,8 @@ on:
       - 'api/migrations/045_b2b_net_request_resolution.sql'
       - 'api/migrations/046_b2b_net_request_idempotency.sql'
       - 'tests/b2b-net-portal-ui.cjs'
+      - 'tests/b2b-http-fixture-seed.php'
+      - 'tests/b2b-real-auth-http.cjs'
       - 'api/lib/Migrations.php'
       - 'tests/b2b-hybrid-isolation-unit.php'
       - 'tests/b2b-hybrid-schema-ci.php'
@@ -41,10 +43,12 @@ jobs:
           php -l api/index.php
           php -l tests/b2b-partner-hub-unit.php
           php -l tests/b2b-hybrid-isolation-unit.php
+          php -l tests/b2b-http-fixture-seed.php
           php -l tests/b2b-hybrid-schema-ci.php
       - name: JavaScript syntax and real NET portal DOM regression
         run: |
           node --check partner-hub.js
+          node --check tests/b2b-real-auth-http.cjs
           node --check tour-library.js
           npm ci --prefix tests
           node tests/b2b-net-portal-ui.cjs

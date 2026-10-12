@@ -5,6 +5,8 @@ on:
       - 'journeys.php'
       - 'b2c-*'
       - 'tests/b2c-*'
+      - 'tests/b2b-http-fixture-seed.php'
+      - 'tests/b2b-real-auth-http.cjs'
       - 'deploy/build-integrated-package.py'
       - 'docs/RC62_INTEGRATED_STAGING_RELEASE_VI.md'
       - '.github/workflows/rc62-integrated-runtime.yml'
