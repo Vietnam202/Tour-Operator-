@@ -10,9 +10,10 @@ const CACHE='vta-RC62-COST-SAVE-1-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
+const costAsset=new URL('./cost-sheet.js?v=COST-SAVE-1',SCOPE).href;
 const stores=new Map([
- [OLD,new Map([[asset,'STALE-V5-OLD'],[offlinePage,'STALE-OFFLINE']])],
- ['foreign-app-cache',new Map([[asset,'FOREIGN-UNREVIEWED'],[offlinePage,'FOREIGN-OFFLINE']])]
+ [OLD,new Map([[asset,'STALE-V5-OLD'],[costAsset,'STALE-COST'],[offlinePage,'STALE-OFFLINE']])],
+ ['foreign-app-cache',new Map([[asset,'FOREIGN-UNREVIEWED'],[costAsset,'FOREIGN-COST'],[offlinePage,'FOREIGN-OFFLINE']])]
 ]);
 const events={};
 let claimCount=0,globalMatchCount=0,skipWaitingCount=0,networkCalls=0,offline=false;
@@ -56,11 +57,18 @@ function request(url,{method='GET',mode='cors'}={}) {
 }
 (async()=>{
  assert.match(source,/const CACHE='vta-RC62-COST-SAVE-1-PWA'/);
+ assert(source.includes("'./cost-sheet.js?v=COST-SAVE-1'"),'current Cost editor must be precached');
+ for(const page of ['index.html','preview.html']) {
+  const html=fs.readFileSync(path.join(__dirname,'..',page),'utf8');
+  assert(html.includes('cost-sheet.js?v=COST-SAVE-1'),page+' must request the updated Cost editor');
+ }
  await lifecycle('install');
  assert(stores.has(CACHE),'new version must have dedicated cache');
  assert.equal(stores.get(CACHE).get(asset),'FRESH:'+asset);
+ assert.equal(stores.get(CACHE).get(costAsset),'FRESH:'+costAsset);
  // Old and unrelated caches exist; a scoped lookup must never return them.
  assert.equal(await request(asset),'FRESH:'+asset,'current assets must come only from current-version cache');
+ assert.equal(await request(costAsset),'FRESH:'+costAsset,'cost editor must not be served from old/foreign cache');
  assert.equal(globalMatchCount,0,'never globally scan caches for allowlisted assets');
  await lifecycle('activate');
  assert.equal(stores.has(OLD),false,'activation removes stale VTA cache');
@@ -82,6 +90,7 @@ function request(url,{method='GET',mode='cors'}={}) {
   [SCOPE+'api/index.php?route=public-proposals/example',{}],
   [SCOPE+'uploads/private.jpg',{}],
   [SCOPE+'other.js',{}],
+  [SCOPE+'cost-sheet.js?v=3.4.0-VS23-UX',{}],
   [asset,{method:'POST'}],
   ['https://external.invalid/service.js',{}]
  ];
