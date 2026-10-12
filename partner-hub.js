@@ -2,7 +2,7 @@
 const app=document.getElementById('hub'), account=document.getElementById('account'),logout=document.getElementById('logout');
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>JSON.parse(JSON.stringify(x));
-let user=null,portal=null,tab=['library','my','agency','admin','net','requests','sales'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
+let user=null,portal=null,tab=['library','my','agency','kpi','admin','net','requests','sales'].includes(location.hash.slice(1))?location.hash.slice(1):'library',view=null,tours=[],my=[],selectedAgency=0,draft=null,activeQuote=null,quotation=null;
 let netRequestDraft=null;
 const status=(msg,error=false)=>{const el=document.querySelector('[data-hub-status]');if(el){el.textContent=msg;el.className='hub-status '+(error?'error':'success');}else if(error)alert(msg);};
 async function request(route,opt={}){
@@ -16,7 +16,7 @@ async function request(route,opt={}){
  return data;
 }
 function shell(title,description,content){
- const options=portal?.sales?[['sales','My NET Tasks']]:[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],...(portal?.admin?[['admin','VTA Publishing'],['net','NET Requests'],['requests','Booking Requests']]:[])];
+ const options=portal?.sales?[['sales','My NET Tasks']]:[['library','Tour Library'],['my','My Tours'],['agency','My Agency'],['kpi','Partner KPI'],...(portal?.admin?[['admin','VTA Publishing'],['net','NET Requests'],['requests','Booking Requests']]:[])];
  app.innerHTML='<header class="hub-intro"><div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div></header><nav class="hub-tabs" aria-label="Partner workspace">'+options.map(([k,n])=>'<button data-tab="'+k+'" class="'+(tab===k?'current':'')+'">'+esc(n)+'</button>').join('')+'</nav>'+content+'<p data-hub-status class="hub-status" role="status"></p>';
  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;draft=null;activeQuote=null;render();});
 }
@@ -41,6 +41,7 @@ async function render(){
  if(tab==='library')return await library();
  if(tab==='my')return await myTours();
  if(tab==='agency')return await agencyScreen();
+ if(tab==='kpi')return await agencyKpiScreen();
  if(tab==='admin'&&portal.admin)return await adminScreen();
  if(tab==='requests'&&portal.admin)return await requestsScreen();
  if(tab==='net'&&portal.admin)return await netRequestsScreen();
@@ -159,6 +160,21 @@ async function openDraft(id){
   await saveWorking();const q=await request('b2b/my-tours/'+draft.id+'/quote?'+queryString(quoteParams()));if(q.quote.status!=='QUOTABLE')throw Error('Request an approved NET rate before booking');
   const b=Object.fromEntries(new FormData(e.target).entries());const result=await request('b2b/my-tours/'+draft.id+'/booking-request',{method:'POST',body:{...b,...quoteParams()}});
   status('Booking request #'+result.id+' submitted to VTA for review.');}catch(e){status(e.message,true);}};
+}
+async function agencyKpiScreen(){
+ if(!selectedAgency){shell('Partner KPI','Scoped request counts only',noAgency());return;}
+ const metrics=await request('b2b/kpi?agency_id='+Number(selectedAgency));
+ const nr=metrics.net_requests||{},br=metrics.booking_requests||{};
+ const item=(name,value)=>'<article class="hub-card"><h3>'+esc(name)+'</h3><p><strong>'+Number(value||0)+'</strong></p></article>';
+ shell('Partner KPI','All-time activity · '+esc(metrics.agency?.brand_name||agencyName())+
+   ' · Request counts only; booking requests are not supplier confirmations or paid bookings',
+ '<div class="hub-toolbar">'+agencyFilter()+'</div><div class="hub-grid">'+
+ item('Published tours available',metrics.published_tours)+item('Active agency copies',metrics.active_copies)+
+ item('NET · Requested',nr.REQUESTED)+item('NET · In review',nr.IN_REVIEW)+item('NET · Quote linked',nr.CLOSED)+
+ item('Booking · Requested',br.REQUESTED)+item('Booking · In review',br.IN_REVIEW)+
+ item('Booking request · Reviewed confirmed',br.CONFIRMED)+item('Booking request · Rejected',br.REJECTED)+
+ '</div><p class="hub-note">These are request workflow statuses, not supplier availability, actual financial revenue or verified tour departures. No pricing, NET or guest PII is included.</p>');
+ app.querySelector('#hubAgency').onchange=e=>{selectedAgency=Number(e.target.value);agencyKpiScreen().catch(err=>status(err.message,true));};
 }
 async function agencyScreen(){
  if(!selectedAgency){shell('My Agency','Brand settings',noAgency());return;}

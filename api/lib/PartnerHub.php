@@ -70,6 +70,43 @@ final class PartnerHub {
                 self::q($db,"SELECT w.*,p.version_no,p.status publication_status,a.brand_name FROM b2b_partner_tours w JOIN b2b_publications p ON p.id=w.publication_id AND p.company_id=w.company_id JOIN b2b_agencies a ON a.id=w.agency_id AND a.company_id=w.company_id JOIN b2b_agency_members m ON m.agency_id=w.agency_id AND m.company_id=w.company_id AND m.user_id=? WHERE w.company_id=? AND a.status='ACTIVE' AND p.status='PUBLISHED' AND (p.distribution_scope='COMMON' OR (p.distribution_scope='EXCLUSIVE' AND p.exclusive_agency_id=w.agency_id)) ORDER BY w.updated_at DESC LIMIT 200",[$user,$company]);
         return $allowed;
     }
+    /** Company + active agency scoped, aggregated B2B KPI. Never serialize NET,
+     * customer, supplier, guest or other agencies' activity to partner users.
+     * Bookings here are REQUESTS, not confirmed Operations bookings.
+     */
+    public static function agencyKpis(PDO $db,array $u,int $agencyId):array {
+        $agency=self::agency($db,$u,$agencyId);
+        $company=(int)$u['company_id'];
+        $scalar=static function(string $sql,array $params)use($db):int {
+            $s=self::q($db,$sql,$params);
+            return (int)$s->fetchColumn();
+        };
+        $publications=$scalar("SELECT COUNT(*) FROM b2b_publications p
+            WHERE p.company_id=? AND p.status='PUBLISHED'
+            AND (p.distribution_scope='COMMON' OR (p.distribution_scope='EXCLUSIVE' AND p.exclusive_agency_id=?))
+            AND p.version_no=(SELECT MAX(q.version_no) FROM b2b_publications q
+                WHERE q.company_id=p.company_id AND q.program_id=p.program_id)",[$company,$agencyId]);
+        $copies=$scalar("SELECT COUNT(*) FROM b2b_partner_tours w
+            JOIN b2b_publications p ON p.company_id=w.company_id AND p.id=w.publication_id
+            WHERE w.company_id=? AND w.agency_id=? AND p.status='PUBLISHED'
+            AND (p.distribution_scope='COMMON' OR (p.distribution_scope='EXCLUSIVE' AND p.exclusive_agency_id=?))",
+            [$company,$agencyId,$agencyId]);
+        $statuses=static function(string $table,array $valid)use($db,$company,$agencyId):array {
+            $stmt=self::q($db,'SELECT status,COUNT(*) AS n FROM '.$table.' WHERE company_id=? AND agency_id=? GROUP BY status',
+                [$company,$agencyId]);
+            $out=array_fill_keys($valid,0);
+            foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $row)
+                if(array_key_exists((string)$row['status'],$out))$out[$row['status']]=(int)$row['n'];
+            return $out;
+        };
+        return [
+            'agency'=>['id'=>(int)$agency['id'],'brand_name'=>(string)$agency['brand_name']],
+            'period'=>'ALL_TIME','unit'=>'REQUEST_COUNT_NOT_CONFIRMED_BOOKINGS',
+            'published_tours'=>$publications,'active_copies'=>$copies,
+            'net_requests'=>$statuses('b2b_net_requests',['REQUESTED','IN_REVIEW','CLOSED']),
+            'booking_requests'=>$statuses('b2b_booking_requests',['REQUESTED','IN_REVIEW','CONFIRMED','REJECTED'])
+        ];
+    }
     /** Explicit public content allow-list. Imported proposal price tables are NOT approved net prices. */
     private static function publicContent(array $p):array {
         $proposal=$p['proposal']??[];
@@ -213,7 +250,7 @@ final class PartnerHub {
         foreach(['children'=>'Children Policy','payment'=>'Payment Terms','cancellation'=>'Cancellation Policy','notes'=>'Notes'] as $key=>$heading)if(!empty($data['policies'][$key])){$blocks[]=['type'=>'heading','text'=>$heading];$blocks[]=['type'=>'text','text'=>$data['policies'][$key]];}
         $blocks[]=['type'=>'text','text'=>'Contact: '.$agency['email'].' · '.$agency['whatsapp']];
         return ['tour_name'=>$data['title'],'quote_ref'=>'B2B-'.$work['id'],
-            'presentation'=>['settings'=>['template'=>'VTA_B2B_WHITE_LABEL','brand_name'=>$agency['brand_name'],'brand_color'=>$agency['brand_color']],'blocks'=>$blocks]];
+            'presentation'=>['settings'=>['template'=>'VTA_B2B_WHITE_LABEL','brand_mode'=>'WHITE_LABEL','brand_name'=>$agency['brand_name'],'brand_color'=>$agency['brand_color']],'blocks'=>$blocks]];
     }
     public static function handle(string $route,string $method,PDO $db,array $cfg,array $u):void {
         if($route!=='b2b'&&!str_starts_with($route,'b2b/'))return;
@@ -237,6 +274,10 @@ final class PartnerHub {
                 $agencies=$admin?self::q($db,"SELECT * FROM b2b_agencies WHERE company_id=? AND status='ACTIVE' ORDER BY agency_name",[$company])->fetchAll(PDO::FETCH_ASSOC):
                 self::q($db,"SELECT a.* FROM b2b_agencies a JOIN b2b_agency_members m ON m.agency_id=a.id AND m.company_id=a.company_id WHERE a.company_id=? AND m.user_id=? AND a.status='ACTIVE' ORDER BY a.agency_name",[$company,$user])->fetchAll(PDO::FETCH_ASSOC);
                 Http::json(['ok'=>true,'admin'=>$admin,'agencies'=>array_map([self::class,'safeAgency'],$agencies)]);
+            }
+            if($route==='b2b/kpi'&&$method==='GET'){
+                $id=self::id($_GET['agency_id']??0);
+                Http::json(['ok'=>true]+self::agencyKpis($db,$u,$id));
             }
             if(preg_match('#^b2b/agencies/(\\d+)/logo$#D',$route,$lm)){
                 $agency=self::agency($db,$u,(int)$lm[1]);

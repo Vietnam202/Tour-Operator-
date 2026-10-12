@@ -44,6 +44,13 @@ $agency=['brand_name'=>'Partner Agency','email'=>'agent@example.test','whatsapp'
 $doc=$outputMethod->invoke(null,['id'=>2,'content_json'=>json_encode($out),'markup_type'=>'PERCENT','markup_value'=>'15'],$agency,$pub,$params,'client');
 $serialized=json_encode($doc);
 assertB2b(str_contains($serialized,'115.00')&&!str_contains($serialized,'net_per_pax')&&!str_contains($serialized,'100.00'),'Client Word/PDF source blocks contain only selling price, no NET');
+require_once __DIR__.'/../api/lib/ProposalOutput.php';
+$renderedHtml=ProposalOutput::html($doc,static fn($id)=>'./logo-authenticated.jpg');
+assertB2b(($doc['presentation']['settings']['brand_mode']??'')==='WHITE_LABEL'
+    &&str_contains($renderedHtml,'Partner Agency')&&!str_contains($renderedHtml,'Vietnam Travel Advisor'),
+    'Client white-label HTML footer never falls back to VTA corporate brand');
+assertB2b(!str_contains($renderedHtml,'VTA NET / pax')&&!str_contains($renderedHtml,'net_per_pax')
+    &&!str_contains($renderedHtml,'100.00'),'White-label client HTML includes selling price, not NET or supplier amount');
 $itinerary=$outputMethod->invoke(null,['id'=>2,'content_json'=>json_encode($out),'markup_type'=>'PERCENT','markup_value'=>'15'],$agency,['status'=>'PUBLISHED','version_no'=>1,'rate_json'=>'{"cells":[]}'],[],'itinerary');
 assertB2b(!str_contains(json_encode($itinerary),'Client Price Offer'),'Unpriced itinerary exports allowed without a rate');
 // VIE-13: NET request closure must refer to an approved commercial snapshot
