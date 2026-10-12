@@ -136,6 +136,25 @@ final class PartnerHub {
         if(!$rows)throw new DomainException('Quotation has no approved NET cells. Publish itinerary without rates instead');
         return ['valid_until'=>$valid,'source_quote_version_id'=>$version,'cells'=>$rows];
     }
+    /** A NET request can be resolved only against an issued quote reviewed for
+     * exactly this departure, paying population, FOC and Hotel/Cruise option.
+     * This checks commercial provenance, not supplier availability or booking.
+     */
+    public static function matchNetRequest(array $request,array $rates,array $source):void {
+        if((string)($source['start_date']??'')!==(string)($request['departure_date']??'')
+           ||(int)($source['paying_pax']??-1)!==(int)($request['paying_pax']??-2)
+           ||(int)($source['foc']??-1)!==(int)($request['foc_pax']??-2))
+            throw new DomainException('Approved quotation must match departure date, paying guests and FOC');
+        $matches=[];
+        foreach($rates['cells']??[] as $cell){
+            if($cell['mode']===$request['mode']
+               &&$cell['hotel']===$request['hotel_level']
+               &&($cell['cruise']??'')===$request['cruise_level']
+               &&(int)$request['paying_pax']>=(int)$cell['pax_min']
+               &&(int)$request['paying_pax']<=(int)$cell['pax_max'])$matches[]=$cell;
+        }
+        if(count($matches)!==1)throw new DomainException('Select one uniquely approved NET rate for the requested Hotel, Cruise, mode and PAX');
+    }
     private static function quote(array $work,array $pub,array $params):array {
         $rates=self::parse($pub['rate_json']);$cells=$rates['cells']??[];
         $pax=self::id($params['pax']??0);$mode=strtoupper(self::field($params['mode']??'',10));
@@ -372,17 +391,45 @@ final class PartnerHub {
             }
             if($route==='b2b/net-requests'&&$method==='GET'){
                 $rows=$admin?
-                    self::q($db,'SELECT id,agency_id,partner_tour_id,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,status,created_at FROM b2b_net_requests WHERE company_id=? ORDER BY id DESC LIMIT 200',[$company]):
+                    self::q($db,'SELECT id,agency_id,partner_tour_id,departure_date,paying_pax,foc_pax,mode,hotel_level,cruise_level,status,assigned_to_user_id,source_quote_version_id,resolved_at,created_at FROM b2b_net_requests WHERE company_id=? ORDER BY id DESC LIMIT 200',[$company]):
                     self::q($db,'SELECT n.id,n.agency_id,n.partner_tour_id,n.departure_date,n.paying_pax,n.foc_pax,n.mode,n.hotel_level,n.cruise_level,n.status,n.created_at FROM b2b_net_requests n JOIN b2b_agency_members m ON m.company_id=n.company_id AND m.agency_id=n.agency_id AND m.user_id=? WHERE n.company_id=? ORDER BY n.id DESC LIMIT 200',[$user,$company]);
                 Http::json(['ok'=>true,'items'=>$rows->fetchAll(PDO::FETCH_ASSOC)]);
             }
+            if($route==='b2b/admin/net-assignees'&&$method==='GET'){
+                self::requireAdmin($db,$u);
+                $users=self::q($db,"SELECT id,full_name FROM users WHERE company_id=? AND status='ACTIVE' ORDER BY full_name,id LIMIT 200",[$company])->fetchAll(PDO::FETCH_ASSOC);
+                $allowed=array_values(array_map(static fn($r)=>['id'=>(int)$r['id'],'name'=>$r['full_name']],
+                    array_filter($users,static fn($r)=>Auth::can($db,(int)$r['id'],'quote.edit'))));
+                Http::json(['ok'=>true,'items'=>$allowed]);
+            }
+            if(preg_match('#^b2b/admin/net-requests/(\d+)/assign$#D',$route,$n)&&$method==='POST'){
+                self::requireAdmin($db,$u);
+                $owner=self::id(Http::body()['assigned_to_user_id']??null);
+                $staff=self::q($db,"SELECT id FROM users WHERE company_id=? AND id=? AND status='ACTIVE'",[$company,$owner])->fetchColumn();
+                if(!$staff||!Auth::can($db,$owner,'quote.edit'))throw new DomainException('Assign an active Sales user allowed to edit quotations');
+                $done=self::q($db,"UPDATE b2b_net_requests SET assigned_to_user_id=?,status='IN_REVIEW' WHERE company_id=? AND id=? AND status<>'CLOSED'",[$owner,$company,(int)$n[1]]);
+                if($done->rowCount()!==1)throw new OutOfBoundsException('NET request unavailable or closed');
+                Audit::log($db,$company,$user,'B2B_NET_REQUEST_ASSIGNED','b2b_net_request',(int)$n[1],null,['assigned_to_user_id'=>$owner]);
+                Http::json(['ok'=>true,'status'=>'IN_REVIEW','assigned_to_user_id'=>$owner]);
+            }
             if(preg_match('#^b2b/admin/net-requests/(\d+)/status$#D',$route,$n)&&$method==='POST'){
-                self::requireAdmin($db,$u);$status=strtoupper(self::field((string)(Http::body()['status']??''),12));
+                self::requireAdmin($db,$u);$b=Http::body();$status=strtoupper(self::field((string)($b['status']??''),12));
                 if(!in_array($status,['IN_REVIEW','CLOSED'],true))throw new InvalidArgumentException('Invalid NET request status');
-                $updated=self::q($db,'UPDATE b2b_net_requests SET status=? WHERE id=? AND company_id=? AND status<>?',[$status,$n[1],$company,'CLOSED']);
-                if($updated->rowCount()!==1)throw new OutOfBoundsException('NET request unavailable or closed');
-                Audit::log($db,$company,$user,'B2B_NET_REQUEST_STATUS','b2b_net_request',(int)$n[1],null,['status'=>$status]);
-                Http::json(['ok'=>true,'status'=>$status]);
+                $request=self::q($db,'SELECT * FROM b2b_net_requests WHERE id=? AND company_id=?',[(int)$n[1],$company])->fetch(PDO::FETCH_ASSOC);
+                if(!$request||$request['status']==='CLOSED')throw new OutOfBoundsException('NET request unavailable or closed');
+                $source=null;
+                if($status==='CLOSED'){
+                    $source=self::id($b['source_quote_version_id']??null);
+                    $version=QuoteOptions::version($db,$company,$source);
+                    $rates=self::approvedRates($db,$u,$source);
+                    self::matchNetRequest($request,$rates,$version);
+                    $updated=self::q($db,"UPDATE b2b_net_requests SET status='CLOSED',source_quote_version_id=?,resolved_by_user_id=?,resolved_at=NOW() WHERE id=? AND company_id=? AND status<>'CLOSED'",[$source,$user,(int)$n[1],$company]);
+                }else{
+                    $updated=self::q($db,"UPDATE b2b_net_requests SET status='IN_REVIEW' WHERE id=? AND company_id=? AND status='REQUESTED'",[(int)$n[1],$company]);
+                }
+                if($updated->rowCount()!==1)throw new OutOfBoundsException('NET request already processed or unavailable');
+                Audit::log($db,$company,$user,'B2B_NET_REQUEST_STATUS','b2b_net_request',(int)$n[1],null,['status'=>$status,'approved_quote_version_id'=>$source]);
+                Http::json(['ok'=>true,'status'=>$status,'source_quote_version_id'=>$source,'message'=>$status==='CLOSED'?'Issued quote linked; supplier availability and Booking are not confirmed':'Request in review']);
             }
             if($route==='b2b/admin/requests'&&$method==='GET'){
                 self::requireAdmin($db,$u);Http::json(['ok'=>true,'items'=>self::q($db,'SELECT r.id,r.agency_id,a.agency_name,r.partner_tour_id,r.departure_date,r.paying_pax,r.guest_name,r.status,r.created_at FROM b2b_booking_requests r JOIN b2b_agencies a ON a.company_id=r.company_id AND a.id=r.agency_id WHERE r.company_id=? ORDER BY r.id DESC LIMIT 200',[$company])->fetchAll(PDO::FETCH_ASSOC)]);
