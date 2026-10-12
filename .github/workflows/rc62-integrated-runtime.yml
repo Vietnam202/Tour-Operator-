@@ -24,6 +24,7 @@ on:
       - 'tests/document-cost-ui.cjs'
       - 'tests/vta-cost-editor-ui.cjs'
       - 'tests/tour-library-rich-docx-unit.php'
+      - 'tests/tour-library-bulk50-http.cjs'
       - 'tests/tour-proposal-studio.cjs'
       - 'tests/v5-template-gallery-ui.cjs'
       - 'tests/v5-parity-recovery.cjs'
