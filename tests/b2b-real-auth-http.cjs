@@ -23,7 +23,7 @@ async function makeSession(email){
   const setCookie=result.headers.get('set-cookie');
   if(setCookie)cookie=setCookie.split(';')[0];
   const raw=await result.text();let data;
-  try{data=JSON.parse(raw)}catch{data={raw:raw.slice(0,300)}}
+  try{data=JSON.parse(raw)}catch{data={raw}}
   return {status:result.status,data,headers:result.headers};
  }
  const login=await request('auth/login','POST',{email,password});
