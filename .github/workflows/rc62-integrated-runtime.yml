@@ -120,6 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 deploy/build-integrated-package.py --output dist
+          python3 deploy/build-full-install.py dist
           python3 - <<'PY'
           import glob, json, subprocess
           candidates = glob.glob('dist/vta-rc62-manifest-*.json')
@@ -165,6 +166,8 @@ jobs:
           path: |
             dist/vta-rc62-integrated-staging-*.zip
             dist/vta-rc62-manifest-*.json
+            dist/VTA_RC62_FULL_INSTALL_*.zip
+            dist/VTA_RC62_FULL_INSTALL_*.zip.sha256
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
@@ -224,6 +227,7 @@ jobs:
           mkdir -p "$VS22_OUTPUT_DIR"
           php tests/vs23-native.php | tee "$VS22_OUTPUT_DIR/handover-native.log"
           php tests/lead-potential.php | tee "$VS22_OUTPUT_DIR/lead-potential-native.log"
+          php tests/fresh-install-native.php | tee "$VS22_OUTPUT_DIR/fresh-install-native.log"
       - name: Domain regression, pricing and official staging safety rules
         run: |
           set -euo pipefail
@@ -233,3 +237,29 @@ jobs:
           php tests/rc6-group-pricing-manual-unit.php
           php tests/staging_deploy_safety.php
           php tests/rc62-release-readiness-unit.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Seven fresh-install roles with real sessions and Chromium
+        env:
+          VTA_TEST_DB_PASSWORD: ci_root_password
+          VTA_TEST_DB_PORT: '3306'
+          VTA_FRESH_FIXTURE_CONFIG_POINTER: ${{ runner.temp }}/fresh-config-pointer.txt
+          VTA_FRESH_HTTP_URL: http://127.0.0.1:18870
+          VTA_FRESH_PASSWORD: Synthetic-Installer-Only-2026
+          VTA_FRESH_SCREENSHOTS: ${{ runner.temp }}/fresh-role-browser
+        run: |
+          set -euo pipefail
+          npm ci --prefix tests
+          npm install --prefix tests --no-save --package-lock=false playwright@1.64.0
+          tests/node_modules/.bin/playwright install --with-deps chromium
+          php tests/fresh-install-native.php
+          export VTA_CONFIG_FILE="$(cat "$VTA_FRESH_FIXTURE_CONFIG_POINTER")"
+          php -S 127.0.0.1:18870 -t . > "$RUNNER_TEMP/fresh-http.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent http://127.0.0.1:18870/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          node tests/fresh-install-browser.cjs
