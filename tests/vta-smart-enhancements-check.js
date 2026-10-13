@@ -37,9 +37,9 @@ assert.ok(api.indexOf('SmartEnhancements::handle(')>api.indexOf('Auth::checkCsrf
 for(const html of [index,preview]){
   assert.match(html,/smart-enhancements\.css\?v=P1-1/);
   assert.match(html,/smart-enhancements\.js\?v=P1-1/);
-  assert.ok(html.indexOf('smart-enhancements.js')<html.indexOf('app.js?v=PROGRAM-1'),'P1 script must load before RC app boot');
+  assert.ok(html.indexOf('smart-enhancements.js')<html.indexOf('app.js?v=VTA-RC62-MKT-RESTORE-1'),'P1 script must load before RC app boot');
 }
-assert.match(sw,/vta-RC62-V5-B2C-WORD-1-PWA/);
+assert.match(sw,/vta-RC62-V5-B2C-MKT-RESTORE-1-PWA/);
 assert.match(sw,/smart-enhancements\.css\?v=P1-1/);
 assert.match(sw,/smart-enhancements\.js\?v=P1-1/);
 assert.match(app,/VTASmartEnhancements\?\.mount/);
