@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
 const SCOPE='https://v2quote.vietnamtraveladvisor.com.vn/';
-const CACHE='vta-RC62-V5-B2C-MKT-RESTORE-1-PWA';
+const CACHE='vta-RC62-V5-B2C-MKT-RESTORE-2-PDF6-PWA';
 const OLD='vta-RC62-SMART-P1-1';
 const asset=new URL('./tour-proposal-studio.js?v=V5-4-RECOVERY',SCOPE).href;
 const offlinePage=new URL('./offline.html',SCOPE).href;
@@ -58,7 +58,7 @@ function request(url,{method='GET',mode='cors'}={}) {
  return answered;
 }
 (async()=>{
- assert.match(source,/const CACHE='vta-RC62-V5-B2C-MKT-RESTORE-1-PWA'/);
+ assert.match(source,/const CACHE='vta-RC62-V5-B2C-MKT-RESTORE-2-PDF6-PWA'/);
  assert(source.includes("'./cost-sheet.js?v=COST-SAVE-1'"),'fallback Cost editor must be precached');
  assert(source.includes("'./vta-cost-editor.js?v=COST-SAVE-2'"),'direct Cost editor must be precached');
  assert(source.includes("'./document-editor.js?v=WORD-SOURCE-1'"),'new Word source importer must be precached');

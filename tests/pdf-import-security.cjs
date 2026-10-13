@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const pkg=JSON.parse(read('editor-build/package.json')),lock=JSON.parse(read('editor-build/package-lock.json'));
+assert.equal(pkg.dependencies['pdfjs-dist'],'6.4.299');
+assert.equal(lock.packages['node_modules/pdfjs-dist'].version,'6.4.299');
+for(const file of ['assets/document-pdf.js','assets/document-pdf-worker.js'])assert(read(file).includes('6.4.299'),file+' must contain the patched runtime version');
+assert(read('editor-build/pdf.js').includes('isEvalSupported:false'));
+assert(read('editor-build/pdf.js').includes('document-pdf-worker.js?v=RC62-PDF6-1'));
+assert(read('document-editor.js').includes('document-pdf.js?v=RC62-PDF6-1'));
+assert(read('service-worker.js').includes('vta-RC62-V5-B2C-MKT-RESTORE-2-PDF6-PWA'));
+assert(read('service-worker.js').includes('document-pdf-worker.js?v=RC62-PDF6-1'));
+console.log('PASS patched PDF.js source/lockfile/client/worker versions and PWA cache pins match; eval remains disabled');

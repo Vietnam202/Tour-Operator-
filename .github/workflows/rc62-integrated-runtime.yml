@@ -80,6 +80,14 @@ jobs:
       - name: Syntax / security contract before packaging
         run: |
           set -euo pipefail
+          npm ci --prefix editor-build
+          npm audit --prefix editor-build --audit-level=high
+          npm run build --prefix editor-build
+          git diff --exit-code -- assets/document-engine.js assets/document-pdf.js assets/document-pdf-worker.js
+          node tests/pdf-import-security.cjs
+      - name: Runtime syntax / security contract before packaging
+        run: |
+          set -euo pipefail
           php -l api/index.php
           php -l api/bootstrap.php
           php -l api/lib/PartnerHub.php
