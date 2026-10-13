@@ -97,7 +97,8 @@ check((int)$handover['handover']['booking_id']===$bookingId
     && (int)$handoverCreated['booking_id']===$bookingId,
     'Golden path: Sales handover is linked to this Booking and its services');
 $handoverAgain=SalesHandover::create($db,$user,$bookingId);
-check((int)$handoverAgain['id']===(int)$handoverCreated['id']
+check((int)$handoverAgain['booking_id']===$bookingId
+    && $handoverAgain['source_hash']===$handoverCreated['source_hash']
     && (int)v2q('SELECT COUNT(*) FROM booking_handovers WHERE booking_id=?',
         [$bookingId])->fetchColumn()===1,
     'Golden path: repeated Sales handover remains idempotent');

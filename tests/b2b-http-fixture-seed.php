@@ -14,13 +14,15 @@ if(!$configPath || !$password || strlen($password)<12 || !$dbPassword
     throw new RuntimeException('B2B_LOCAL_HTTP_FIXTURE_REQUIRED');
 $config=require $configPath;
 $database=(string)($config['db']['database']??'');
+$testPort=(int)(getenv('VTA_TEST_DB_PORT')?:33317);
 if(!preg_match('/^vta_test_[0-9a-f]{10}$/D',$database)
    ||($config['app']['env']??'')!=='testing'
    ||($config['db']['host']??'')!=='127.0.0.1'
-   ||(int)($config['db']['port']??0)!==33317
+   ||$testPort<1024||$testPort>65535
+   ||(int)($config['db']['port']??0)!==$testPort
    ||($config['app']['base_url']??'')!=='http://127.0.0.1:18869')
     throw new RuntimeException('Refusing non-disposable B2B database fixture');
-$db=new PDO('mysql:host=127.0.0.1;port=33317;dbname='.$database.';charset=utf8mb4','root',$dbPassword,
+$db=new PDO('mysql:host=127.0.0.1;port='.$testPort.';dbname='.$database.';charset=utf8mb4','root',$dbPassword,
   [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,
    PDO::ATTR_EMULATE_PREPARES=>false]);
 $role=$db->query("SELECT id FROM roles WHERE company_id=1 AND code='PARTNER'")->fetchColumn();

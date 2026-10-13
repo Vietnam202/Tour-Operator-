@@ -126,7 +126,7 @@ final class RC62ReleaseReadiness
             $resolved = realpath($path);
             // Also reject a symlinked parent directory which could read a file
             // outside the intended runtime root.
-            if (!$resolved || !str_starts_with($resolved, $root.'/')
+            if (!$resolved || !str_starts_with(str_replace('\\', '/', $resolved), str_replace('\\', '/', $root).'/')
                 || !is_file($path) || is_link($path)
                 || !hash_equals($hash, hash_file('sha256', $path) ?: ''))
                 self::reject('RUNTIME_HASH_MISMATCH');

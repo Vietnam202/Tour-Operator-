@@ -18,17 +18,23 @@ Migrations::run($db,dirname(__DIR__).'/migrations');
 $db->beginTransaction();
 $db->exec("INSERT INTO companies(code,name,timezone,base_currency) VALUES('VTA','Vietnam Travel Advisor','Asia/Ho_Chi_Minh','USD') ON DUPLICATE KEY UPDATE name=VALUES(name)");
 $companyId=(int)$db->query("SELECT id FROM companies WHERE code='VTA'")->fetchColumn();
-$roles=['ADMIN'=>'CEO / Admin','SALES'=>'Sales','PRODUCT'=>'Product / Contracting','OPERATIONS'=>'Operations','FINANCE'=>'Finance'];
+$roles=['ADMIN'=>'CEO / Admin','SALES'=>'Sales','PRODUCT'=>'Product / Contracting','OPERATIONS'=>'Operations','FINANCE'=>'Finance','MARKETING'=>'Marketing','PARTNER'=>'B2B Agency'];
 $roleIds=[];$st=$db->prepare('INSERT INTO roles(company_id,code,name,is_system) VALUES(?,?,?,1) ON DUPLICATE KEY UPDATE name=VALUES(name)');
 foreach($roles as $code=>$label){$st->execute([$companyId,$code,$label]);$q=$db->prepare('SELECT id FROM roles WHERE company_id=? AND code=?');$q->execute([$companyId,$code]);$roleIds[$code]=(int)$q->fetchColumn();}
 $all=array_column($db->query('SELECT code FROM permissions')->fetchAll(),'code');
 $map=[
  'ADMIN'=>$all,
+ 'MARKETING'=>['ai.chat','lead.view','lead.manage','campaign.manage','tour_library.view','product.view','task.view'],
+ 'PARTNER'=>['b2b.portal'],
  'PRODUCT'=>['ai.chat','tour_library.view','tour_library.manage','product.view','product.manage','supplier.view','supplier.create','supplier.edit','supplier.archive','document.view','document.upload','document.review','rate.view','rate.create','rate.edit','rate.approve','rate.archive','rate.reconcile','rate.compare','task.view','audit.view'],
  'SALES'=>['ai.chat','tour_library.view','travel_document.view','product.view','lead.view','lead.manage','campaign.manage','sales.view','customer.manage','inquiry.manage','quote.create','quote.edit','quote.send','quote.confirm','quote.view_cost','supplier.view','document.view','rate.view','booking.view','task.view'],
  'OPERATIONS'=>['quote.confirm','ai.chat','tour_library.view','travel_document.view','travel_document.manage','travel_document.issue','booking.view','booking.manage','guest.manage','operations.view','service.manage','supplier_order.create','supplier_order.send','supplier_order.confirm','document.booking_upload','booking.complete','supplier.view','document.view','rate.view','supplier_ap.view','task.view'],
  'FINANCE'=>['booking.view','finance.view','customer_ar.view','customer_payment.record','supplier_ap.view','supplier_payment.record','profit.view','finance.close','document.booking_upload','report.view','supplier.view','document.view','rate.view','task.view'],
 ];
+// Migrations precede the first company/roles. Their role grants therefore have
+// no rows to update on a fresh database; seed the same derived grants here.
+$map['SALES']=array_merge($map['SALES'],['lead.sales_accept','media.view','media.manage','proposal.edit','proposal.send','b2c.view','b2c.edit']);
+$map['PRODUCT']=array_merge($map['PRODUCT'],['b2c.view','b2c.edit','b2c.approve']);
 $permId=[];foreach($db->query('SELECT id,code FROM permissions')->fetchAll() as $p)$permId[$p['code']]=(int)$p['id'];
 $ins=$db->prepare('INSERT IGNORE INTO role_permissions(role_id,permission_id) VALUES(?,?)');foreach($map as $role=>$perms){foreach($perms as $p){if(isset($permId[$p]))$ins->execute([$roleIds[$role],$permId[$p]]);}}
 $hash=password_hash($password,PASSWORD_DEFAULT);$find=$db->prepare('SELECT id FROM users WHERE company_id=? AND email=?');$find->execute([$companyId,$email]);$existing=$find->fetchColumn();
