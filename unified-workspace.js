@@ -16,6 +16,7 @@
       ...(any(can, ['sales.view','quote.confirm','booking.view','operations.view','task.view']) ? [{id:'tours',label:'Tour Workspace',icon:'▣',group:'WORKSPACES'}] : []),
       ...(any(can, ['tour_library.view','product.view','supplier.view']) ? [{id:'product',label:'Tour Library',icon:'▤',group:'WORKSPACES'}] : []),
       ...(any(can, ['supplier.view','rate.view','document.view']) ? [{id:'suppliers',label:'Suppliers',icon:'◇',group:'WORKSPACES'}] : []),
+      ...(can('lead.view') ? [{id:'marketing',label:'Marketing',icon:'◈',group:'WORKSPACES'}] : []),
       ...(any(can, ['report.view','finance.view','customer_ar.view','supplier_ap.view','profit.view']) ? [{id:'reports',label:'Reports',icon:'▥',group:'MANAGEMENT'}] : []),
       {id:'settings',label:'Settings',icon:'⚙',group:'MANAGEMENT'}
     ];
