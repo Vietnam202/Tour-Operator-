@@ -8,7 +8,7 @@ let browser;
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});const page=await browser.newPage(),errors=[],external=[],api=[];
  page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>{const u=r.request().url();if(!u.startsWith(origin+'/')){external.push(u);return r.abort();}if(u.includes('/api/'))api.push(u);return r.continue();});
- await page.goto(origin+'/preview.html');await page.waitForSelector('.wsc-center');assert.equal(await page.locator('[data-nav="marketing"]').count(),0);
+ await page.goto(origin+'/preview.html');await page.waitForSelector('.wsc-center');assert((await page.locator('[data-nav="marketing"]').count())>0,'Marketing restored for authorized preview account');
  await page.locator('.sidebar [data-nav="product"]').click();await page.waitForSelector('[data-tl-grid]');await page.locator('.tl-head-more summary').click();await page.locator('[data-tl-b2c]').click();await page.waitForSelector('[data-create]');
  await page.locator('[data-create]').click();await page.locator('form select[name="master"]').waitFor();await page.locator('form button[type="submit"]').click();await page.waitForSelector('[data-actions]');
  for(const action of ['review','approve','publish']){await page.locator('[data-actions]').first().click();if(action==='approve')await page.locator('[data-reviewed]').check();await page.locator('[data-action="'+action+'"]').click();await page.waitForFunction(status=>document.querySelector('#workspace').textContent.includes(status),({review:'REVIEW',approve:'APPROVED',publish:'PUBLISHED'})[action]);}
