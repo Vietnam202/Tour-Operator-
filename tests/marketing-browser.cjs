@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const base=path.resolve(__dirname,'..'),out=process.env.VTA_MARKETING_SCREENSHOTS;
-const tabs=['overview','content','calendar','publishing','connections','library','webhooks','campaigns','inbox','insights','channels'];
+const tabs=['overview','content','calendar','publishing','connections','library','webhooks','landing','campaigns','inbox','insights','channels'];
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png'};
 const server=http.createServer((req,res)=>{
  const file=path.resolve(base,'.'+new URL(req.url,'http://localhost').pathname);
@@ -23,11 +23,10 @@ async function assertLayout(page,label){
  await context.route('**/*',route=>{if(route.request().url().startsWith(origin+'/'))return route.continue();external.push(route.request().url());return route.abort();});
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(origin+'/preview.html');
- // Legacy components remain for data compatibility; they are not mounted by the RC6 shell.
- await page.waitForSelector('.wsc-center');assert.equal(await page.locator('[data-nav="marketing"], [data-module="marketing"]').count(),0);
- for(const file of ['marketing-model.js','marketing-demo.js','social-publishing.js','meta-connections.js','marketing-studio.js'])await page.addScriptTag({url:origin+'/'+file});
- for(const file of ['marketing-studio.css','social-publishing.css','meta-connections.css'])await page.addStyleTag({url:origin+'/'+file});
- await page.evaluate(async()=>{const root=document.querySelector('#workspace');root.dataset.view='marketing';await window.VTAMarketing({api:{user:{id:1,company_id:1}},can:()=>true,esc:x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])),toast:()=>{},modal:()=>{},closeModal:()=>{},navigate:()=>{}});});
+ // Marketing is now mounted by the authorized RC6 shell in this isolated review branch.
+ await page.waitForSelector('.wsc-center');
+ assert((await page.locator('[data-nav="marketing"]').count())>=1,'authorized Marketing navigation is present');
+ await page.locator('.sidebar [data-nav="marketing"]').click();
  await page.waitForSelector('.mk-studio');
  assert.equal(await page.locator('.mk-hero h1').innerText(),'Trung tâm Marketing');
  for(const width of [1440,820,390,360]){
@@ -42,7 +41,8 @@ async function assertLayout(page,label){
    await page.screenshot({path:path.join(out,'marketing-'+width+'.png'),fullPage:true});
   }
  }
- console.log('PASS isolated legacy component: 44 preview tab layouts at 1440, 820, 390 and 360px; no page overflow or blank tabs');
+ console.log('PASS integrated Marketing nav and 48 preview tab layouts at 1440, 820, 390 and 360px; no page overflow or blank tabs');
+ await page.locator('.mk-tabs [data-id="overview"]').click();
 
  // Render real-mode account, form and queue surfaces with read-only fixtures.
  await page.evaluate(async()=>{
@@ -70,5 +70,5 @@ async function assertLayout(page,label){
  assert((await page.evaluate(()=>window.marketingTestRequests)).every(x=>x[1]==='GET'));
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
  console.log('PASS 12 real-mode fixture layouts, read-only status requests, no JavaScript errors or external calls');
- console.log('NOTE: isolated legacy compatibility fixture; not RC6 navigation, live provider, staging or CyberPanel verification.');
+ console.log('NOTE: integrated Marketing preview/navigation and read-only fixture only; not live provider, real staging or CyberPanel verification.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});
