@@ -13,6 +13,7 @@ on:
       - 'tour-library*.js'
       - 'tour-proposal-studio.*'
       - 'api/lib/Tour*.php'
+      - 'api/lib/CoreOS.php'
       - 'api/lib/FreeformDocument.php'
       - 'editor-build/**'
       - 'index.html'
@@ -87,6 +88,8 @@ jobs:
           FREEFORM_FIXTURE_DIR: ${{ runner.temp }}/vta-freeform
         run: |
           mkdir -p "$FREEFORM_FIXTURE_DIR"
+          php -l api/lib/CoreOS.php
+          python3 tests/quote-list-current-version.py
           php -l api/lib/PartnerHub.php
           php -l api/lib/Migrations.php
           php tests/b2b-partner-hub-unit.php

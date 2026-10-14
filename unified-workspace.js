@@ -93,10 +93,14 @@
           try {
             const response=await api.request('bookings');
             if(!alive()) return;
-            if(!Array.isArray(response.items))throw Error(t('Incomplete booking response.','Dữ liệu booking chưa đầy đủ.'));
+            if(!Array.isArray(response?.items))throw Error(t('Incomplete booking response.','Dữ liệu booking chưa đầy đủ.'));
             const target=response.items.find(row=>Number(row.quote_id)===sourceID);
             if(target) return navigate('booking',{bookingId:Number(target.id),bookingTab:tab});
-            options.toast(t('No booking yet. Confirm the issued quote and use Create / Open Booking below.','Chưa có Booking. Xác nhận báo giá đã phát hành, sau đó chọn Tạo / Mở Booking ở bên dưới.'));
+            const message=t('No booking yet. Open the Quotation tab, confirm the issued quote, then use Create / Open Booking. Booking is required before operations can begin.','Chưa có Booking. Mở tab Báo giá, xác nhận báo giá đã phát hành, sau đó chọn Tạo / Mở Booking. Cần có booking trước khi điều hành tour.');
+            let notice=bar.querySelector('[data-uw-booking-notice]');
+            if(!notice){notice=document.createElement('p');notice.dataset.uwBookingNotice='';notice.className='uw-notice';notice.setAttribute('role','status');bar.append(notice);}
+            notice.textContent=message;
+            options.toast(message);
             root.querySelector('[data-quote-confirmation]')?.scrollIntoView?.({block:'center'});
           } catch(error) { if(alive())options.toast(error.message,true); }
           finally { if(button?.isConnected)button.disabled=false; }
