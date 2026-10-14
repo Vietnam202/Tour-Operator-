@@ -171,3 +171,10 @@
 }
 /* Only new application chrome is excluded from browser printing. */
 @media print { .uw-context,.uw-preview,.uw-filter {display:none!important;} }
+
+/* VIE-15: compact, accessible Inquiry removal action. */
+.vta-unified-shell .lead-row-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap;}
+.vta-unified-shell .lead-row-actions .lead-delete-btn {min-width:34px;padding:5px 9px;border:1px solid #f1bbc1;color:#ba2436;background:#fff;font-size:20px;line-height:1;}
+.vta-unified-shell .lead-row-actions .lead-delete-btn:hover {background:#fff1f2;border-color:#ba2436;}
+.vta-unified-shell .lead-confirm-danger {background:#ba2436;border:1px solid #ba2436;color:#fff;}
+.vta-unified-shell .lead-confirm-danger:hover {background:#982036;}
