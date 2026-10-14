@@ -38,6 +38,17 @@ async function submit(h, selector) { h.d.querySelector(selector).dispatchEvent(n
 function deferred() { let resolve, reject; const promise = new Promise((a,b) => { resolve=a;reject=b; }); return { resolve, reject, promise }; }
 
 (async()=>{
+ const preview=harness({handle:async route=>route==='tour-library'?{items:[{...copy(program),day_count:0,days:[]}]}:/^tour-library\/\d+$/.test(route)?{program:{...copy(program),has_document:true}}:undefined});
+ try{
+  const mounts=[];preview.w.VTATourProgramWorkspace={mount:async(root,options)=>mounts.push(options)};
+  await preview.render();assert(preview.d.querySelector('[data-tl-open]').getAttribute('aria-label').startsWith('Xem trước:'));
+  assert(preview.d.querySelector('.tl-cover-duration').textContent.includes('Chưa rõ số ngày'));
+  await click(preview,'[data-tl-open]');assert.equal(mounts.at(-1).canEdit,false);
+  await preview.render();await click(preview,'[data-tl-word]');assert.equal(mounts.at(-1).canEdit,true);
+  assert(!preview.calls.some(c=>c.options.method==='POST'||c.options.method==='PUT'));
+  console.log('PASS Master preview/edit distinction and unknown duration; opening never writes');
+ }finally{preview.close();}
+
  let parity=harness();try{
   let b2cOptions,editorOptions;
   parity.w.VTAB2CStudio=options=>{b2cOptions=options;};

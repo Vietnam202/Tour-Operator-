@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
 const copy=x=>JSON.parse(JSON.stringify(x));
 const tick=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));};
-async function setup(){
+async function setup(overrides={}){
  const dom=new JSDOM('<main id="workspace"></main>',{url:'https://fixture.local',runScripts:'outside-only'}),w=dom.window;
  const model={schema:'VTA_DOC_2',title:'Original',content:{type:'doc',content:[{type:'paragraph'}]}};
  let ctx={settings:{document:model},links:[],days:[],costing_revision:1},options,engineOptions,content=copy(model.content);
@@ -13,10 +13,17 @@ async function setup(){
  w.confirm=message=>{confirmations.push(message);return false;};
  w.eval(fs.readFileSync(path.join(__dirname,'../document-editor.js'),'utf8'));
  const api={request:async(route,opt={})=>{calls.push({route,opt});if(opt.method==='PUT'){if(failSave)throw Error('SAVE_UNAVAILABLE');ctx={...ctx,settings:copy(opt.body.settings),links:copy(opt.body.links),costing_revision:ctx.costing_revision+1};}return copy(ctx);}};
- const mounted=await w.mountVisualProposal(w.document.querySelector('main'),{api,quoteData:{quote:{id:1},version:{id:1,version_status:'DRAFT'}},can:()=>true,integrated:true,toast:()=>{},onBack:()=>{}});
+ const mounted=await w.mountVisualProposal(w.document.querySelector('main'),{api,quoteData:{quote:{id:1},version:{id:1,version_status:'DRAFT'}},can:()=>true,integrated:true,toast:()=>{},onBack:()=>{},...overrides});
  return {w,calls,confirmations,mounted,q:s=>w.document.querySelector(s),change:()=>engineOptions.onUpdate(),failSave:value=>{failSave=value;},close:()=>{mounted.dispose();w.close();}};
 }
 (async()=>{
+ let preview=await setup({libraryProgram:{id:1},canEdit:false});try{
+  assert(preview.q('[data-wd-status]').textContent.includes('Xem trước'));
+  assert(preview.q('[data-wd-notice]').textContent.includes('Mở & sửa'));
+  assert(preview.q('[data-wd=save]').disabled);
+  await preview.mounted.save();assert(!preview.calls.some(c=>c.opt.method==='PUT'));
+  console.log('PASS Master preview explains how to edit and never writes');
+ }finally{preview.close();}
  let h=await setup();try{
   assert.equal(h.q('[data-wd-status]').textContent,'Saved');
   assert.equal(h.calls.filter(c=>c.opt.method==='PUT').length,0,'Opening a saved document is read-only');
