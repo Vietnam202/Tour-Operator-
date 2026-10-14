@@ -1,0 +1,26 @@
+name: VIE-15 Inquiry Trash
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'api/lib/CoreOS.php'
+      - 'api/lib/WorkspaceCenter.php'
+      - 'api/migrations/049_inquiry_soft_delete.sql'
+      - 'tests/inquiry-soft-delete-ui.cjs'
+      - '.github/workflows/inquiry-soft-delete.yml'
+  workflow_dispatch:
+
+jobs:
+  inquiry-trash-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: UI and contract tests
+        run: node --test tests/inquiry-soft-delete-ui.cjs
+      - name: PHP syntax checks
+        run: |
+          php -l api/lib/CoreOS.php
+          php -l api/lib/WorkspaceCenter.php
