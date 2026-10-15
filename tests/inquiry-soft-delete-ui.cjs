@@ -7,6 +7,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const core = fs.readFileSync(path.join(root, 'api/lib/CoreOS.php'), 'utf8');
+const lifecycle = fs.readFileSync(path.join(root, 'api/lib/InquiryLifecycle.php'), 'utf8');
 const queue = fs.readFileSync(path.join(root, 'api/lib/WorkspaceCenter.php'), 'utf8');
 const migration = fs.readFileSync(path.join(root, 'api/migrations/049_inquiry_soft_delete.sql'), 'utf8');
 
@@ -62,7 +63,7 @@ test('user-provided Inquiry reference is HTML escaped', () => {
 test('API contract: tenant, permissions, safeguards, and no hard delete', () => {
   assert.match(core, /inquiries\/\(\\d\+\)\/\(archive\|restore\)/);
   assert.match(core, /'inquiry\.manage'/);
-  assert.match(core, /i\.company_id=\? AND i\.id=\? FOR UPDATE/);
+  assert.match(lifecycle, /FROM inquiries WHERE company_id=\? AND id=\? FOR UPDATE/);
   assert.match(core, /'LINKED_COMMERCIAL_RECORD'/);
   assert.match(core, /deleted_at IS NULL/);
   assert.doesNotMatch(core, /DELETE FROM inquiries/i);
