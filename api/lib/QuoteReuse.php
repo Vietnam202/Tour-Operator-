@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/InquiryLifecycle.php';
 final class QuoteReuse {
  private static function q(PDO $db,string $s,array $a=[]): PDOStatement {$q=$db->prepare($s);$q->execute($a);return $q;}
  private static function insert(PDO $db,string $table,array $data): int {self::q($db,"INSERT INTO $table(".implode(',',array_keys($data)).') VALUES('.implode(',',array_fill(0,count($data),'?')).')',array_values($data));return (int)$db->lastInsertId();}
@@ -13,6 +14,8 @@ final class QuoteReuse {
  public static function clone(PDO $db,array $u,int $source,int $inquiry,string $mode): array {
   if(!in_array($mode,['PROGRAM_ONLY','PROGRAM_COST','FULL_DRAFT'],true))throw new InvalidArgumentException('Invalid reuse mode');
   $db->beginTransaction();try{
+   $targetInquiry=InquiryLifecycle::lock($db,(int)$u['company_id'],$inquiry);
+   InquiryLifecycle::active($targetInquiry);
    $old=QuoteOptions::version($db,(int)$u['company_id'],$source,true);
    $target=self::q($db,'SELECT t.*,i.id target_inquiry FROM inquiries i JOIN trips t ON t.id=i.trip_id WHERE i.company_id=? AND t.company_id=? AND i.id=? FOR UPDATE',[$u['company_id'],$u['company_id'],$inquiry])->fetch();
    if(!$target)throw new OutOfBoundsException('Target inquiry not found');

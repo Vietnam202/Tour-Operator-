@@ -2,11 +2,13 @@
 declare(strict_types=1);
 require_once __DIR__.'/QuoteVs2Repository.php';
 require_once __DIR__.'/QuoteVs2Domain.php';
+require_once __DIR__.'/InquiryLifecycle.php';
 
 final class QuoteSmartCosting {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {return QuoteVs2Repository::q($db,$sql,$args);}
     public static function activate(PDO $db,array $u,int $id,array $body): array {
         return QuoteVs2Repository::atomic($db,function()use($db,$u,$id,$body){
+            InquiryLifecycle::version($db,(int)$u['company_id'],$id);
             $v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$id,QuoteVs2Repository::expected($body));QuoteVs2Repository::mutable($db,$v);
             if(getenv('VTA_VS21_CREATION')==='0')throw new DomainException('VS21_CREATION_DISABLED');
             if(QuoteVs2Repository::engine($v)==='VS2_1')return ['version_id'=>$id,'costing_revision'=>(int)$v['costing_revision']];
@@ -19,6 +21,7 @@ final class QuoteSmartCosting {
     }
     public static function context(PDO $db,array $u,int $id,array $body): array {
         return QuoteVs2Repository::atomic($db,function()use($db,$u,$id,$body){
+            InquiryLifecycle::version($db,(int)$u['company_id'],$id);
             $v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$id,QuoteVs2Repository::expected($body));QuoteVs2Repository::mutable($db,$v);
             if(QuoteVs2Repository::engine($v)!=='VS2_1')throw new DomainException('ACTIVATE_SMART_COSTING');
             $graph=QuoteVs2Repository::graph($db,$v);$profile=$graph['profile'];$before=QuoteVs2Domain::guests($v,$profile);$metadata=QuoteVs2Repository::decode($profile['review_metadata_json']);
