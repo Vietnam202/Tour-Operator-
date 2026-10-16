@@ -49,7 +49,7 @@ hermes mcp test vta_rc62
 
 6. Ask Hermes to execute \`vta_connection_status\` and \`vta_operations_overview\`, verify the expected company and the **actual staging records**.
 
-The Windows launcher defaults to **read-only** and explicitly refuses \`enable_task_writes != 0\`. To enable any operation that writes records, a separate reviewed release and durable idempotency contract are required. Do not bypass the launcher or edit the DPAPI file.
+The Windows-native Python launcher defaults to **read-only** and explicitly refuses \`enable_task_writes != 0\`. To enable any operation that writes records, a separate reviewed release and durable idempotency contract are required. Do not bypass the launcher or edit the DPAPI file.
 
 ### No staging environment yet?
 
