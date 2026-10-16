@@ -129,6 +129,7 @@ try {
     WebsiteInbox::publicHandle($route,$method,$db,$config);
     MetaInbox::publicHandle($route,$method,$db,$config);
     WebsiteChatDelivery::publicHandle($route,$method,$db,$config);
+    MarketingShareBooking::publicHandle($route,$method,$db,$config);
     MarketingTourShare::publicHandle($route,$method,$db);
 
     $user=Auth::requireUser($db);
