@@ -35,7 +35,7 @@ if ($check -cne 'ISOLATED-STAGING') { throw 'Operator did not attest isolated st
 
 $source = Split-Path -Parent $PSScriptRoot
 $client = Join-Path $source 'vta_mcp_server.py'
-$launcher = Join-Path $PSScriptRoot 'Start-VTAHermes.ps1'
+$launcher = Join-Path $PSScriptRoot 'vta_mcp_launcher.py'
 $skill = Join-Path $source 'SKILL.md'
 foreach ($path in @($client,$launcher,$skill)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -79,7 +79,7 @@ $cfg = @{
 $cfg | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'bridge-settings.json') -Encoding UTF8
 
 Copy-Item -LiteralPath $client -Destination (Join-Path $root 'vta_mcp_server.py') -Force
-Copy-Item -LiteralPath $launcher -Destination (Join-Path $root 'Start-VTAHermes.ps1') -Force
+Copy-Item -LiteralPath $launcher -Destination (Join-Path $root 'vta_mcp_launcher.py') -Force
 $skillDestination = Join-Path $skillTarget 'SKILL.md'
 if (-not (Test-Path -LiteralPath $skillDestination)) {
     Copy-Item -LiteralPath $skill -Destination $skillDestination
@@ -89,12 +89,14 @@ if (-not (Test-Path -LiteralPath $skillDestination)) {
 & $pythonExe @pythonArgs -m py_compile (Join-Path $root 'vta_mcp_server.py')
 if ($LASTEXITCODE -ne 0) { throw 'Python validation failed.' }
 
-$installedLauncher = (Join-Path $root 'Start-VTAHermes.ps1').Replace('\','/')
+$installedLauncher = (Join-Path $root 'vta_mcp_launcher.py').Replace('\','/')
+$installedPython = $pythonExe.Replace('\','/')
+$yamlArgs = (@($pythonArgs) + @($installedLauncher) | ForEach-Object { '"' + $_ + '"' }) -join ', '
 $snippet = @"
 mcp_servers:
   vta_rc62:
-    command: "powershell.exe"
-    args: ["-NoProfile", "-NonInteractive", "-File", "$installedLauncher"]
+    command: "$installedPython"
+    args: [$yamlArgs]
     supports_parallel_tool_calls: false
     tools:
       include: [vta_connection_status, vta_operations_overview, vta_sales_queues, vta_list_inquiries, vta_list_master_tours, vta_get_master_tour, vta_list_bookings, vta_booking_readiness, vta_operations_day, vta_list_tasks]
@@ -108,7 +110,7 @@ $registered = $false
 if (-not $SkipHermesRegistration) {
     $hermes = Get-Command hermes -ErrorAction SilentlyContinue
     if ($hermes) {
-        & $hermes.Source mcp add vta_rc62 --command powershell.exe --args -NoProfile -NonInteractive -File $installedLauncher
+        & $hermes.Source mcp add vta_rc62 --command $pythonExe --args @pythonArgs $installedLauncher
         $registered = $LASTEXITCODE -eq 0
         if ($registered) {
             Write-Host 'Hermes registration attempted successfully. Apply read-only tool filter from snippet if needed.'
