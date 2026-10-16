@@ -1,0 +1,46 @@
+name: RC6.2 V6.7 B2B Partner Edition QA
+on:
+  pull_request:
+    paths:
+      - 'b2b-partner-edition.html'
+      - 'partner-hub.js'
+      - 'api/lib/PartnerHub.php'
+      - 'tests/b2b-v67-contract.cjs'
+      - 'tests/b2b-v67-browser.cjs'
+      - 'tests/b2b-four-templates-browser.cjs'
+      - '.github/workflows/rc62-b2b-v67-edition.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: php -l api/lib/PartnerHub.php
+      - run: node --check partner-hub.js
+      - run: node tests/b2b-v67-contract.cjs
+  browser:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.55.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install --no-save playwright@1.55.1
+      - run: node tests/b2b-v67-browser.cjs
+      - run: node tests/b2b-four-templates-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vta-v67-b2b-visual-evidence
+          path: |
+            v67-partner-*.png
+            vta-four-*.png
+            vta-four-*.pdf
+          if-no-files-found: ignore

@@ -396,6 +396,20 @@ final class PartnerHub {
                 if($action===''&&$method==='GET'){
                     Http::json(['ok'=>true,'tour'=>['id'=>(int)$w['id'],'content'=>self::parse($w['content_json']),'agency'=>self::safeAgency($agency),'revision'=>(int)$w['revision'],'markup_type'=>$w['markup_type'],'markup_value'=>(float)$w['markup_value'],'publication_status'=>$pub['status']]]);
                 }
+                // V6.7 white-label editor: same published agency copy as Partner Hub,
+                // but only reviewed tour text and public agency identity, NO NET/rate_json/markup.
+                // Requires authenticated partner membership and an active publication.
+                if($action==='v67-preview'&&$method==='GET'){
+                    $data=self::normalizeCopy(self::parse($w['content_json']));
+                    // Day notes are internal operational fields; expose only approved visible schedule text.
+                    $data['days']=array_map(static fn(array $day):array=>[
+                        'title'=>(string)($day['title']??''),'description'=>(string)($day['description']??''),
+                        'meals'=>(string)($day['meals']??''),'overnight'=>(string)($day['overnight']??'')],$data['days']);
+                    header('Cache-Control: private, no-store');
+                    Http::json(['ok'=>true,'schema'=>'VTA_B2B_PARTNER_V67_PUBLIC_PREVIEW',
+                        'tour'=>['id'=>(int)$w['id'],'publication_version'=>(int)$pub['version_no'],'content'=>$data],
+                        'agency'=>self::safeAgency($agency)]);
+                }
                 if($action===''&&$method==='PUT'){
                     if($pub['status']!=='PUBLISHED')throw new DomainException('Publication revoked; create a new copy from an active tour');
                     $b=Http::body();$rev=self::id($b['revision']??0);
