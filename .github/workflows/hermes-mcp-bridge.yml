@@ -48,3 +48,11 @@ jobs:
             !integrations/hermes/**/__pycache__/**
           if-no-files-found: error
           retention-days: 14
+
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline Windows DPAPI installer and stdio smoke
+        shell: pwsh
+        run: ./integrations/hermes/windows/Test-Installer.ps1
