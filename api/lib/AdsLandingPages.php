@@ -154,13 +154,7 @@ final class AdsLandingPages {
         $event=(int)$landing['publication_event_id'];
         LeadHub::submit($db,(string)$landing['private_form_token'],$lead,
             static function(int $company,int $leadId)use($db,$slug,$landingId,$event,$expectedCompany,$attr):void{
-                if($company!==$expectedCompany)throw new OutOfBoundsException('Wrong company Lead Form');
-                $now=self::live($db,$slug,true);
-                if((int)$now['id']!==$landingId||(int)$now['publication_event_id']!==$event)
-                    throw new OutOfBoundsException('Publication changed');
-                $saved=self::q($db,'INSERT IGNORE INTO ads_landing_lead_links(landing_id,company_id,lead_request_id,publication_event_id)
-                    VALUES(?,?,?,?)',[$landingId,$company,$leadId,$event]);
-                if($saved->rowCount()===1)self::metric($db,$landingId,'LEAD',$attr);
+                self::recordLead($db,$slug,$company,$leadId,$expectedCompany,$landingId,$event,$attr);
             });
         http_response_code(201);
         header('Content-Type: text/html; charset=utf-8');
@@ -170,6 +164,18 @@ final class AdsLandingPages {
             .'<h1>Thank you — enquiry received</h1><p>Our team will confirm availability, services and pricing. This is not a confirmed booking.</p>'
             .'<p>Vietnam Travel Advisor · info@vietnamtraveladvisor.com.vn</p></main></html>';
         exit;
+    }
+    /** Called INSIDE LeadHub transaction: attribution insert is idempotent. */
+    public static function recordLead(PDO $db,string $slug,int $company,int $leadId,
+        int $expectedCompany,int $landingId,int $event,array $attr):bool {
+        if($company!==$expectedCompany)throw new OutOfBoundsException('Wrong company Lead Form');
+        $now=self::live($db,$slug,true);
+        if((int)$now['id']!==$landingId||(int)$now['publication_event_id']!==$event
+            ||(int)$now['company_id']!==$expectedCompany)throw new OutOfBoundsException('Publication changed');
+        $saved=self::q($db,'INSERT IGNORE INTO ads_landing_lead_links(landing_id,company_id,lead_request_id,publication_event_id)
+                    VALUES(?,?,?,?)',[$landingId,$company,$leadId,$event]);
+        if($saved->rowCount()===1){self::metric($db,$landingId,'LEAD',$attr);return true;}
+        return false;
     }
     public static function publicHandle(string $route,string $method,PDO $db,array $cfg):void {
         if(!preg_match('#^ads/landing/([a-z0-9-]+)(?:/(lead|event))?$#D',$route,$parts))return;
