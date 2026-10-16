@@ -3,9 +3,11 @@ on:
   pull_request:
     paths:
       - 'api/lib/MarketingShareBooking.php'
+      - 'api/lib/ClientTourPresentation.php'
       - 'api/index.php'
       - 'api/bootstrap.php'
       - 'tests/tour-share-booking-contract.php'
+      - 'tests/client-tour-share-layouts.php'
       - '.github/workflows/rc62-public-tour-share-lead.yml'
   workflow_dispatch:
 permissions:
@@ -22,7 +24,10 @@ jobs:
       - name: PHP syntax for public lead flow
         run: |
           php -l api/lib/MarketingShareBooking.php
+          php -l api/lib/ClientTourPresentation.php
           php -l api/index.php
           php -l api/bootstrap.php
       - name: Contract regression
-        run: php tests/tour-share-booking-contract.php
+        run: |
+          php tests/tour-share-booking-contract.php
+          php tests/client-tour-share-layouts.php
