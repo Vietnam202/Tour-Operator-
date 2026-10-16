@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VTA · Professional Tour Design Templates V6.1</title>
+<style>
+:root{--navy:#153b59;--teal:#087c7b;--muted:#748a9b;--edge:#dce6ed}
+*{box-sizing:border-box}body{margin:0;background:#edf3f8;color:#20374a;font:14px/1.55 Arial,sans-serif}
+h1,h2,h3,p{margin:0}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #8dbcf1;outline-offset:2px}
+header.app{background:var(--navy);color:white;padding:16px clamp(20px,4vw,55px);display:flex;justify-content:space-between;gap:20px;align-items:center}
+.app b{font-size:17px}.app small{display:block;color:#bad0df;font-size:11px}.app button{background:#176fe7;color:#fff;border:0;border-radius:8px;padding:10px 18px}
+main{max-width:1360px;margin:0 auto;padding:30px 24px 85px}.eyebrow{letter-spacing:2px;font-size:10px;font-weight:800;color:#849baa}
+main>h1{font-size:29px;margin-top:5px;letter-spacing:-1px}main>p{color:#7c90a3;margin-top:7px}
+.chooser{margin:22px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.choice{background:white;border:1px solid var(--edge);border-radius:12px;text-align:left;padding:0;overflow:hidden}
+.choice[aria-pressed=true]{outline:3px solid #2d77e6}.choice .thumb{height:120px;background:linear-gradient(130deg,#1b5071,#5dabb1);display:block;position:relative}
+.choice:nth-child(2) .thumb{background:linear-gradient(135deg,#276273,#f0c895)}
+.choice:nth-child(3) .thumb{background:linear-gradient(135deg,#dcebf2,#9dbbcf)}
+.choice:nth-child(4) .thumb{background:linear-gradient(135deg,#223953,#607f9b)}
+.thumb:after{content:"";position:absolute;top:21px;left:40%;width:56px;height:84px;background:linear-gradient(#fff 0 17%,#d7e4eb 18% 22%,#fff 23% 37%,#d7e4eb 38% 41%,#fff 42%);box-shadow:0 5px 15px #001a3533}
+.choice>b{display:block;padding:13px 13px 2px;color:#193d58;font-size:13px}
+.choice>small{display:block;padding:0 13px 14px;color:#6d8495}
+.preview-top{background:#fff;border:1px solid var(--edge);border-radius:10px;padding:14px 18px;margin-bottom:13px;display:flex;justify-content:space-between}
+.preview-top strong{color:#113b5c}.preview-top span{font-size:10px;color:var(--teal);font-weight:800}
+.stage{background:#dfe8ef;border:1px solid #d1dfe8;border-radius:12px;padding:28px 14px 70px;overflow:auto}
+.paper{background:#fff;max-width:794px;margin:0 auto;box-shadow:0 13px 35px #163b531c;min-height:1000px;overflow:hidden}
+.paper h1{font:700 45px/1.15 Georgia,serif;letter-spacing:-1px}.paper h2{font:700 23px Georgia,serif;color:var(--navy);margin:0 0 13px}
+.paper h3{font-size:17px;color:var(--navy);margin:0 0 5px}.paper p{line-height:1.65;color:#587083}
+.brand{display:flex;align-items:center;gap:10px}.brand .logo{background:#deeff0;color:#1a677d;padding:11px 8px;border-radius:8px;font-size:14px;font-weight:900}
+.brand b{font-size:12px}.brand small{display:block;font-size:9px;color:#8c9eaa}
+.hero{background:linear-gradient(125deg,#153e5c,#4d8c99);height:260px;position:relative;color:#fff;padding:48px 45px;overflow:hidden}
+.hero:before{content:"";position:absolute;right:-10%;bottom:-50%;width:80%;height:120%;background:#10354b9e;clip-path:polygon(0 80%,23% 27%,46% 68%,70% 12%,100% 80%,100% 100%,0 100%)}
+.hero h1,.hero p{position:relative;color:#fff;max-width:560px}.hero h1{margin:18px 0 10px}.hero p{color:#e9f4f1}.hero small{position:relative;letter-spacing:2px;font-size:10px;color:#edd49a;font-weight:800}
+.section{padding:28px 43px}.section+.section{padding-top:8px}
+.route{display:flex;flex-wrap:wrap;gap:5px;margin:14px 0 21px;font-size:11px;font-weight:800;color:var(--teal)}
+.route span{background:#e9f5f5;border-radius:4px;padding:5px 8px}
+.highlights{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.highlights div{border:1px solid #e2eaf0;border-radius:7px;padding:9px 13px;color:#41657a;font-size:12px}
+.day{padding:16px 0;border-top:1px solid var(--edge);break-inside:avoid;display:grid;grid-template-columns:61px 1fr;gap:16px}
+.day .number{display:grid;place-items:center;background:#e6f2f3;border-radius:8px;height:65px;font-size:24px;font-weight:800;color:var(--teal)}
+.day p{font-size:12px}.day small{display:block;color:#748c9d;margin-top:7px;font-size:10px}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:25px}
+.list{padding-left:19px;font-size:11px;color:#597080}.list li{margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:10px}td,th{border:1px solid #dbe5eb;text-align:left;padding:9px 8px;vertical-align:top}th{background:#eff4f7;color:#3b5870}
+.foot{border-top:1px solid #e1e8ee;padding:16px 40px;display:flex;justify-content:space-between;gap:15px;color:#8899a5;font-size:9px}
+.brochure .hero{height:490px;background:linear-gradient(160deg,#13506b,#73b2ac 62%,#d8b57f)}.brochure .hero h1{font-size:70px;margin-top:160px}
+.brochure .hero:before{background:#123f55b8}.brochure .section h2{font-size:27px}
+.mosaic{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:7px;padding:0 43px}.mosaic div{height:130px;background:linear-gradient(140deg,#195c70,#79b4a4);border-radius:5px}.mosaic div:nth-child(2){background:linear-gradient(140deg,#9e7567,#e4ba86)}.mosaic div:nth-child(3){background:linear-gradient(140deg,#5c85a4,#b5c5b7)}
+.brochure .day{grid-template-columns:110px 1fr}.brochure .day .number{height:93px;background:linear-gradient(130deg,#225b72,#80b7b8);color:white;font-size:29px}
+.quick .hero{height:auto;min-height:180px;background:#ecf5f7;color:var(--navy)}.quick .hero h1,.quick .hero p{color:var(--navy)}.quick .hero:before{display:none}
+.quick .hero small{color:var(--teal)}.quick .hero h1{font:700 33px Georgia,serif}
+.quick td:first-child{font-weight:800;color:var(--teal)}
+.b2b .hero{height:auto;background:#173d59}.b2b .hero:before{display:none}.b2b .hero h1{font-size:38px}
+.b2b .section h2{font:700 20px Arial,sans-serif}.b2b .day{grid-template-columns:60px 1fr}.b2b .day .number{height:40px;font-size:13px}
+.alert{margin:22px 0;border:1px solid #e7d29b;background:#fff6e2;padding:12px 16px;color:#926625;font-size:11px}
+@media(max-width:900px){.chooser{grid-template-columns:1fr 1fr}.paper{width:100%}}
+@media(max-width:550px){.app{flex-wrap:wrap}main{padding:20px 12px}.paper h1{font-size:28px}.hero{padding:28px 24px}.section{padding:20px 23px}.columns,.highlights{grid-template-columns:1fr}.brochure .hero h1{font-size:42px;margin-top:160px}.mosaic{padding:0 23px}.preview-top{display:block}.stage{padding:10px 5px}.day{gap:9px}.foot{padding:15px 20px}}
+@media print{@page{size:A4;margin:13mm}header.app,main>h1,main>p,.eyebrow,.chooser,.preview-top,.alert{display:none!important}.stage,main{border:0;padding:0;background:#fff}.paper{width:100%;box-shadow:none;max-width:none}.day{break-inside:avoid}body{background:white}}
+</style></head><body>
+<header class="app"><div><b>VTA / Professional Template Studio</b><small>Vietnam Travel Advisor · RC6.2 · V6.1 design reference</small></div><button id="print">Print preview</button></header>
+<main><span class="eyebrow">MASTER TOUR · DESIGN TEMPLATE CENTER</span><h1>Choose your itinerary presentation</h1>
+<p>4 distinct layouts · 1 example 8-day tour · no supplier prices or changes to RC6.2 database</p>
+<div class="chooser" id="chooser"></div>
+<div class="preview-top"><strong id="active">Professional Detailed</strong><span>VISUAL PREVIEW / NOT A BOOKING OR QUOTATION</span></div>
+<div class="stage"><article class="paper" id="paper"></article></div>
+<div class="alert">Illustrative content only. Replace with authenticated, owner-approved tour data and approved media in RC6.2. Read-only demo; does not edit the Tiptap document, quote, supplier rates or booking.</div>
+</main>
+<script>
+(function(){
+'use strict';
+const sample={name:'Vietnam Discovery',subtitle:'Heritage, landscapes & authentic local experiences',code:'VTA-DEMO-8D7N',route:['Hanoi','Ninh Binh','Ha Long Bay','Da Nang','Hoi An'],
+highlights:['Hanoi cultural heritage','Ninh Binh karst landscapes','Ha Long Bay overnight cruise','Golden Bridge and Hoi An'],
+days:[
+['Arrival in Hanoi','Hanoi','Airport welcome and transfer. Depending on flight arrival, explore the Old Quarter at leisure.','—','Hanoi'],
+['Hanoi City Discovery','Hanoi','Explore historical and cultural highlights with visits subject to opening schedules.','B','Hanoi'],
+['Ninh Binh Landscapes','Hanoi → Ninh Binh → Hanoi','Enjoy a boat excursion through the limestone countryside.','B','Hanoi'],
+['Ha Long Bay Cruise','Hanoi → Ha Long Bay','Board an overnight cruise; experiences are subject to operator and weather.','B/L/D*','Ha Long Bay'],
+['Flight to Da Nang','Ha Long Bay → Hanoi → Da Nang','Disembark, return to Hanoi and connect to a separately confirmed domestic flight.','B/Brunch*','Da Nang'],
+['Ba Na Hills · Golden Bridge','Da Nang','Ride the cable car and discover the Golden Bridge, weather permitting.','B','Da Nang'],
+['Hoi An Heritage','Da Nang → Hoi An → Da Nang','Explore the heritage town and optional basket-boat experience.','B','Da Nang'],
+['Departure','Da Nang','Departure transfer according to the confirmed flight time.','B','—']
+],inclusions:['Accommodation category subject to confirmation','Ground transfers and guided excursions as agreed','Meals stated in the final itinerary'],exclusions:['Flights and e-visa unless quoted','Tips, insurance and personal expenses','Other unconfirmed services']};
+const templates=[['detailed','Professional Detailed','B2B / B2C'],['brochure','Photo-rich Brochure','B2C editorial'],['quick','Quick Itinerary','Quick sharing'],['b2b','B2B Tour Proposal','Agency trade']];
+const paper=document.getElementById('paper'),chooser=document.getElementById('chooser');
+function E(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n;}
+function append(parent,...children){for(const c of children)parent.appendChild(c);return parent;}
+function div(cls,text){return E('div',cls,text)}
+function title(parent,n,text){return append(parent,E('h'+n,'',text));}
+function header(root,style){const h=div('hero');append(h,E('small','',style==='b2b'?'TRADE PARTNER PROPOSAL':style==='quick'?'JOURNEY AT A GLANCE':'VIETNAM DMC · LOCAL EXPERTS'),E('h1','',sample.name),E('p','',sample.subtitle));root.append(h)}
+function route(root){const d=div('route');for(const a of sample.route)d.append(E('span','',a));root.append(d)}
+function section(root,heading){const s=div('section');title(s,2,heading);root.append(s);return s}
+function hlist(root,entries){const u=E('ul','list');for(const i of entries)append(u,E('li','',i));root.append(u)}
+function renderDays(root,compact){const s=section(root,compact?'Travel plan at a glance':'Daily itinerary');if(compact){const table=E('table');const hr=E('tr');for(const h of ['Day','Program','Route','Meals','Overnight'])append(hr,E('th','',h));const thead=E('thead');thead.append(hr);table.append(thead);const tbody=E('tbody');sample.days.forEach((d,i)=>{const r=E('tr');for(const v of [i+1,d[0],d[1],d[3],d[4]])append(r,E('td','',v));tbody.append(r)});table.append(tbody);s.append(table);return}
+sample.days.forEach((d,i)=>{const el=div('day'),num=div('number',String(i+1).padStart(2,'0')),body=div('');title(body,3,d[0]);append(body,E('p','',d[2]),E('small','',d[1]+' · Meals '+d[3]+' · Overnight '+d[4]));append(el,num,body);s.append(el)})}
+function services(root){const s=section(root,'Included / Not included'),cols=div('columns'),a=div(''),b=div('');title(a,3,'Inclusions');title(b,3,'Exclusions');hlist(a,sample.inclusions);hlist(b,sample.exclusions);append(cols,a,b);s.append(cols)}
+function draw(style){paper.className='paper '+style;paper.replaceChildren();
+const brand=div('section');brand.style.paddingBottom='14px';append(brand,E('strong','', 'VIETNAM TRAVEL ADVISOR'),E('p','',sample.code+' · 8 days / 7 nights · SAMPLE ONLY'));paper.append(brand);
+header(paper,style);
+if(style==='brochure'){const p=section(paper,'Discover more. Experience deeper.');p.append(E('p','', 'Local heritage, remarkable natural landscapes and inspiring Vietnam experiences, tailored to your travel preferences.'));const mosaic=div('mosaic');append(mosaic,div(''),div(''),div(''));paper.append(mosaic);}
+if(style==='detailed'||style==='b2b'){const s=section(paper,style==='b2b'?'Program overview':'Tour overview');route(s);s.append(E('p','', 'A carefully designed private journey connecting northern Vietnam landscapes with the heritage of Central Vietnam. All services require final supplier confirmation.'));}
+if(style!=='quick'){const s=section(paper,'Tour highlights'),g=div('highlights');sample.highlights.forEach(h=>g.append(div('',h)));s.append(g)}else{const s=section(paper,'Tour route');route(s);}
+renderDays(paper,style==='quick');
+if(style==='b2b'){const s=section(paper,'Accommodation & cruise — to confirm'),table=E('table'),tr=E('tr');for(const v of ['Location','Category','Approved property'])tr.append(E('th','',v));table.append(tr);for(const row of [['Hanoi','3★ / 4★ / 5★','TBC'],['Ha Long Bay','Cruise class TBC','TBC'],['Da Nang','3★ / 4★ / 5★','TBC']]){const r=E('tr');row.forEach(x=>r.append(E('td','',x)));table.append(r)}s.append(table);s.append(E('p','', 'Pricing: NOT QUOTED. Verified VND supplier rates and agency approval required.'));}
+services(paper);const foot=div('foot');append(foot,E('span','', 'Vietnam Travel Advisor'),E('span','', 'info@vietnamtraveladvisor.com.vn'),E('span','', 'UNAPPROVED SAMPLE'));paper.append(foot);
+document.getElementById('active').textContent=templates.find(t=>t[0]===style)[1];
+chooser.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.style===style)));
+}
+templates.forEach(t=>{const b=E('button','choice');b.type='button';b.dataset.style=t[0];b.append(E('span','thumb'));b.append(E('b','',t[1]),E('small','',t[2]));b.onclick=()=>draw(t[0]);chooser.append(b)});
+document.getElementById('print').onclick=()=>window.print();draw('detailed');
+})();
+</script></body></html>
