@@ -30,7 +30,7 @@ for(const style of api.templates){
 assert.throws(()=>api.render(sample,'unexpected'),/Unsupported layout/);
 assert.throws(()=>api.render({days:Array(61).fill({})},'quick'),/60 days/);
 const css=fs.readFileSync(path.join(root,'design-templates.css'),'utf8');
-assert(css.includes('.theme-brochure')&&css.includes('.theme-detailed')&&css.includes('.theme-b2b')&&css.includes('.theme-quick'));
+for(const selector of ['.vta-detailed-cover','.vta-brochure-cover','.vta-quick-top','.vta-b2b-top'])assert(css.includes(selector),'Missing design selector '+selector);
 const html=fs.readFileSync(path.join(root,'preview.html'),'utf8');
 for(const file of ['sample-data.js','design-templates.js','design-templates.css'])assert(html.includes(file));
 console.log('PASS renderer escape, media allowlist, 4 distinct designs, size guard, UI entrypoints');
