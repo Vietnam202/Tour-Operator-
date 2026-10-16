@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/../api/lib/MarketingShareBooking.php';
+if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 
 function check(bool $condition,string $name):void {
     if(!$condition)throw new RuntimeException('FAILED: '.$name);
@@ -15,7 +16,6 @@ foreach(['','fake-token',str_repeat('x',64),str_repeat('a',63),'javascript:alert
     catch(OutOfBoundsException $e){}
 }
 check(true,'malformed tokens fail closed');
-if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 $method=$clazz->getMethod('form');
 $html=$method->invoke(null,$good);
 check(str_contains($html,'name="csrf"')&&str_contains($html,'name="request_id"'),'CSRF and idempotency keys are rendered');
