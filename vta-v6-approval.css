@@ -1,0 +1,79 @@
+/* VTA RC6.2 V6 approval: additive screen-only Master Tour + Word Editor UX */
+.tour-library{max-width:1600px}
+.tour-library .tl-heading{border:0;margin-bottom:10px;align-items:center}
+.tour-library .tl-heading h1{color:#123454;font-size:28px;letter-spacing:-.6px}
+.tour-library .tl-tabs{gap:8px;flex-wrap:wrap;margin:14px 0 18px}
+.tour-library .tl-tabs .btn{border-radius:10px;padding:10px 17px}
+.v6-library-intro{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border:1px solid #dce5ef;border-radius:15px;background:linear-gradient(115deg,#fff 36%,#f0f7fd);margin-bottom:15px}
+.v6-library-intro strong{color:#133a59;font-size:18px}
+.v6-library-intro p{font-size:13px;color:#697d90;max-width:850px;line-height:1.6;margin:6px 0 0}
+.tour-library .tl-metrics{margin:0 0 14px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.tour-library .tl-metric{padding:11px 15px;border:1px solid #e2e8ef;box-shadow:none}
+.tour-library .tl-metric strong{font-size:23px;color:#123a5d}
+.tour-library .v6-filterbar{background:#fff;border:1px solid #e0e8f0;padding:14px;border-radius:14px;margin:0 0 11px;gap:10px}
+.tour-library .v6-filterbar label{font-size:12px;min-width:115px}
+.tour-library .v6-filterbar label:first-child{flex:2;min-width:215px}
+.tour-library .v6-filterbar .tl-check{min-width:138px;font-size:12px}
+.v6-library-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#718396;font-size:12px;margin-bottom:13px}
+.v6-library-bar>div{display:flex;gap:4px}
+.v6-library-bar .btn{font-size:12px;padding:8px 12px}
+.tour-library .tl-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tour-library .tl-card{border-radius:15px;padding:13px;box-shadow:0 5px 16px #17324d0b}
+.tour-library .tl-card .tl-cover{min-height:130px;border-radius:11px}
+.tour-library .tl-card-body strong{font-size:16px}
+.tour-library .tl-card-actions{gap:7px}
+.tour-library .tl-card-actions .btn{border-radius:8px;font-weight:650}
+.tour-library .tl-grid.v6-list-view{display:flex;flex-direction:column;gap:8px}
+.tour-library .v6-list-view .tl-card{display:grid;grid-template-columns:minmax(230px,1.7fr) minmax(80px,.6fr) minmax(110px,1fr) auto;align-items:center;gap:15px;min-height:106px}
+.tour-library .v6-list-view .tl-card-open{display:grid;grid-template-columns:110px minmax(0,1fr);gap:15px;align-items:center}
+.tour-library .v6-list-view .tl-cover{height:76px;min-height:76px}
+.tour-library .v6-list-view .tl-cover-icon{font-size:28px}
+.tour-library .v6-list-view .tl-cover-status{font-size:9px}
+.tour-library .v6-list-view .tl-card .tl-source{margin:0}
+.tour-library .v6-list-view .tl-card .tl-tags{margin:0}
+.tour-library .v6-list-view .tl-card-actions{justify-content:flex-end;min-width:175px}
+.v6-editor-layout{display:grid;grid-template-columns:190px minmax(0,1fr) 194px;gap:14px;align-items:start;width:100%;max-width:1750px;margin:0 auto}
+.v6-editor-layout>.wd-canvas{min-width:0;max-width:100%;width:100%;overflow:auto}
+.v6-editor-layout .wd-page{margin:20px auto 40px}
+.v6-outline,.v6-editor-tools{position:sticky;top:20px;max-height:calc(100vh - 90px);overflow:auto;background:#fff;border:1px solid #e2e9f0;border-radius:13px;padding:16px 12px;box-shadow:0 7px 25px #0b294408;margin-top:18px}
+.v6-outline>strong,.v6-editor-tools>strong{display:block;font-size:10px;font-weight:800;letter-spacing:1.4px;color:#647d91;margin:0 0 15px}
+.v6-outline p,.v6-editor-tools p,.v6-editor-tools small{display:block;margin:6px 0 10px;color:#76899b;font-size:11px;line-height:1.55}
+.v6-outline-item,.v6-editor-tools>button{display:block;width:100%;text-align:left;background:transparent;color:#2b4963;border:0;border-radius:8px;padding:9px 10px;font-size:12px;cursor:pointer;line-height:1.4}
+.v6-outline-item:hover,.v6-outline-item:focus-visible,.v6-editor-tools>button:hover,.v6-editor-tools>button:focus-visible{background:#e9f4f7;color:#0f596e;outline:none}
+.v6-outline-level-1{font-weight:750}
+.v6-outline-level-2{padding-left:14px}
+.v6-outline-level-3,.v6-outline-level-4{padding-left:23px;font-size:11px}
+.v6-editor-tools>button{margin-bottom:4px;background:#f7fafc;border:1px solid #e5edf2}
+.v6-editor-tools>button:disabled{opacity:.4;cursor:not-allowed}
+.v6-editor-tools>.v6-layout-title{margin:20px 0 7px;border-top:1px solid #e5ebf2;padding-top:15px}
+.v6-editor-tools label{display:block;font-size:11px;color:#647b8c;margin-bottom:5px}
+.v6-editor-tools select{width:100%;max-width:100%;padding:9px 8px;border:1px solid #d7e2ed;border-radius:8px;background:#fff;color:#173753}
+.v6-editor-layout[data-v6-layout=brochure] .wd-page{border-top:8px solid #0c807f}
+.v6-editor-layout[data-v6-layout=quick] .wd-page{box-shadow:0 8px 22px #0a28540d}
+.v6-editor-layout[data-v6-layout=b2b] .wd-page{border-top:6px solid #163e66}
+.v6-editor-layout[data-v6-layout=brochure] [data-wd-surface] h1{color:#0f7775}
+.v6-editor-layout[data-v6-layout=b2b] [data-wd-surface] h1,.v6-editor-layout[data-v6-layout=b2b] [data-wd-surface] h2{color:#143b61}
+@media(max-width:1250px){
+ .v6-editor-layout{grid-template-columns:150px minmax(0,1fr)}
+ .v6-editor-tools{grid-column:1/-1;position:static;max-height:none;display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+ .v6-editor-tools>strong{flex-basis:100%;margin:0}
+ .v6-editor-tools>button{width:auto;margin:0}
+ .v6-editor-tools>p,.v6-editor-tools>small{display:none}
+ .v6-editor-tools>.v6-layout-title{flex-basis:auto;margin:0;padding:0;border:0}
+ .v6-editor-tools select{width:170px}
+}
+@media(max-width:760px){
+ .tour-library .tl-grid{grid-template-columns:1fr}
+ .tour-library .tl-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .tour-library .tl-heading h1{font-size:23px}
+ .tour-library .v6-filterbar{padding:10px}
+ .tour-library .v6-filterbar label{flex:1}
+ .tour-library .v6-list-view .tl-card{display:flex;flex-direction:column;align-items:stretch}
+ .tour-library .v6-list-view .tl-card-open{display:grid}
+ .v6-editor-layout{display:flex;flex-direction:column}
+ .v6-editor-layout>.wd-canvas{order:1}
+ .v6-editor-layout>.v6-editor-tools{order:2;width:100%;padding:12px}
+ .v6-editor-layout>.v6-outline{order:3;position:static;max-height:220px;width:100%;margin:0}
+ .v6-editor-layout .wd-page{margin:5px auto 12px;min-width:0}
+}
+@media print{.v6-outline,.v6-editor-tools,.v6-library-bar{display:none!important}.v6-editor-layout{display:block!important}}

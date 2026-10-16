@@ -12,7 +12,7 @@
   const allowedView=()=>['tour_library.view','product.view','supplier.view'].some(can);
   const allowedManage=()=>['tour_library.manage','product.manage','document.upload'].some(can);
   const alive=()=>root.dataset.view==='product'&&root.dataset.tourLibraryInstance===instance;
-  let items=[],batch=[],view='library',query=String(options.searchQuery||'').slice(0,190),destination='',language='',showArchived=false,ticket=0,busy=false,nextId=1;
+  let items=[],batch=[],view='library',layout='gallery',duration='',query=String(options.searchQuery||'').slice(0,190),destination='',language='',showArchived=false,ticket=0,busy=false,nextId=1;
   const safe=x=>esc(x??'');
   const request=(route,opt)=>api.request(route,opt);
   const errorText=e=>String(e?.message||e||'Không thể thực hiện. Vui lòng thử lại.');
@@ -20,9 +20,43 @@
   const metadata=p=>p.metadata?{...p,...p.metadata}:p;
   const normalize=p=>{const x=metadata(p||{});return {...x,title:x.title||'',destination:x.destination||'',language:x.language||'vi',tags:array(x.tags),status:['DRAFT','ARCHIVED'].includes(x.status)?x.status:'ACTIVE',days:array(x.days).map((d,i)=>({...d,day:d.day||i+1})),included_text:x.included_text||'',excluded_text:x.excluded_text||'',terms_text:x.terms_text||'',warnings:array(x.warnings)};};
   const message=(text,kind='note')=>'<div class="tl-'+kind+'">'+safe(text)+'</div>';
-function shell(body){if(!alive())return;if(root.__vtpsAbort)root.__vtpsAbort.abort();root.classList.remove('vtps-host');root.innerHTML='<div class="page tour-library" data-no-translate><header class="tl-heading"><div><span class="tl-kicker">PRODUCT MANAGEMENT</span><h1>Kho chương trình tour</h1><p>Lưu, tìm và tái sử dụng nhiều chương trình tour</p></div><div class="tl-head-actions">'+(allowedManage()?'<button class="btn" data-tl-quick-import>↑ Nhập chương trình</button>':'')+(allowedManage()?'<button class="btn primary" data-tl-new>+ Tạo chương trình</button>':'')+'<details class="tl-head-more"><summary class="btn" aria-label="Tùy chọn kho chương trình">⋯ Tùy chọn</summary><div class="tl-head-menu">'+(allowedManage()?'<a class="btn" href="partner.html" target="_blank" rel="noopener">B2B Partner Hub ↗</a>':'')+'<button class="btn" data-tl-refresh>Làm mới</button>'+(!window.VTA_PREVIEW&&can('product.view')?'<button class="btn" data-tl-inventory>Tour Inventory nâng cao</button>':'')+(['supplier.view','document.view','rate.view'].some(can)?'<button class="btn" data-tl-suppliers>Nhà cung cấp &amp; bảng giá</button>':'')+'</div></details></div></header><div class="tl-tabs"><button class="btn '+(view==='library'?'primary':'')+'" data-tl-tab="library">Master</button>'+(can('b2c.view')?'<button class="btn" data-tl-b2c>B2C</button>':'')+(allowedManage()?'<button class="btn '+(view==='import'?'primary':'')+'" data-tl-tab="import">Upload / Nhập chương trình'+(batch.length?' ('+batch.length+')':'')+'</button>':'')+'</div>'+(window.VTA_PREVIEW?message('PREVIEW · Dữ liệu mẫu. Chương trình bạn lưu chỉ tồn tại trong phiên xem thử.'): '')+'<div data-tl-body>'+body+'</div></div>';root.querySelector('[data-tl-refresh]').onclick=()=>load();root.querySelector('[data-tl-b2c]')?.addEventListener('click',()=>window.VTAB2CStudio({root,api,can,modal,toast,navigate,onBack:load}));root.querySelector('[data-tl-new]')?.addEventListener('click',()=>newProgram());root.querySelector('[data-tl-quick-import]')?.addEventListener('click',()=>{collectBatch();view='import';render();});root.querySelector('[data-tl-inventory]')?.addEventListener('click',()=>navigate('inventory'));root.querySelector('[data-tl-suppliers]')?.addEventListener('click',()=>navigate('suppliers',{productTab:'overview'}));root.querySelectorAll('[data-tl-tab]').forEach(b=>b.onclick=()=>{collectBatch();view=b.dataset.tlTab;render();});}
+function shell(body){if(!alive())return;if(root.__vtpsAbort)root.__vtpsAbort.abort();root.classList.remove('vtps-host');root.innerHTML='<div class="page tour-library" data-no-translate><header class="tl-heading"><div><span class="tl-kicker">PRODUCT MANAGEMENT</span><h1>Kho chương trình tour</h1><p>Lưu, tìm và tái sử dụng nhiều chương trình tour</p></div><div class="tl-head-actions">'+(allowedManage()?'<button class="btn" data-tl-quick-import>↑ Nhập chương trình</button>':'')+(allowedManage()?'<button class="btn primary" data-tl-new>+ Tạo chương trình</button>':'')+'<details class="tl-head-more"><summary class="btn" aria-label="Tùy chọn kho chương trình">⋯ Tùy chọn</summary><div class="tl-head-menu">'+(allowedManage()?'<a class="btn" href="partner.html" target="_blank" rel="noopener">B2B Partner Hub ↗</a>':'')+'<button class="btn" data-tl-refresh>Làm mới</button>'+(!window.VTA_PREVIEW&&can('product.view')?'<button class="btn" data-tl-inventory>Tour Inventory nâng cao</button>':'')+(['supplier.view','document.view','rate.view'].some(can)?'<button class="btn" data-tl-suppliers>Nhà cung cấp &amp; bảng giá</button>':'')+'</div></details></div></header><div class="tl-tabs"><button class="btn '+(view==='library'?'primary':'')+'" data-tl-tab="library">Master</button>'+(allowedView()?'<button class="btn '+(view==='templates'?'primary':'')+'" data-tl-tab="templates">Template Center</button>':'')+''+(can('b2c.view')?'<button class="btn" data-tl-b2c>B2C</button>':'')+(allowedManage()?'<button class="btn '+(view==='import'?'primary':'')+'" data-tl-tab="import">Upload / Nhập chương trình'+(batch.length?' ('+batch.length+')':'')+'</button>':'')+'</div>'+(window.VTA_PREVIEW?message('PREVIEW · Dữ liệu mẫu. Chương trình bạn lưu chỉ tồn tại trong phiên xem thử.'): '')+'<div data-tl-body>'+body+'</div></div>';root.querySelector('[data-tl-refresh]').onclick=()=>load();root.querySelector('[data-tl-b2c]')?.addEventListener('click',()=>window.VTAB2CStudio({root,api,can,modal,toast,navigate,onBack:load}));root.querySelector('[data-tl-new]')?.addEventListener('click',()=>newProgram());root.querySelector('[data-tl-quick-import]')?.addEventListener('click',()=>{collectBatch();view='import';render();});root.querySelector('[data-tl-inventory]')?.addEventListener('click',()=>navigate('inventory'));root.querySelector('[data-tl-suppliers]')?.addEventListener('click',()=>navigate('suppliers',{productTab:'overview'}));root.querySelectorAll('[data-tl-tab]').forEach(b=>b.onclick=()=>{collectBatch();view=b.dataset.tlTab;render();});}
   function metric(n,label){return '<div class="tl-metric"><strong>'+safe(n)+'</strong><span>'+safe(label)+'</span></div>';}
-  function render(){if(!alive())return;if(view==='import'){renderImport();return;}const visible=items.filter(p=>showArchived||p.status!=='ARCHIVED');const destinations=[...new Set(visible.map(p=>p.destination).filter(Boolean))].sort();const languages=[...new Set(visible.map(p=>p.language).filter(Boolean))].sort();shell('<div class="tl-metrics">'+metric(visible.length,'Chương trình')+metric(visible.filter(p=>p.status==='ACTIVE').length,'Đang sử dụng')+metric(destinations.length,'Điểm đến')+metric(languages.length,'Ngôn ngữ')+'</div><div class="tl-filters"><label>Tìm chương trình<input type="search" data-tl-search value="'+safe(query)+'" placeholder="Tên tour, điểm đến, tag…"></label><label>Điểm đến<select data-tl-destination><option value="">Tất cả</option>'+destinations.map(x=>'<option '+(x===destination?'selected':'')+'>'+safe(x)+'</option>').join('')+'</select></label><label>Ngôn ngữ<select data-tl-language><option value="">Tất cả</option>'+languages.map(x=>'<option '+(x===language?'selected':'')+'>'+safe(x)+'</option>').join('')+'</select></label><label class="tl-check"><input type="checkbox" data-tl-archived '+(showArchived?'checked':'')+'>Hiện đã lưu trữ</label></div><div class="tl-grid" data-tl-grid>'+visible.map(card).join('')+'</div><div class="tl-empty" data-tl-empty hidden>Chưa có chương trình phù hợp. '+(allowedManage()?'Chọn Upload / Nhập chương trình để thêm tour.':'')+'</div>');root.querySelector('[data-tl-search]').oninput=e=>{query=e.target.value;filter();};root.querySelector('[data-tl-destination]').onchange=e=>{destination=e.target.value;filter();};root.querySelector('[data-tl-language]').onchange=e=>{language=e.target.value;filter();};root.querySelector('[data-tl-archived]').onchange=e=>{showArchived=e.target.checked;render();};root.querySelectorAll('[data-tl-open]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlOpen,false));root.querySelectorAll('[data-tl-word]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlWord,allowedManage(),'word'));root.querySelectorAll('[data-tl-edit]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlEdit,true));root.querySelectorAll('[data-tl-archive]').forEach(b=>b.onclick=()=>archiveProgram(b.dataset.tlArchive));root.querySelectorAll('[data-tl-copy]').forEach(b=>b.onclick=()=>copyProgram(b.dataset.tlCopy));filter();}
+  function render(){
+    if(!alive())return;
+    if(view==='import'){renderImport();return;}
+    const isTemplate=p=>array(p.tags).includes('VTA_TEMPLATE');
+    const visible=items.filter(p=>(showArchived||p.status!=='ARCHIVED')&&(view==='templates'?isTemplate(p):!isTemplate(p)));
+    const destinations=[...new Set(visible.map(p=>p.destination).filter(Boolean))].sort();
+    const languages=[...new Set(visible.map(p=>p.language).filter(Boolean))].sort();
+    const durations=[...new Set(visible.map(p=>Number(p.day_count)||array(p.days).length).filter(Number.isFinite))].sort((a,b)=>a-b);
+    const intro=view==='templates'
+      ?'<div class="v6-library-intro"><div><strong>Reusable Content Templates</strong><p>Mẫu nội dung đã lưu trong công ty, khác với 4 kiểu trình bày Word/PDF. Tạo bản nháp độc lập, không thay đổi Master gốc.</p></div></div>'
+      :'<div class="v6-library-intro"><div><strong>Professional Master Tour Library</strong><p>Kho nội dung chuẩn của VTA. Mở tour để biên tập Word, hoặc dùng bản sao trong báo giá.</p></div></div>';
+    shell(intro+
+      '<div class="tl-metrics">'+metric(visible.length,view==='templates'?'Mẫu nội dung':'Master Tours')+metric(visible.filter(p=>p.status==='ACTIVE').length,'Đang sử dụng')+metric(destinations.length,'Điểm đến')+metric(languages.length,'Ngôn ngữ')+'</div>'+
+      '<div class="tl-filters v6-filterbar"><label>Tìm chương trình<input type="search" data-tl-search value="'+safe(query)+'" placeholder="Tên tour, điểm đến, tag…"></label>'+
+      '<label>Điểm đến<select data-tl-destination><option value="">Tất cả</option>'+destinations.map(x=>'<option '+(x===destination?'selected':'')+'>'+safe(x)+'</option>').join('')+'</select></label>'+
+      '<label>Số ngày<select data-tl-duration><option value="">Tất cả</option>'+durations.map(n=>'<option value="'+n+'" '+(duration===String(n)?'selected':'')+'>'+n+' ngày</option>').join('')+'</select></label>'+
+      '<label>Ngôn ngữ<select data-tl-language><option value="">Tất cả</option>'+languages.map(x=>'<option '+(x===language?'selected':'')+'>'+safe(x)+'</option>').join('')+'</select></label>'+
+      '<label class="tl-check"><input type="checkbox" data-tl-archived '+(showArchived?'checked':'')+'>Hiện đã lưu trữ</label></div>'+
+      '<div class="v6-library-bar"><span>'+visible.length+' mục · Dữ liệu theo quyền công ty</span><div role="group" aria-label="Kiểu hiển thị"><button class="btn '+(layout==='gallery'?'primary':'')+'" data-tl-layout="gallery" aria-pressed="'+(layout==='gallery')+'">▦ Gallery</button><button class="btn '+(layout==='list'?'primary':'')+'" data-tl-layout="list" aria-pressed="'+(layout==='list')+'">☷ List</button></div></div>'+
+      '<div class="tl-grid '+(layout==='list'?'v6-list-view':'')+'" data-tl-grid>'+visible.map(card).join('')+'</div>'+
+      '<div class="tl-empty" data-tl-empty hidden>Chưa có '+(view==='templates'?'mẫu nội dung':'chương trình')+' phù hợp.</div>');
+    root.querySelector('[data-tl-search]').oninput=e=>{query=e.target.value;filter();};
+    root.querySelector('[data-tl-destination]').onchange=e=>{destination=e.target.value;filter();};
+    root.querySelector('[data-tl-duration]').onchange=e=>{duration=e.target.value;filter();};
+    root.querySelector('[data-tl-language]').onchange=e=>{language=e.target.value;filter();};
+    root.querySelector('[data-tl-archived]').onchange=e=>{showArchived=e.target.checked;render();};
+    root.querySelectorAll('[data-tl-layout]').forEach(b=>b.onclick=()=>{layout=b.dataset.tlLayout;render();});
+    root.querySelectorAll('[data-tl-open]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlOpen,false));
+    root.querySelectorAll('[data-tl-word]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlWord,allowedManage(),'word'));
+    root.querySelectorAll('[data-tl-edit]').forEach(b=>b.onclick=()=>openProgram(b.dataset.tlEdit,true));
+    root.querySelectorAll('[data-tl-archive]').forEach(b=>b.onclick=()=>archiveProgram(b.dataset.tlArchive));
+    root.querySelectorAll('[data-tl-copy]').forEach(b=>b.onclick=()=>copyProgram(b.dataset.tlCopy));
+    root.querySelectorAll('[data-tl-use-template]').forEach(b=>b.onclick=()=>cloneTemplate(b.dataset.tlUseTemplate));
+    filter();
+  }
   // Decorative, destination-derived cover only. No remote images, user HTML or rate data.
   function tourVisual(p){
     const label=(String(p.destination||'')+' '+String(p.title||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
@@ -47,6 +81,7 @@ function shell(body){if(!alive())return;if(root.__vtpsAbort)root.__vtpsAbort.abo
       '<p class="tl-source">'+safe(sourceName(p))+'</p>'+
       '<div class="tl-tags">'+array(p.tags).slice(0,4).map(t=>'<span>'+safe(t)+'</span>').join('')+'</div>'+
       '<div class="tl-card-actions">'+
+        (manage&&array(p.tags).includes('VTA_TEMPLATE')&&!p.has_document?'<button class="btn primary" data-tl-use-template="'+id+'">Tạo từ mẫu</button>':'')+
         (manage&&window.VTATourProgramWorkspace?'<button class="btn primary tl-open-word" data-tl-word="'+id+'">Mở &amp; sửa →</button>':'')+
         (manage&&!window.VTATourProgramWorkspace&&!p.has_document?'<button class="btn tl-open-editor" data-tl-edit="'+id+'">Mở &amp; sửa →</button>':'')+
         (quote||manage?'<details class="tl-card-more"><summary aria-label="Thao tác khác">⋯ Tùy chọn</summary><div class="tl-card-more-items">'+
@@ -56,7 +91,36 @@ function shell(body){if(!alive())return;if(root.__vtpsAbort)root.__vtpsAbort.abo
       '</div>'+
     '</article>';
   }
-  function filter(){let count=0;const q=query.trim().toLocaleLowerCase('vi');root.querySelectorAll('[data-tl-card]').forEach(card=>{const p=items.find(p=>Number(p.id)===Number(card.dataset.tlCard));card.hidden=!(p&&(!destination||p.destination===destination)&&(!language||p.language===language)&&[p.title,p.destination,...array(p.tags)].join(' ').toLocaleLowerCase('vi').includes(q));if(!card.hidden)count++;});root.querySelector('[data-tl-empty]').hidden=count>0;}
+  function filter(){
+    let count=0;const q=query.trim().toLocaleLowerCase('vi');
+    root.querySelectorAll('[data-tl-card]').forEach(card=>{
+      const p=items.find(p=>Number(p.id)===Number(card.dataset.tlCard));
+      const days=Number(p?.day_count)||array(p?.days).length||0;
+      card.hidden=!(p&&(!destination||p.destination===destination)&&(!duration||days===Number(duration))&&(!language||p.language===language)&&[p.title,p.destination,...array(p.tags)].join(' ').toLocaleLowerCase('vi').includes(q));
+      if(!card.hidden)count++;
+    });
+    const empty=root.querySelector('[data-tl-empty]');if(empty)empty.hidden=count>0;
+  }
+  async function cloneTemplate(id){
+    if(!allowedManage()||!alive())return;
+    const n=++ticket;
+    try{
+      const source=await request('tour-library/'+Number(id));
+      if(!alive()||n!==ticket)return;
+      const original=normalize(source?.program);
+      if(!array(original.tags).includes('VTA_TEMPLATE'))throw Error('Đây không phải mẫu nội dung.');
+      if(original.has_document||original.proposal?.document)throw Error('Mẫu Word có hình ảnh hoặc định dạng cần được nhân bản qua quy trình tài liệu có kiểm tra media. Không sao chép thiếu nội dung; hãy mở mẫu để biên tập.');
+      if(!window.confirm('Tạo chương trình DRAFT mới từ mẫu? Giá bán cũ sẽ không được sao chép và phải được tính lại.'))return;
+      const proposal=clone(original.proposal||{});
+      delete proposal.group_prices;delete proposal.private_prices;
+      const title=(original.title.replace(/^\s*\[Mẫu\]\s*/iu,'').trim()+' · Bản sao').slice(0,190);
+      const body={title,destination:original.destination,language:original.language||'vi',tags:array(original.tags).filter(t=>t!=='VTA_TEMPLATE'),status:'DRAFT',days:clone(original.days),included_text:original.included_text,excluded_text:original.excluded_text,terms_text:original.terms_text,source_type:'MANUAL',source_name:'',source_text:'',source_url:'',proposal,creation_key:crypto.randomUUID()};
+      const result=await request('tour-library',{method:'POST',body});
+      if(!result?.id)throw Error('Máy chủ chưa xác nhận đã tạo chương trình.');
+      toast('Đã tạo bản nháp mới; kiểm tra dịch vụ và giá trước khi sử dụng.');
+      if(alive()&&n===ticket)await openProgram(result.id,true);
+    }catch(e){if(alive()&&n===ticket)toast(errorText(e),true);}
+  }
   async function fetchItems(n){let rows=[],offset=0,total=0;do{const r=await request(offset?'tour-library?limit=100&offset='+offset:'tour-library');if(!Array.isArray(r?.items))throw Error('Dữ liệu kho chương trình chưa đầy đủ.');if(!alive()||ticket!==n)return null;rows.push(...r.items.map(metadata));total=Number(r.total??r.pagination?.total??rows.length);if(!Number.isFinite(total)||total<0)throw Error('Số chương trình trả về chưa hợp lệ.');if(!r.items.length)break;offset=rows.length;}while(offset<total);return [...new Map(rows.map(p=>[Number(p.id),p])).values()];}
   async function load(){const n=++ticket;if(!allowedView()){shell(message('Bạn chưa có quyền xem kho chương trình tour.','alert'));return;}if(view==='import')collectBatch();if(!items.length)shell(message('Đang tải chương trình…'));try{const loaded=await fetchItems(n);if(!loaded)return;items=loaded;render();}catch(e){if(!alive()||n!==ticket)return;shell(message(errorText(e),'alert')+'<button class="btn" data-tl-retry>Thử lại</button>');root.querySelector('[data-tl-retry]').onclick=()=>load();}}
   function input(label,name,value='',extra=''){return '<label>'+safe(label)+'<input name="'+name+'" value="'+safe(value)+'" '+extra+'></label>';}
