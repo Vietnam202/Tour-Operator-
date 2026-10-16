@@ -24,4 +24,15 @@ check(str_contains($html,'name="contact_name"')&&str_contains($html,'name="trave
 check(str_contains($html,'REQUEST BOOKING · NOT A CONFIRMED RESERVATION'),'no confirmed booking claim');
 check(!preg_match('/\$\s*(520|620|870)(?![0-9])|NET\s+USD/i',$html),'no B2B net prices in public form');
 check(str_contains($html,'marketing/tour-share/request-booking'),'form targets isolated public lead endpoint');
+$dedicated=['integrations'=>['tour_share_booking'=>['enabled'=>true,'company_id'=>7,'form_token'=>str_repeat('a',64)]]];
+$settings=MarketingShareBooking::bookingSettings($dedicated);
+check($settings['company_id']===7&&$settings['form_token']===str_repeat('a',64),'dedicated company-bound lead form config');
+foreach([
+  ['integrations'=>['tour_share_booking'=>['enabled'=>false,'company_id'=>7,'form_token'=>str_repeat('a',64)]]],
+  ['integrations'=>['tour_share_booking'=>['enabled'=>true,'company_id'=>7,'form_token'=>'bad']]]
+] as $badSettings){
+    try{MarketingShareBooking::bookingSettings($badSettings);throw new RuntimeException('Invalid lead form config accepted');}
+    catch(OutOfBoundsException $e){}
+}
+check(true,'disabled/invalid public intake fails closed');
 echo 'Tour share booking contract PASS'.PHP_EOL;
