@@ -1,0 +1,41 @@
+name: RC6.2 Lead Request MariaDB Integration QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MarketingShareBooking.php'
+      - 'api/lib/ClientTourPresentation.php'
+      - 'tests/tour-lead-mariadb-ci.php'
+      - '.github/workflows/rc62-tour-lead-mariadb-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-lead-ci-database:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-password-only
+          MARIADB_DATABASE: vta_lead_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_DATABASE: vta_lead_ci
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: ci-password-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql
+          coverage: none
+      - name: PHP syntax
+        run: php -l tests/tour-lead-mariadb-ci.php
+      - name: Real LeadHub INSERT / readback on ephemeral MariaDB
+        run: php tests/tour-lead-mariadb-ci.php
