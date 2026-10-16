@@ -98,7 +98,8 @@ final class MarketingShareBooking {
         self::secureHeaders();
         $token=self::validToken($token);
         $snapshot=MarketingTourShare::view($db,$token);
-        $html=MarketingTourShare::html($snapshot);
+        $layout=ClientTourPresentation::allowedLayout($_GET['layout']??'detailed');
+        $html=ClientTourPresentation::render($snapshot,$layout,$token);
         $form='';
         try{
             $row=self::share($db,$token);
