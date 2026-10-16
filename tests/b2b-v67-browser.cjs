@@ -38,6 +38,12 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>{window.print=()=>{window.__printCalled=true;};});
    await page.locator('#partner-print-btn').click();
    assert.equal(await page.evaluate(()=>window.__printCalled),true,'PDF control did not invoke print');
+   await page.emulateMedia({media:'print'});
+   assert.equal(await page.locator('.partner-editor').evaluate(el=>getComputedStyle(el).display),'none','editor must not appear in customer PDF');
+   const pdf=await page.pdf({format:'A4',printBackground:true,preferCSSPageSize:true});
+   assert.equal(pdf.subarray(0,5).toString(),'%PDF-','Chromium must produce a real PDF');
+   assert.ok(pdf.length>12000,'PDF output unexpectedly empty');
+   await page.emulateMedia({media:'screen'});
    const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#partner-save-btn').click()]);
    const target=path.join(os.tmpdir(),'v67-ci-'+width+'-'+Date.now()+'.html');await download.saveAs(target);
    const saved=fs.readFileSync(target,'utf8');
