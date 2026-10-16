@@ -177,7 +177,6 @@ class RC62:
             return {"booking_id": id_, **select(d, ("ready", "status", "readiness_pct",
                                                      "blockers", "warnings"))}
         if tool == "vta_operations_day":
-            self.require("operations.view")
             date = arguments.get("date", datetime.date.today().isoformat())
             if not isinstance(date, str):
                 raise BridgeError("Invalid date")
@@ -186,6 +185,7 @@ class RC62:
                     raise ValueError()
             except ValueError as exc:
                 raise BridgeError("Expected valid YYYY-MM-DD") from exc
+            self.require("operations.view")
             d = self.request("GET", "v3/operations", {"date": date})
             m = ("id", "booking_id", "booking_ref", "category", "service_name",
                  "service_date", "start_time", "booking_status")
