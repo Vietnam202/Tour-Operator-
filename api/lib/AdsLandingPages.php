@@ -244,6 +244,24 @@ final class AdsLandingPages {
     public static function manage(string $route,string $method,PDO $db,array $cfg,array $u):void {
         if(!str_starts_with($route,'ads/landing-admin'))return;
         try{
+            if($route==='ads/landing-admin/options'&&$method==='GET'){
+                Auth::requirePermission($db,$u,'b2c.approve');
+                Auth::requirePermission($db,$u,'campaign.manage');
+                $cid=(int)$u['company_id'];
+                $events=self::q($db,"SELECT e.id AS publication_event_id,p.id AS program_id,p.title,p.destination,p.revision
+                    FROM b2c_publication_events e
+                    JOIN b2c_programs p ON p.id=e.program_id AND p.company_id=e.company_id
+                    WHERE e.company_id=? AND e.status='PUBLISHED' AND p.status='PUBLISHED'
+                      AND p.revision=e.revision AND p.approved_revision=p.revision
+                      AND e.id=(SELECT MAX(e2.id) FROM b2c_publication_events e2
+                                WHERE e2.company_id=e.company_id AND e2.program_id=e.program_id)
+                    ORDER BY e.id DESC LIMIT 100",[$cid])->fetchAll(PDO::FETCH_ASSOC);
+                $forms=self::q($db,"SELECT f.id AS lead_form_id,c.id AS campaign_id,c.source
+                    FROM lead_forms f JOIN campaigns c ON c.id=f.campaign_id AND c.company_id=f.company_id
+                    WHERE f.company_id=? AND f.status='ACTIVE' AND c.status='ACTIVE'
+                    ORDER BY c.id DESC,f.id DESC LIMIT 100",[$cid])->fetchAll(PDO::FETCH_ASSOC);
+                Http::json(['ok'=>true,'publications'=>$events,'forms'=>$forms,'layouts'=>AdsLandingPresentation::LAYOUTS]);
+            }
             if($route==='ads/landing-admin'&&$method==='GET'){
                 Auth::requirePermission($db,$u,'lead.view');
                 $list=self::q($db,'SELECT * FROM ads_landing_pages WHERE company_id=? ORDER BY id DESC LIMIT 200',
