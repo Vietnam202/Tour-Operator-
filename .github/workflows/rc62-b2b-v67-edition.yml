@@ -33,3 +33,9 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm install --no-save playwright@1.55.1
       - run: node tests/b2b-v67-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vta-v67-b2b-visual-evidence
+          path: v67-partner-*.png
+          if-no-files-found: ignore
