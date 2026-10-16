@@ -246,7 +246,7 @@ html{scroll-behavior:smooth}body{margin:0;background:#eaf0f4;font:14px/1.58 syst
 @media print{html,body{background:white!important;font-size:11pt!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.partner-app-top,.partner-editor,.partner-help,.partner-status,.partner-editor-grid>.partner-editor,.partner-draft{display:none!important}.partner-editor-grid{display:block!important;padding:0!important;margin:0!important;max-width:none!important}.partner-document-wrap,.partner-print{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important}.partner-print .vta-document{max-width:none!important;width:100%!important;box-shadow:none!important;margin:0!important;border-radius:0!important;border:0!important}.vta-b2b-top,.vta-b2b-title,.vta-b2b-facts,.vta-doc-body{break-inside:auto}.vta-b2b-day,.vta64-price-section,.vta-accomm,.vta-services,.vta-terms,.partner-contact-box{break-inside:avoid-page}.vta64-table-scroll{overflow:visible!important}.vta64-hotel-table th,.vta64-hotel-table td,.vta64-price-table th,.vta64-price-table td{font-size:9px!important;word-break:normal;overflow-wrap:anywhere}.vta64-price-section{margin:10px 0!important}.vta62-review-chip{color:#79521d!important;background:#fff7e6!important}}
 
 @media print{.vta64-price-section{break-before:page!important;page-break-before:always!important}}
-</style></head><body><header class="partner-app-top"><div class="identity"><b>VTA · B2B PARTNER EDITION</b><small>White-label tour proposal · Your agency sets its own client selling prices</small></div><span style="font-size:12px;opacity:.8">LOCAL EDITOR · NO CRM ACCESS · NO NET RATES</span></header>
+</style><style id="vta67-auth-mask">.partner-editor-grid{visibility:hidden}</style></head><body><header class="partner-app-top"><div class="identity"><b>VTA · B2B PARTNER EDITION</b><small>White-label tour proposal · Your agency sets its own client selling prices</small></div><span style="font-size:12px;opacity:.8">LOCAL EDITOR · NO CRM ACCESS · NO NET RATES</span></header>
 <div class="partner-help"><b>Partner workflow:</b> enter agency branding, customer-facing selling prices and contact details; review tour and service notes; click <b>Export PDF</b> and choose <b>Save as PDF</b> in Chrome. This file makes <b>no server requests</b> and cannot overwrite Vietnam Travel Advisor's Master Tour or price data.</div>
 <div class="partner-editor-grid"><aside aria-label="Travel agent controls" class="partner-editor"><h2>Agency branding &amp; selling prices</h2><p>Changes update the preview immediately. No VTA supplier NET price is available in this file.</p>
 <h3>Company identity</h3>
@@ -260,7 +260,7 @@ html{scroll-behavior:smooth}body{margin:0;background:#eaf0f4;font:14px/1.58 syst
 <label>Website<input id="in-website" maxlength="180" placeholder="youragency.com"/></label>
 <label>Office/address<input id="in-address" maxlength="180" placeholder="Address"/></label>
 <h3>Agency selling prices — per guest</h3>
-<div class="partner-row"><label>Currency<select id="in-currency"><option>USD</option><option>VND</option><option>INR</option><option>PHP</option><option>SGD</option><option>EUR</option><option>GBP</option><option>AUD</option></select></label><label>Reference<input id="in-ref" maxlength="80" value="VTA707"/></label></div>
+<div class="partner-row"><label>Currency<select id="in-currency"><option>USD</option><option>VND</option><option>INR</option><option>PHP</option><option>SGD</option><option>EUR</option><option>GBP</option><option>AUD</option></select></label><label>Reference<input id="in-ref" maxlength="80" value="PARTNER-TOUR"/></label></div>
 <div class="partner-row three"><label>3 ★ / person<input id="in-price3" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label><label>4 ★ / person<input id="in-price4" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label><label>5 ★ / person<input id="in-price5" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label></div>
 <div class="partner-row three"><label>3 ★ single supplement<input id="in-single3" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label><label>4 ★ single supplement<input id="in-single4" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label><label>5 ★ single supplement<input id="in-single5" max="9999999" min="0.01" placeholder="On request" step="0.01" type="number"/></label></div>
 <label>Quote valid until<input id="in-expiry" type="date"/></label>
@@ -271,373 +271,13 @@ html{scroll-behavior:smooth}body{margin:0;background:#eaf0f4;font:14px/1.58 syst
 <p class="partner-mini">Pricing is entered by the agency; nothing here constitutes an approved supplier quotation, confirmed booking or payment. Only the partner-branded tour proposal appears in PDF. Internal edit controls are hidden in print.</p></aside>
 <main class="partner-document-wrap"><div class="partner-print" id="partner-print-area"><article aria-label="B2B Tour Proposal" class="vta-document theme-b2b">
 <header class="vta-b2b-top"><div class="vta-brand-lockup"><div aria-label="Agency logo placeholder" class="partner-logo-placeholder" id="partner-logo-mark">YOUR LOGO</div><span class="partner-brand-name"><b id="partner-company-name">Your Travel Company</b><small id="partner-brand-tagline">Travel Proposal · Personalised for you</small></span></div><span>CUSTOMER TOUR PROPOSAL · SUBJECT TO CONFIRMATION</span></header>
-<div class="vta-b2b-title"><div><span class="vta-kicker">TRAVEL PARTNER PROPOSAL</span><h1>Vietnam Highlights 7D6N</h1><p>Da Nang · Ba Na Hills · Hoi An · Hanoi · Ha Long Bay · Phu Quoc</p></div><div class="vta-b2b-code"><small>REFERENCE</small><b id="partner-reference">VTA707</b><small>Program reference · Hotel and services to reconfirm</small></div></div>
-<div class="vta-doc-body"><div class="vta62-tour-facts"><span><b>SIC</b> 2–22 pax</span><span><b>Meals</b> B6 · L4 · D1 (review)</span><span><b>Guide</b> Day 5 private vehicle, no guide</span><span><b>Start</b> Da Nang · <b>End</b> Phu Quoc</span></div><div class="vta-b2b-facts"><div><small>PROGRAM DURATION</small><b>7 DAYS · 6 NIGHTS</b></div><div><small>TOUR TYPE</small><b>SIC group · 2–22 pax · Start Da Nang / Depart Phu Quoc</b></div><div><small>TRADE STATUS</small><b>Quotation status: proposal only, not booked</b></div></div>
-<section class="vta-b2b-route"><h2>Route &amp; program overview</h2><div aria-label="Tour route" class="vta-route"><span>Da Nang</span><i aria-hidden="true">→</i><span>Hoi An</span><i aria-hidden="true">→</i><span>Ba Na Hills</span><i aria-hidden="true">→</i><span>Hanoi</span><i aria-hidden="true">→</i><span>Ha Long Bay</span><i aria-hidden="true">→</i><span>Phu Quoc</span></div><p>A seven-day Vietnam itinerary connecting Central Vietnam heritage, a Ha Long Bay day cruise, Hanoi cultural stops and Phu Quoc island experiences. All services remain subject to final reconfirmation.</p></section>
-<section class="vta-b2b-program"><h2>Detailed itinerary</h2><article class="vta-b2b-day vta-print-section"><span>DAY 01</span><div><h3>Da Nang arrival · Son Tra · Marble Mountains · Hoi An</h3><small>Da Nang → Hoi An → Da Nang · Meals: D · Overnight: Da Nang</small><p class="vta62-long-copy">Upon arrival at Da Nang International Airport, our representative warmly welcomes you and transfers you to the hotel for check-in and refreshment.
-
-Note : Time check in 2-3 pm
-
-The journey begins with a gentle introduction to the beauty of Central Vietnam.
-
-You travel to Son Tra Peninsula, often called “Monkey Mountain,” a lush nature reserve rising dramatically above the sea. The highlight is a visit to Linh Ung Pagoda, home to the iconic 67-meter Lady Buddha Statue, guarding the coastline and overlooking Da Nang Bay. The sea breeze, the scent of pine forest, and the temple bells create a serene start to the trip.
-
-Next, continue to the legendary Marble Mountain (Ngu Hanh Son)—a cluster of five limestone peaks representing the five natural elements. You explore:
-
-Mysterious caves lit gently through stone crevices
-
-Ancient pagodas carved into the mountains
-
-Panoramic viewpoints overlooking Non Nuoc Beach
-
-In the late afternoon, the journey heads to Hoi An Ancient Town, a UNESCO World Heritage site glowing with golden lanterns and timeless charm. Follow your guide through:
-
-The 400-year-old Japanese Covered Bridge
-
-Ancient merchant houses
-
-The lively lantern market along Hoai River
-
-Dinner is served at a charming local restaurant featuring Hoi An specialties. After dinner, enjoy the magical evening atmosphere of the old town before returning to Da Nang.
-
-Overnight in Da Nang.</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 02</span><div><h3>Ba Na Hills · Golden Bridge · flight to Hanoi</h3><small>Da Nang → Ba Na Hills → Hanoi · Meals: B / L · Overnight: Hanoi</small><p class="vta62-long-copy">After breakfast and Check out room . your journey continues to the magical mountaintop world of Ba Na Hills, located 1,487 meters above sea level and famous for its year-round cool climate.
-
-The adventure begins with boarding the Ba Na Hills Cable Car, one of the longest and highest cable car systems on Earth. As the cabin ascends, you glide through layers of mist, above ancient forests, waterfalls and deep valleys. The panorama reveals spectacular views of the Truong Son mountain range stretching endlessly under the sky.
-
-Golden Bridge – Cầu Vàng
-
-Your first stop is the world-renowned Golden Bridge, a 150-meter-long pedestrian walkway appearing as if it's suspended in the clouds. The bridge is lifted by two colossal moss-covered stone hands, designed to represent the “hands of the Mountain God” pulling a golden silk ribbon from the hillside.
-
-Clients love this spot because:
-
-It offers 360-degree cloud and mountain views
-
-It produces iconic photos that became viral worldwide
-
-The early morning light creates a dreamlike atmosphere
-
-Le Jardin d’Amour – The Gardens of Love
-
-Continue your walk through Le Jardin d'Amour, a collection of themed flower gardens:
-
-The Mystery Garden with stone walls inspired by European maze sculptures
-
-The Romance Garden blooming with roses
-
-The Sacred Garden with ancient Buddhist statues
-
-The Vineyard Terrace overlooking the French Village
-
-The air here is crisp and filled with the sweet scent of flowers. Every corner is photo-worthy.
-
-Debay Ancient Wine Cellar
-
-Next, discover the Debay Wine Cellar, built by the French in 1923. It is carved deep into the mountain to maintain a natural temperature of 16–20°C year-round. Guests can:
-
-Learn about French colonial wine-making
-
-See century-old oak barrels
-
-Optional tasting of premium imported wines
-
-Fantasy Park – Vietnam’s Largest Indoor Theme Park
-
-Before lunch, you can explore Fantasy Park, inspired by Jules Verne’s novels. Inside are:
-
-Adventure rides
-
-4D, 5D cinemas
-
-Alpine slides
-
-A massive indoor playground suitable for all ages
-
-Lunch at Ba Na Hills
-
-Lunch is served at a luxury buffet restaurant offering over 100 dishes, including Vietnamese, Asian, and European cuisine—perfect for recharging after a morning full of exploration.
-
-French Village – A Walk Through Old Europe
-
-In the afternoon, step into the enchanting French Village, designed like a European medieval town with:
-
-Gothic-style churches
-
-Clock towers
-
-Stone-paved streets
-
-Street performances such as dancers, musicians, and mimes
-
-The architecture recreates an old French town with remarkable detail—arched windows, vintage lanterns, and ivy-covered walls. It feels like stepping into a European postcard, but on a peak above the clouds.
-
-Enjoy the cool mountain atmosphere as you wander through cafés, souvenir shops, and photo corners surrounded by cloud layers drifting past the rooftops.
-
-At around 16:00, board the cable car and descend back to Da Nang, where the warm sea breeze welcomes you again.
-
-Overnight  in Hanoi</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 03</span><div><h3>Ha Long Bay day cruise · Sung Sot · Titop · kayaking</h3><small>Hanoi → Ha Long Bay → Hanoi · Meals: B / L · Overnight: Hanoi</small><p class="vta62-long-copy">Sail through one of the World’s Natural Wonders – Halong Bay
-
-After breakfast, depart from your hotel for a journey to Halong Bay, one of the most breathtaking natural landscapes on Earth.
-A UNESCO World Heritage Site and one of the New Seven Natural Wonders of the World, Halong Bay features over 1,600 limestone islands and islets rising majestically from emerald-green waters.
-Each island is shaped by time and legend, creating a mystical seascape like no other in Asia.
-
-Your drive to Halong takes approximately 2.5 hours, passing through Vietnam’s rural countryside dotted with rice paddies, small villages, and traditional markets. Along the way, your guide shares fascinating stories about Vietnamese life and local culture.
-
-Late Morning – Begin Your Cruise Adventure
-
-Upon arrival at Tuan Chau Harbor, you’ll board your luxury day cruise.
-Enjoy a refreshing welcome drink and a warm greeting from the friendly crew as the vessel sets sail into the heart of the bay.
-
-As you glide through the jade waters, admire the countless limestone cliffs rising like dragon’s teeth from the sea — each formation with its own mythical name, such as:
-
-Dinh Huong (Incense Burner) Islet
-
-Ga Choi (Fighting Cock) Islet
-
-Cho Da (Stone Dog) Islet
-
-🌿 Experience Highlight: Feel the cool sea breeze as you stand on the open deck, surrounded by majestic peaks reflecting on the emerald surface — a moment that captures the soul of Vietnam.
-
-🍽️ Lunch Onboard – Taste of the Sea
-
-While the boat gently sails between limestone islands, enjoy a delicious Vietnamese lunch served onboard.
-Feast on fresh seafood delicacies such as:
-
-Steamed prawns
-
-Grilled squid
-
-Fried fish with passionfruit sauce
-
-Stir-fried vegetables and jasmine rice
-
-Vegetarian and non-seafood options are always available upon request.
-
-🚣‍♀️ Afternoon – Kayaking or Bamboo Boat Ride
-
-For those seeking a closer connection with nature, enjoy an unforgettable kayaking experience or a bamboo boat ride around the limestone formations.
-Paddle through calm waters and explore hidden lagoons surrounded by towering cliffs — a chance to experience Halong’s tranquil side.
-
-Listen to the gentle rhythm of the water and the echo of birds calling from the cliffs — it’s pure serenity.
-
-🌟 Experience Highlight: Kayaking in Halong Bay is not just an activity — it’s a way to feel the heartbeat of nature, surrounded by silence, wind, and sea.
-
-🌄 Midday – Explore Sung Sot (Amazing) Cave
-
-Your first stop is Sung Sot Cave, known as the Cave of Surprises.
-Discovered by French explorers in 1901, this is the largest and most beautiful grotto in Halong Bay, measuring over 10,000 square meters.
-
-Inside, the cave opens into massive chambers filled with spectacular stalactites and stalagmites illuminated by soft, multicolored lights.
-Each rock formation has a story — some shaped like animals, others resembling people or mythical creatures.
-
-Your guide will share local legends and point out formations such as “The Sleeping Dragon” and “The King on His Throne.”
-
-💎 Experience Highlight: Walking through Sung Sot Cave feels like stepping into a natural cathedral carved by time and tide — a masterpiece of nature’s artistry.
-
-🏖️  – Titop Island Adventure
-
-After exploring the cave, continue cruising toward Titop Island, one of the most famous destinations in Halong Bay.
-Named after Russian astronaut Gherman Titov, who visited the island in 1962, it offers both relaxation and adventure.
-
-You may:
-
-Swim in the crystal-clear water at Titop Beach.
-
-Hike up to the island’s viewpoint (400 steps) for a panoramic 360° view of Halong Bay — a perfect spot for photos.
-
-📸 Photo Tip: From the summit of Titop Island, the view of the bay, dotted with emerald islands and white-sailed boats, is simply breathtaking.
-
-🌇 Evening – Return to Hanoi
-
-As the afternoon sun paints the bay in shades of gold and amber, your cruise slowly returns to the harbor.
-Disembark and meet your driver for the relaxing journey back to Hanoi.
-
-You’ll arrive at your hotel in the early evening, with free time to rest or enjoy dinner at your leisure.
-
-🌅 Memorable Moment: Watching Halong’s limestone peaks fade into the mist as the sun sets behind them is a memory that will linger long after your journey ends.
-
-🛏 Overnight in Hanoi</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 04</span><div><h3>Hanoi city highlights · flight to Phu Quoc</h3><small>Hanoi → Phu Quoc · Meals: B · Overnight: Phu Quoc</small><p class="vta62-long-copy">In morning have breakfast and check out room
-
-🕛 8:15 PM – Pick up from your hotel
-
-Your guide and driver from Vietnam Travel Advisor will warmly welcome you at your hotel lobby.
-Begin your journey through the heart of Hanoi – The City of Thousand Years of Culture, a place where ancient traditions blend harmoniously with modern life.
-
-🚉 Visit Train Street
-
-For a touch of excitement, revisit Hanoi Train Street in the evening.
-Enjoy a drink as the train passes just inches away from local homes — a thrilling and unique memory that captures Hanoi’s urban magic.
-
-🏯 – Explore the Temple of Literature (Văn Miếu – Quốc Tử Giám)
-
-Continue to one of Hanoi’s most treasured landmarks – the Temple of Literature, Vietnam’s first national university, established in 1070.
-
-Dedicated to Confucius and great scholars, the temple is a masterpiece of ancient Vietnamese architecture.
-
-Walk through five serene courtyards, shaded by ancient trees and decorated with stone steles carved with the names of scholars who passed royal exams centuries ago.
-
-Feel the peaceful, scholarly atmosphere that once nurtured Vietnam’s greatest minds.
-
-🌿 Experience Highlight: The temple’s timeless beauty and historical significance make it a favorite spot for both travelers and students seeking wisdom and good fortune.
-
-🏛️ 2:45 PM – Visit Ho Chi Minh Mausoleum Complex (Outside View)
-
-Next, you’ll visit the Ho Chi Minh Mausoleum Complex, an iconic symbol of Vietnam’s history and national pride.
-
-Admire the Mausoleum (outside) – a monumental structure where the preserved body of President Ho Chi Minh rests.
-
-Walk around Ba Dinh Square, where the Declaration of Independence was read in 1945.
-
-Stroll through the peaceful Presidential Palace gardens and see Ho Chi Minh’s humble stilt house, where he lived and worked from 1958 to 1969.
-
-🕊 Experience Highlight: This sacred area offers a deep insight into the simplicity, humility, and legacy of “Uncle Ho,” Vietnam’s most beloved leader.
-
-🌸– Tran Quoc Pagoda – The Oldest Pagoda in Hanoi
-
-Continue your journey to Tran Quoc Pagoda, the oldest Buddhist temple in Hanoi, dating back to the 6th century.
-
-Located on a small island in West Lake, the pagoda is surrounded by calm waters and ancient Bodhi trees brought from India.
-
-Admire the striking red tower reflected in the lake and learn about Vietnam’s Buddhist traditions.
-
-Capture beautiful photos of this sacred site, where serenity and spirituality meet.
-
-📸 Photo Spot: The view of Tran Quoc Pagoda at sunset, reflected on the lake, is one of Hanoi’s most breathtaking scenes.
-
-Visit Dong Xuan Market is bigest local market in Hanoi  for shopping
-
-In Afternoon  our driver tranfer to airport flight to Phu Quoc
-
-Overnight  in Phu Quoc</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 05</span><div><h3>Phu Quoc Safari · VinWonders · Grand World</h3><small>Phu Quoc · Meals: B / L · Overnight: Phu Quoc</small><p class="vta62-long-copy">Morning: 8h30 am start from Hotel  :  Visit Vinpearl Safari Phu Quoc – Vietnam’s First Semi-Wild Zoo
-
-Breakfast at your resort.
-After breakfast, your private car will pick you up for a fun-filled day exploring Vinpearl Safari – a must-visit attraction on Phu Quoc Island, especially for families.
-
-Location: Bai Dai Area, Ganh Dau Commune (about 30 minutes drive from most main beaches).
-
-Opening Hours: 9:00 AM
-
-Highlights of Vinpearl Safari:
-
-Open Zoo Area: Stroll through lush paths and observe over 150 species of animals from Asia, Africa, and Europe. You’ll see Bengal tigers, white lions, giraffes, zebras, lemurs, flamingos, and more.
-
-Safari Adventure (Drive-Through): Board a special safari bus and experience the thrill of being "caged" while the animals roam free – lions, rhinos, antelope, and bears surround you, just like in African safaris.
-
-Animal Performance Shows: Fun and educational shows take place twice daily, where you can see birds, reptiles, and small mammals showcasing their natural talents.
-
-Kid-Friendly Activities: Feeding giraffes, mini petting zoo, and animal photo zones are perfect for younger travelers.
-
-You’ll spend about 2–3 hours enjoying the Safari Park.
-
-Midday:
-
-Lunch suggestion (on your own): There are several restaurants and snack kiosks inside Vinpearl Safari and nearby VinWonders.
-
-Afternoon: Explore VinWonders Phu Quoc – Vietnam’s Largest Theme Park
-
-After finishing at the Safari, take a short 5-minute ride by your private car or shuttle bus to VinWonders, another major entertainment hub next door.
-
-VinWonders Highlights:
-
-Six Themed Zones:
-
-European Avenue – Step into a fairytale world with castles, performances, and shopping.
-
-Fantasy World – Inspired by stories and legends from around the world. Ideal for kids.
-
-Typhoon World – A tropical water park with slides, a wave pool, and lazy rivers.
-
-Adventure World – Thrill-seekers can enjoy roller coasters, Viking rides, and 5D movies.
-
-Secret Village – Home to dwarves, elves, and magical beings.
-
-Kingdom of Ocean – An impressive aquarium with marine life shows and underwater tunnels.
-
-Live Shows &amp; Entertainment: Magical parades and street performances are scheduled throughout the day.
-
-Kid Zones: Safe rides and games for toddlers and young children.
-
-Shaded rest areas, lockers, and food courts available throughout the park.
-
-Note: You can customize how much time you spend here. Guests usually spend about 3–4 hours.
-
-🎭 19:00 – 19:30 | Free Walkthrough of Grand World’s Cultural &amp; Art Zones
-
-Stroll and take photos in:
-
-European Square – Colorful architecture, fountains
-
-Bamboo Legend – Impressive bamboo art installation
-
-Vietnamese Urban Zone – Traditional-style buildings and lantern-lit streets
-
-Free entry
-📸 Great for sunset and early evening photos
-
-🧸 19:30 – 20:00 | Optional Visit – Teddy Bear Museum
-
-Explore whimsical bear-themed exhibits like Adventure Bears and Royal Bear Kingdom
-
-A favorite for kids, families, and social media lovers
-
-🚪 Ticket (not included): ~150,000 VND/adult | ~100,000 VND/child
-🕒 Visit time: ~30 minutes
- Optional – skip if not interested
-
-🎭 20:00 – 20:45 | Optional: “The Quintessence of Vietnam” Grand Show
-
-🌟 A grand-scale outdoor cultural performance with music, water, lights, and over 200 performers.
-
-📍 Venue: Outdoor theater near Vietnamese Cultural Zone
-🎟 Ticket (not included):
-Standard seating: ~300,000–400,000 VND/person
-
-Optional – guests may skip and continue exploring other parts of Grand World
-
-🌉 20:45 – 21:30 | Venice Light Parade &amp; Canal Show
-
-Stroll the Venetian-style canal under glowing lanterns
-
-Watch gondola dancers, music, and projected light shows over the water
-
-Grab a drink from a riverside café if desired
-
-Free to watch
-💵 Optional drink: ~70,000–120,000 VND
-
-🚌 21:30 – Return to Hotel
-
-Meet your private driver</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 06</span><div><h3>Four islands · speedboat · Hon Thom cable car</h3><small>Phu Quoc · Southern Islands · Hon Thom · Meals: B / L · Overnight: Phu Quoc</small><p class="vta62-long-copy">07:30: Pick up from your hotel at the lobby in the center
-
-Arrive at the harbor - board on speed boat
-
-Visit 4 islands in the south
-
-Gam Ghi Island: Snorkeling at the coral reef - Enjoy the beach excluded
-
-Buom Island (or Mong Tay Island): Snorkeling at the coral reef excluded
-
-May Rut Island: white sand lagoon – unique chillout
-
-Having Lunch on the Island
-
-Sea walker (pay by yourself): a new type of service, walk under the ocean, there are the fish flocks swimming &amp; colorful corals reef of Phu Quoc
-
-Speed boat arrives Thom Island: Enjoy the water park – more than 20 modern games from the world’s leading manufacturers.
-
-Back on the cable car (around 25 mins): Enjoy sunset &amp; rides with a panoramic overall view of islands
-
-See kiss bridge and back hotel</p></div></article><article class="vta-b2b-day vta-print-section"><span>DAY 07</span><div><h3>Phu Quoc at leisure · departure</h3><small>Phu Quoc · Meals: B · Overnight: —</small><p class="vta62-long-copy">Enjoy a relaxing morning at your resort. Take advantage of the island’s tranquil beaches, crystal-clear waters, and premium facilities, or spend your final hours exploring Phu Quoc’s specialty shops for local products such as fish sauce, peppers, pearls, and sim wine.
-
-Depending on your flight schedule, our driver will pick you up at the hotel and transfer you to Phu Quoc International Airport for your onward journey.
-
-End of the program. Wishing you a pleasant trip home and we look forward to welcoming you back to Vietnam.
-
-End Hanoi- Halong bay- Danang – Hoian – Bana hill -Phu Quoc Island  –7D6N</p></div></article></section>
-<section class="vta-accomm vta-print-section"><h2>Hotel &amp; Cruise Comparison · 3★ / 4★ / 5★</h2><div class="vta64-table-scroll"><table class="vta64-hotel-table"><thead><tr><th>Destination / Service</th><th>3★</th><th>4★</th><th>5★</th></tr></thead><tbody><tr><th>Phu Quoc Hotel</th><td>Hawai Resort/ Kim Hoa Resort / Ngoc Chau hotel/ Tk hotel/</td><td>Saigon phu Quoc resort/ maris hotel/ Avs Hotel/wyndham Garden hotel/ Vinholiday hotel/ Qualia resort/</td><td>Movempick hotel/ wyndham Grand hotel/ Blue Redison hotel</td></tr><tr><th>Hanoi  Hotel</th><td>Anise hotel / Tk123 hotel/ Hanoi surise hotel/ TQT2 hotel similar</td><td>A25 Premium Hotel / TQT hotel / Flower Garden  hotel/ La casa hotel hotel/ Thang Long opera hotel / similar</td><td>Pullman hotel/ Golden Lake  hotel/ similar</td></tr><tr><th>Halong bay cruise</th><td>Cozy bay cruise/ Sunlight cruise/ Fantasea cruise similar</td><td>Syrena  cruise/ Hera cruise/ / La regina classic  cruise/ Le journey cruise  similar</td><td>Golden cruise/ Granduer lotus  cruise/ Auqua of sea cruise  cruise similar</td></tr><tr><th>Danang  Hotel</th><td>Terra boutique  hotel /soho boutique Hotel/ sepon blue   hotel similar</td><td>ElC hotel/ Eden ocean view hotel/ Dimond sea hotel / similar</td><td>Nanod hotel/ wynham golden bay hotel/ similar</td></tr></tbody></table></div><p class="vta-disclaimer">Hotel / cruise options are reference choices only, subject to room class, supplier approval and availability.</p></section><section class="vta-services vta-print-section"><div><h2>Inclusions</h2><ul class="vta-service-list"><li>Airport and ground transfers and sightseeing transportation as specified</li><li>Shared Ha Long day cruise program and attraction entrance fees as listed</li><li>Ba Na Hills cable car; Hon Thom one-way cable car and water park (source)</li><li>English-speaking guide for guided tour services; Day 5 Phu Quoc private car WITHOUT guide</li><li>Accommodation for six nights with breakfast (hotel choice requires confirmation)</li><li>Meals stated by source: 6 breakfasts, 4 lunches, 1 dinner</li><li>One bottled water per guest per tour day</li></ul></div><div><h2>Exclusions</h2><ul class="vta-service-list"><li>International and domestic flight tickets</li><li>Tips, drinks, travel insurance, visa and personal purchases</li><li>Single room supplement and unconfirmed activities</li><li>Optional sea walker, museum and shows unless expressly included</li><li>Taxes/bank charges as indicated in source — confirm applicability</li></ul></div></section><section class="vta-terms vta-print-section"><h2>Notes &amp; booking conditions</h2><ul class="vta-service-list"><li>The issuing travel agency will provide applicable payment and cancellation terms in writing before booking confirmation.</li><li>Accommodation, boat operator, transfers and operating hours are subject to availability.</li><li>Agency selling prices are estimates only; visa, child policy, surcharges and cancellation terms require written confirmation.</li></ul></section></div><section class="vta64-price-section vta-print-section" id="partner-price-section"><h2>Tour Price Table · 3★ / 4★ / 5★</h2><p class="vta64-table-label">Reference VTA707 · 7D6N · SIC group · 2–22 guests · Indicative agency selling quote (subject to confirmation)<strong id="partner-price-status" style="display:block;margin-top:6px;color:#966b33">SELLING PRICE NOT YET ENTERED</strong></p><div class="vta64-table-scroll"><table class="vta64-price-table"><thead><tr><th>Hotel category</th><th id="partner-price-currency">Selling price / person (USD) · Twin / Double / Triple</th><th>Single supplement</th><th>Availability</th></tr></thead><tbody><tr><th>3★</th><td data-price-tier="3">Price on request</td><td data-single-tier="3">On request</td><td>Subject to availability</td></tr><tr><th>4★</th><td data-price-tier="4">Price on request</td><td data-single-tier="4">On request</td><td>Subject to availability</td></tr><tr><th>5★</th><td data-price-tier="5">Price on request</td><td data-single-tier="5">On request</td><td>Subject to availability</td></tr></tbody></table></div><p class="vta64-price-footnote">Prices shown are independently supplied by the issuing travel agent, and remain subject to the final written confirmation of all services. This quote is not a booking confirmation.</p></section><section class="partner-contact-box"><h2 id="partner-contact-title">Agency Contact</h2><div id="partner-contact-details">Enter agency contact information before exporting.</div><p class="partner-price-status" id="partner-price-expiry">Quotation validity: subject to agent confirmation.</p><p id="partner-quote-notes">Hotels, cruises, transfers, admission and operating conditions are subject to reconfirmation.</p></section><div class="vta62-review-chip">AGENCY TOUR PROPOSAL · NOT A CONFIRMED BOOKING</div><footer class="vta-document-foot"><span id="partner-foot-name">Your Travel Company</span><span id="partner-foot-contact">Enter agency contact information before exporting.</span><span id="partner-foot-status">PRICE / SERVICES SUBJECT TO CONFIRMATION</span></footer></article></div></main></div>
+<div class="vta-b2b-title"><div><span class="vta-kicker">TRAVEL PARTNER PROPOSAL</span><h1 data-v67="title">Loading approved tour…</h1><p data-v67="destination"></p></div><div class="vta-b2b-code"><small>REFERENCE</small><b id="partner-reference">—</b><small>Services subject to reconfirmation</small></div></div><div class="vta-doc-body"><div class="vta62-tour-facts" data-v67="facts"></div><div class="vta-b2b-facts" data-v67="headfacts"></div><section class="vta-b2b-route"><h2>Route &amp; program overview</h2><div class="vta-route" data-v67="route"></div><p data-v67="overview"></p></section>
+<section class="vta-b2b-program"><h2>Detailed itinerary</h2><div data-v67="days"></div></section>
+<section class="vta-accomm vta-print-section"><h2>Hotel &amp; Cruise Comparison · 3★ / 4★ / 5★</h2><div class="vta64-table-scroll"><table class="vta64-hotel-table"><thead><tr><th>Destination / Service</th><th>3★</th><th>4★</th><th>5★</th></tr></thead><tbody data-v67="hotels"></tbody></table></div></section><section class="vta-services vta-print-section"><div><h2>Inclusions</h2><ul class="vta-service-list" data-v67="included"></ul></div><div><h2>Exclusions</h2><ul class="vta-service-list" data-v67="excluded"></ul></div></section><section class="vta-terms vta-print-section"><h2>Notes &amp; booking conditions</h2><ul class="vta-service-list" data-v67="terms"></ul></section></div><section class="vta64-price-section vta-print-section" id="partner-price-section"><h2>Tour Price Table · 3★ / 4★ / 5★</h2><p class="vta64-table-label">Approved agency tour · Indicative agency selling quote (subject to confirmation)<strong id="partner-price-status" style="display:block;margin-top:6px;color:#966b33">SELLING PRICE NOT YET ENTERED</strong></p><div class="vta64-table-scroll"><table class="vta64-price-table"><thead><tr><th>Hotel category</th><th id="partner-price-currency">Selling price / person (USD) · Twin / Double / Triple</th><th>Single supplement</th><th>Availability</th></tr></thead><tbody><tr><th>3★</th><td data-price-tier="3">Price on request</td><td data-single-tier="3">On request</td><td>Subject to availability</td></tr><tr><th>4★</th><td data-price-tier="4">Price on request</td><td data-single-tier="4">On request</td><td>Subject to availability</td></tr><tr><th>5★</th><td data-price-tier="5">Price on request</td><td data-single-tier="5">On request</td><td>Subject to availability</td></tr></tbody></table></div><p class="vta64-price-footnote">Prices shown are independently supplied by the issuing travel agent, and remain subject to the final written confirmation of all services. This quote is not a booking confirmation.</p></section><section class="partner-contact-box"><h2 id="partner-contact-title">Agency Contact</h2><div id="partner-contact-details">Enter agency contact information before exporting.</div><p class="partner-price-status" id="partner-price-expiry">Quotation validity: subject to agent confirmation.</p><p id="partner-quote-notes">Hotels, cruises, transfers, admission and operating conditions are subject to reconfirmation.</p></section><div class="vta62-review-chip">AGENCY TOUR PROPOSAL · NOT A CONFIRMED BOOKING</div><footer class="vta-document-foot"><span id="partner-foot-name">Your Travel Company</span><span id="partner-foot-contact">Enter agency contact information before exporting.</span><span id="partner-foot-status">PRICE / SERVICES SUBJECT TO CONFIRMATION</span></footer></article></div></main></div>
 <script id="partner-state" type="application/json">{}</script>
 <script>(function(){'use strict';
 const $=id=>document.getElementById(id);
-const DEFAULT={agency:'',tagline:'',email:'',phone:'',whatsapp:'',website:'',address:'',logo:'',currency:'USD',price3:'',price4:'',price5:'',single3:'',single4:'',single5:'',expiry:'',note:'',ref:'VTA707'};
+const DEFAULT={agency:'',tagline:'',email:'',phone:'',whatsapp:'',website:'',address:'',logo:'',currency:'USD',price3:'',price4:'',price5:'',single3:'',single4:'',single5:'',expiry:'',note:'',ref:''};
 const fields=['agency','tagline','email','phone','whatsapp','website','address','currency','price3','price4','price5','single3','single4','single5','expiry','note','ref'];
 let state={...DEFAULT};
 const stored=$('partner-state');
@@ -664,7 +304,7 @@ function refresh(){
  $('partner-price-expiry').textContent=state.expiry?('Quote valid until '+state.expiry+'. Subject to final availability and written confirmation.'):'Quotation validity: subject to agent confirmation.';
  $('partner-price-status').textContent=['3','4','5'].some(t=>Boolean(state['price'+t]))?'AGENCY SELLING PRICES · SUBJECT TO CONFIRMATION':'SELLING PRICE NOT YET ENTERED';
  $('partner-quote-notes').textContent=safe(state.note)||'Hotels, cruises, transfers, admission and operating conditions are subject to reconfirmation.';
- $('partner-reference').textContent=safe(state.ref)||'VTA707';
+ $('partner-reference').textContent=safe(state.ref)||'PARTNER-TOUR';
  logoRender();
  updateReady();
 }
@@ -692,21 +332,80 @@ $('in-logo').addEventListener('change',async e=>{
  }catch(err){status('Logo could not be loaded: '+err.message);}
 });
 $('partner-clear-logo').addEventListener('click',()=>{state.logo='';refresh();status('Logo cleared');});
-$('partner-print-btn').addEventListener('click',()=>{if(!formValid())return;document.title=((state.agency||'Agency')+' - Vietnam Tour Proposal VTA707').replace(/[\\/:*?"<>|]/g,'-');window.print();});
+$('partner-print-btn').addEventListener('click',()=>{if(!formValid())return;document.title=((state.agency||'Agency')+' - Tour Proposal').replace(/[\\/:*?"<>|]/g,'-');window.print();});
 function formValid(){const inputs=[...document.querySelectorAll('.partner-editor input,.partner-editor select')].filter(x=>!x.disabled&&x.type!=='file');for(const el of inputs){if(!el.checkValidity()){el.reportValidity();status('Check pricing and contact fields.');return false;}}if(!safe(state.agency)||!(safe(state.email)||safe(state.phone)||safe(state.whatsapp))){status('Agency name and contact are required.');return false;}return true;}
 $('partner-save-btn').addEventListener('click',()=>{
  if(!formValid())return;
  const cloned=document.documentElement.cloneNode(true);
+ cloned.querySelector('#vta67-loader')?.remove();cloned.querySelector('#vta67-auth-mask')?.remove();cloned.querySelector('.partner-editor-grid')?.style.removeProperty('visibility');
  const sc=cloned.querySelector('#partner-state');
  // Escape opening angle brackets; content is JSON, never executable HTML.
  sc.textContent=JSON.stringify(state).replace(/</g,'\\u003c');
  const exported='<!doctype html>\n'+cloned.outerHTML;
  const blob=new Blob([exported],{type:'text/html;charset=utf-8'});
  const u=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=u;a.download='VTA707_B2B_Partner_Edition_Editable.html';a.click();setTimeout(()=>URL.revokeObjectURL(u),1800);
+ a.href=u;a.download='B2B_Partner_Edition_Editable.html';a.click();setTimeout(()=>URL.revokeObjectURL(u),1800);
  status('Editable HTML saved. Send this partner edition to your agency team. Use Export PDF for customer delivery.');
 });
 $('partner-reset-btn').addEventListener('click',()=>{if(!confirm('Clear all agency edits (logo, contact, prices) from this local copy?'))return;state={...DEFAULT};for(const name of fields){const input=$('in-'+name);if(input)input.value=state[name];}refresh();status('Partner edits cleared; the itinerary is unchanged.');});
-refresh();
-})();</script>
-</body></html>
+window.VTA67PartnerEdition=Object.freeze({preload(values){for(const key of Object.keys(DEFAULT)){if(typeof values[key]==='string'){state[key]=values[key].slice(0,key==='logo'?1900000:2000);const input=$('in-'+key);if(input)input.value=state[key];}}refresh();}});
+refresh();})();</script>
+<script id="vta67-loader">
+(async()=>{
+ 'use strict';
+ const sel=q=>document.querySelector(q), el=(t,c,v)=>{const x=document.createElement(t);if(c)x.className=c;if(v!==undefined)x.textContent=String(v);return x;};
+ const txt=(q,v)=>{const x=sel(q);if(x)x.textContent=String(v??'');},wrap=sel('.partner-editor-grid'),notice=sel('.partner-help');
+ const refuse=why=>{wrap.style.visibility='hidden';notice.textContent='Partner tour unavailable: '+why+'. Sign in and select an approved tour in Partner Hub.';notice.setAttribute('role','alert');};
+ const id=new URLSearchParams(location.search).get('tour_id');
+ if(!/^[1-9]\d{0,9}$/.test(id||'')){refuse('missing tour ID');return;}
+ try{
+  const req=await fetch('api/index.php?route='+encodeURIComponent('b2b/my-tours/'+id+'/v67-preview'),{credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});
+  if(!req.ok)throw Error('not authenticated, not authorized or withdrawn ('+req.status+')');
+  const data=await req.json();
+  if(!data.ok||data.schema!=='VTA_B2B_PARTNER_V67_PUBLIC_PREVIEW'||!data.tour||!data.agency)throw Error('invalid approved snapshot');
+  const content=data.tour.content,agency=data.agency;
+  if(!content||!Array.isArray(content.days)||content.days.length<1)throw Error('tour content missing');
+  document.title='VTA Partner Edition · '+String(content.title||'Tour');
+  txt('[data-v67=title]',content.title);txt('[data-v67=destination]',content.destination);txt('[data-v67=overview]',content.overview||'Tour services to be reconfirmed');
+  const route=sel('[data-v67=route]');route.replaceChildren();
+  String(content.destination||'').split(/\s*(?:→|,|·|–|\|)\s*/).filter(Boolean).slice(0,15).forEach((name,i)=>{
+   if(i)route.append(el('i',null,'→'));route.append(el('span',null,name));
+  });
+  const facts=sel('[data-v67=facts]');facts.replaceChildren();
+  facts.append(el('span',null,'Tour type: '+(content.tour_type||'Subject to reconfirmation')));
+  facts.append(el('span',null,' · '+content.days.length+' days'));
+  const summary=sel('[data-v67=headfacts]');summary.replaceChildren();
+  for(const [label,value] of [['PROGRAM DURATION',content.days.length+' DAYS'],['TOUR TYPE',content.tour_type||'To confirm'],['TRADE STATUS','Proposal only · Not booked']]){const cell=el('div');cell.append(el('small',null,label),el('b',null,value));summary.append(cell);}
+  const days=sel('[data-v67=days]');days.replaceChildren();
+  content.days.slice(0,90).forEach((d,i)=>{const art=el('article','vta-b2b-day vta-print-section'),detail=el('div');
+   art.append(el('span',null,'DAY '+String(i+1).padStart(2,'0')));
+   detail.append(el('h3',null,d.title||'Day '+(i+1)));
+   detail.append(el('small',null,'Meals: '+(d.meals||'To confirm')+' · Overnight: '+(d.overnight||'To confirm')));
+   detail.append(el('p','vta62-long-copy',d.description||'Details require reconfirmation'));
+   art.append(detail);days.append(art);
+  });
+  const tbody=sel('[data-v67=hotels]');tbody.replaceChildren();
+  for(const row of (Array.isArray(content.hotels)?content.hotels:[]).slice(0,60)){
+    const tr=el('tr');for(const key of ['destination','three','four','five'])tr.append(el(key==='destination'?'th':'td',null,row[key]||'On request'));tbody.append(tr);
+  }
+  if(!tbody.children.length){const tr=el('tr');for(const x of ['Hotel / Cruise','On request','On request','On request'])tr.append(el('td',null,x));tbody.append(tr);}
+  const lines=v=>String(v||'').split(/\r?\n/).map(v=>v.trim()).filter(Boolean).slice(0,60);
+  for(const [key,val] of [['included',content.included_text],['excluded',content.excluded_text],['terms',content.terms_text]]){
+   const list=sel('[data-v67='+key+']');list.replaceChildren();for(const line of lines(val))list.append(el('li',null,line));
+  }
+  const terms=sel('[data-v67=terms]');
+  if(content.policies&&typeof content.policies==='object')for(const key of ['children','payment','cancellation','notes'])if(content.policies[key])terms.append(el('li',null,key.toUpperCase()+': '+String(content.policies[key]).slice(0,30000)));
+  terms.append(el('li',null,'Tour and agency selling prices are subject to written confirmation; this is not a booking.'));
+  window.VTA67PartnerEdition.preload({agency:String(agency.brand_name||agency.name||''),email:String(agency.email||''),whatsapp:String(agency.whatsapp||''),ref:String(content.tour_code||('B2B-'+id))});
+  if(agency.has_logo&&Number(agency.id)>0){
+   try{const logo=await fetch('api/index.php?route='+encodeURIComponent('b2b/agencies/'+agency.id+'/logo'),{credentials:'same-origin',cache:'no-store'});
+    if(logo.ok){const blob=await logo.blob();if(/^image\/(png|jpeg|webp)$/.test(blob.type)&&blob.size<3*1024*1024){
+      const reader=new FileReader();const data=await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});window.VTA67PartnerEdition.preload({logo:String(data)});}
+    }
+   }catch(_){/* agent may upload replacement logo locally */}
+  }
+  wrap.style.visibility='visible';
+  notice.textContent='Authenticated B2B Partner Edition · Published tour version '+data.tour.publication_version+'. Agency changes stay local to this editable HTML and customer PDF; VTA NET and Master Tour never change.';
+ }catch(e){refuse(e.message||'unavailable');}
+})();
+</script></body></html>
