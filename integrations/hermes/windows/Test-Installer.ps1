@@ -16,7 +16,7 @@ function Read-Host {
 & (Join-Path $PSScriptRoot 'Install-VTAHermes.ps1') -StagingApiUrl 'https://isolated-staging.example.org/api/index.php' -AgentEmail 'mock-staging-agent@example.org' -CompanyId 12 -SkipHermesRegistration
 
 $root = Join-Path $env:LOCALAPPDATA 'VTA\HermesRC62'
-foreach ($file in @('vta_mcp_server.py','bridge-settings.json','agent-password.dpapi','Start-VTAHermes.ps1','hermes-config-snippet.yaml')) {
+foreach ($file in @('vta_mcp_server.py','bridge-settings.json','agent-password.dpapi','vta_mcp_launcher.py','hermes-config-snippet.yaml')) {
     if (-not (Test-Path (Join-Path $root $file))) { throw ('Missing install output: ' + $file) }
 }
 $secure = (Get-Content -LiteralPath (Join-Path $root 'agent-password.dpapi') -Raw).Trim() | ConvertTo-SecureString
@@ -28,7 +28,10 @@ try {
 
 $request = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}'
 $toolList = '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
-$results = @($request, $toolList) | & (Join-Path $root 'Start-VTAHermes.ps1')
+$config = Get-Content -LiteralPath (Join-Path $root 'bridge-settings.json') -Raw | ConvertFrom-Json
+$pythonExe = [string]$config.python_executable
+$pythonArgs = @($config.python_args)
+$results = @($request, $toolList) | & $pythonExe @pythonArgs (Join-Path $root 'vta_mcp_launcher.py')
 if ($LASTEXITCODE -ne 0) { throw 'Windows launcher returned a failure.' }
 $jsonLines = @($results | Where-Object { $_ -match '^\{' } | ForEach-Object { $_ | ConvertFrom-Json })
 if ($jsonLines.Count -ne 2) { throw 'Windows launcher returned an unexpected MCP transcript.' }
