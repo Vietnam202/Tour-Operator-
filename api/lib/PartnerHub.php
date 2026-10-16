@@ -401,6 +401,10 @@ final class PartnerHub {
                 // Requires authenticated partner membership and an active publication.
                 if($action==='v67-preview'&&$method==='GET'){
                     $data=self::normalizeCopy(self::parse($w['content_json']));
+                    // Day notes are internal operational fields; expose only approved visible schedule text.
+                    $data['days']=array_map(static fn(array $day):array=>[
+                        'title'=>(string)($day['title']??''),'description'=>(string)($day['description']??''),
+                        'meals'=>(string)($day['meals']??''),'overnight'=>(string)($day['overnight']??'')],$data['days']);
                     header('Cache-Control: private, no-store');
                     Http::json(['ok'=>true,'schema'=>'VTA_B2B_PARTNER_V67_PUBLIC_PREVIEW',
                         'tour'=>['id'=>(int)$w['id'],'publication_version'=>(int)$pub['version_no'],'content'=>$data],
