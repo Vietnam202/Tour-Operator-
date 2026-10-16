@@ -21,14 +21,14 @@ final class AdsLandingPresentation {
             throw new DomainException('Approved document unavailable');
         return $s;
     }
-    public static function html(array $snapshot,array $landing,string $layout,string $csrf,array $utm):string {
+    public static function html(array $snapshot,array $landing,string $layout,string $csrf,string $nonce):string {
         $s=self::snapshot($snapshot);
         $slug=(string)$landing['slug'];
         if(!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D',$slug)||strlen($slug)>90)
             throw new InvalidArgumentException('Invalid landing slug');
         $layout=self::style($layout);
         if(!preg_match('/^[a-f0-9]{48}$/D',$csrf))throw new DomainException('Session not ready');
-        $nonce=base64_encode(random_bytes(16));
+        if(!preg_match('/^[a-zA-Z0-9+\/]{22}==$/D',$nonce))throw new DomainException('Invalid CSP nonce');
         $route='index.php?route=ads/landing/'.$slug;
         $formRoute='index.php?route=ads/landing/'.$slug.'/lead';
         $actionRoute='index.php?route=ads/landing/'.$slug.'/event';
