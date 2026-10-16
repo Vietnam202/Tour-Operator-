@@ -1,0 +1,58 @@
+name: Hermes RC6.2 MCP Bridge
+
+on:
+  push:
+    branches:
+      - "feat/rc62-hermes-ops-mcp-*"
+    paths:
+      - "integrations/hermes/**"
+      - ".github/workflows/hermes-mcp-bridge.yml"
+  pull_request:
+    paths:
+      - "integrations/hermes/**"
+      - ".github/workflows/hermes-mcp-bridge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax check
+        run: python3 -m py_compile integrations/hermes/vta_mcp_server.py
+      - name: MCP and session security tests
+        run: python3 -m unittest discover -s integrations/hermes -p 'test_*.py' -v
+
+      - name: Validate PowerShell launcher and installer syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem integrations/hermes/windows -Filter '*.ps1'
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error $_.Message }
+              exit 1
+            }
+          }
+
+      - name: Package reviewed Windows MCP installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: vta-rc62-hermes-windows-installer
+          path: |
+            integrations/hermes/
+            !integrations/hermes/**/__pycache__/**
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline Windows DPAPI installer and stdio smoke
+        shell: pwsh
+        run: ./integrations/hermes/windows/Test-Installer.ps1
