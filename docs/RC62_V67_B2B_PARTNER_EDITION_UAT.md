@@ -42,3 +42,23 @@ After controlled authorized staging deployment:
 - Ensure prior PR #102 Tour Share→Lead feature unaffected; do not infer a Lead from B2B PDF export.
 
 **Status to owner:** DRAFT source review until CI full-pass; STAGING_UNVERIFIED / PRODUCTION_NO_GO until real-auth UAT. Do not mark Issue #99 or PR #103 as accepted based on mock data alone.
+
+
+## Four-template RC6.2 completion — current V6.7 owner review
+
+Partner Edition now includes a **Template selector** with four presentations of the same company/agency-approved `b2b_partner_tours` working copy. Switching styles is presentation-only, never changing the Master Tour, approved B2B publication, agency rates or Lead/Booking.
+
+| Layout | Customer-facing presentation | Day detail | Images | Both tables |
+| --- | --- | --- | --- | --- |
+| **Professional Detailed** (`detailed`) | Professional heading and readable full day-by-day text | Full descriptions, meals/overnights | Existing media allowed only after separate public approval; no unapproved source injection | Hotel/Cruise + Selling Prices 3★/4★/5★ |
+| **Photo-rich Brochure** (`brochure`) | Editorial oversized cover and visual destination cards | Full descriptions | Partner-supplied cover and optional day photographs, explicit rights checkbox, max 3 MB per upload; saved locally in downloadable HTML | Same two tables |
+| **Quick Itinerary** (`quick`) | Condensed day overview for simple handout | Day titles + meals/overnights visible; descriptions remain in shared DOM and reappear when switching | No fabricated imagery | Same two tables |
+| **B2B Tour Proposal** (`b2b`) | Exact owner-approved V6.7 brand/price proposal layout, default | Full day descriptions | Partner logo and approved tour content | Same two tables |
+
+**Editing:** template choice `state.layout`, cover `state.cover`, day gallery `state.dayPhotos` coexist with existing contact/logo/currency and 3/4/5-star selling prices; all customer prices remain agency-entered and are never read from VTA NET or supplier costs. Image processing is local: JPEG/PNG/WebP only, original max 3MB/16MP, capped cover/day rendition, explicit partner assertion of reproduction rights; no server-side media upload or automatic public approval.
+
+**Save Editable HTML:** downloads a self-contained partner file with selected style, data-loaded authorized itinerary, images, rates and agency contacts embedded, without staging API loader. This **is an editable agency document**, not a revocable cloud share. Treat as business-sensitive. **Customer delivery** should use browser A4 PDF with all edit controls hidden.
+
+**Test evidence:** `tests/b2b-four-templates-browser.cjs` runs in GitHub Actions `RC6.2 V6.7 B2B Partner Edition QA` alongside the earlier template regression and contract. Desktop 1366/mobile 390: all four distinct style classes and day lists, synchronized two tables/price tiers/contact, no overflow, real A4 PDF on desktop for each layout, image usage-rights checks, day/cover image, offline save/reopen and no unauthorized data. CI screenshots `vta-four-*.png` and Brochure PDF sample `vta-four-brochure-reference.pdf` are uploaded as artifact.
+
+**Go/No-go boundary:** no real-auth staging UAT or approved public-media binding was performed. Static screenshots and CI mock cannot certify CyberPanel staging deployment; VIE-6/VIE-11 gates still apply. Do not merge, publish live partner-editing URL or close P0 parity issue solely on CI pass.
