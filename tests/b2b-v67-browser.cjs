@@ -55,6 +55,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(await offline.locator('#in-agency').inputValue(),'Authorized Partner Ltd');
    assert.equal(await offline.locator('#in-price3').inputValue(),'775');
    await offline.close();fs.unlinkSync(target);
+   await page.screenshot({path:'v67-partner-'+width+'.png',fullPage:true});
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+5);
    assert(!overflow,'horizontal viewport overflow at '+width);
    assert.deepEqual(errors,[],'runtime JS errors at '+width);
