@@ -25,6 +25,9 @@ on:
       - 'docs/RC62_RUNTIME_BUILD_IDENTITY_VI.md'
       - 'tests/rc62-staging-readonly-smoke.cjs'
       - 'tests/rc62-staging-readonly-smoke-unit.cjs'
+      - 'tests/rc62-stage-b2c-readonly.cjs'
+      - 'tests/rc62-stage-b2c-readonly-unit.cjs'
+      - 'docs/RC62_STAGE_B2C_READONLY_SMOKE_VI.md'
       - 'api/lib/RuntimeGuard.php'
       - 'tests/rc62-isolated-host-pin-unit.php'
       - 'docs/RC62_ISOLATED_STAGING_HOST_REVIEW_VI.md'
@@ -104,6 +107,8 @@ jobs:
           python3 tests/rc62-operator-evidence-unit.py
           node --check tests/rc62-staging-readonly-smoke.cjs
           node tests/rc62-staging-readonly-smoke-unit.cjs
+          node --check tests/rc62-stage-b2c-readonly.cjs
+          node tests/rc62-stage-b2c-readonly-unit.cjs
           php tests/tour-library-saved-source-unit.php
           node --check app.js
           node --check tour-proposal-studio.js

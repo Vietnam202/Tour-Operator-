@@ -1,0 +1,33 @@
+name: RC6.2 B2C Staging Contract CI (No Live Host)
+on:
+  pull_request:
+    paths:
+      - 'tests/rc62-stage-b2c-readonly*.cjs'
+      - 'tests/rc62-staging-readonly-smoke.cjs'
+      - 'docs/RC62_STAGE_B2C_READONLY_SMOKE_VI.md'
+      - '.github/workflows/rc62-stage-b2c-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b2c-staging-get-contract-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR HEAD, not merge simulation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and safe GET-only staging contract against fake server
+        run: |
+          set -euo pipefail
+          node --check tests/rc62-stage-b2c-readonly.cjs
+          node --check tests/rc62-stage-b2c-readonly-unit.cjs
+          node tests/rc62-stage-b2c-readonly-unit.cjs
+      - name: Mark evidence boundary
+        run: |
+          echo 'PASS_CI_FIXTURE only. No staging DNS, credentials, MariaDB, CyberPanel, migrations, or owner release signoff.'
