@@ -48,8 +48,26 @@ final class MarketingShareBooking {
             throw new OutOfBoundsException('Link approval is no longer current');
         return $row;
     }
+    /**
+     * Dedicated staging-scoped lead form. When absent, reuse the previously
+     * configured B2C storefront form; an explicit disabled setting blocks it.
+     * No public request is allowed to choose a form token or company.
+     */
+    public static function bookingSettings(array $cfg):array {
+        $specified=$cfg['integrations']['tour_share_booking']??null;
+        if($specified!==null){
+            if(!is_array($specified)||($specified['enabled']??false)!==true)
+                throw new OutOfBoundsException('Tour-share booking disabled');
+            $company=filter_var($specified['company_id']??null,FILTER_VALIDATE_INT);
+            $token=$specified['form_token']??null;
+            if(!$company||$company<1||!is_string($token)||!preg_match('/^[a-f0-9]{64}$/D',$token))
+                throw new OutOfBoundsException('Tour-share lead form unavailable');
+            return ['company_id'=>(int)$company,'form_token'=>$token];
+        }
+        return B2CStorefront::settings($cfg);
+    }
     private static function activeLeadForm(PDO $db,array $cfg,array $share):array {
-        $s=B2CStorefront::settings($cfg);
+        $s=self::bookingSettings($cfg);
         if($s['company_id']!==(int)$share['company_id'])throw new OutOfBoundsException('Lead form not configured for company');
         $st=$db->prepare(
             "SELECT f.id FROM lead_forms f JOIN campaigns c ON c.id=f.campaign_id AND c.company_id=f.company_id
