@@ -84,10 +84,11 @@ async function myTours(){
  if(view?.type==='draft')return openDraft(view.id);
  const r=await request('b2b/my-tours');my=r.items||[];
  shell('My Tours','Independent agency copies · Your edits never overwrite VTA Master',
- '<div class="hub-toolbar">'+agencyFilter()+'</div><div class="hub-grid" id="myGrid">'+(my.length?my.map(t=>'<article class="hub-card" data-agency="'+t.agency_id+'"><h3>'+esc(t.title)+'</h3><p>'+esc(t.agency)+' · Rev '+t.revision+'</p><div class="hub-pill '+(t.publication_status==='PUBLISHED'?'ok':'warn')+'">'+esc(t.publication_status)+'</div><div class="actions"><button class="hub-btn primary" data-edit="'+t.id+'">Edit / Quote / Download</button></div></article>').join(''):'<div class="hub-empty">No working copies yet. Select Customize from Tour Library.</div>')+'</div>');
+ '<div class="hub-toolbar">'+agencyFilter()+'</div><div class="hub-grid" id="myGrid">'+(my.length?my.map(t=>'<article class="hub-card" data-agency="'+t.agency_id+'"><h3>'+esc(t.title)+'</h3><p>'+esc(t.agency)+' · Rev '+t.revision+'</p><div class="hub-pill '+(t.publication_status==='PUBLISHED'?'ok':'warn')+'">'+esc(t.publication_status)+'</div><div class="actions"><button class="hub-btn primary" data-edit="'+t.id+'">Edit / Quote / Download</button><button class="hub-btn" data-v67="'+t.id+'" '+(t.publication_status!=='PUBLISHED'?'disabled title="Publication withdrawn"':'')+'>V6.7 Partner Edition · PDF</button></div></article>').join(''):'<div class="hub-empty">No working copies yet. Select Customize from Tour Library.</div>')+'</div>');
  app.querySelector('#hubAgency').onchange=e=>{selectedAgency=Number(e.target.value);app.querySelectorAll('[data-agency]').forEach(c=>c.hidden=Number(c.dataset.agency)!==selectedAgency);};
  app.querySelector('#hubAgency').dispatchEvent(new Event('change'));
  app.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{view={type:'draft',id:Number(b.dataset.edit)};openDraft(view.id);});
+ app.querySelectorAll('[data-v67]').forEach(b=>b.onclick=()=>{const id=Number(b.dataset.v67);if(Number.isSafeInteger(id)&&id>0)window.open('b2b-partner-edition.html?tour_id='+id,'_blank','noopener');});
 }
 function readDraft(){
  if(!draft)return;
@@ -123,7 +124,7 @@ async function calculate(){
 async function openDraft(id){
  const r=await request('b2b/my-tours/'+id);draft=r.tour;view={type:'draft',id};selectedAgency=draft.agency.id;quotation=null;
  shell('Edit Tour & Quote','White-label · '+draft.agency.brand_name+' · Revision '+draft.revision,
- '<div class="hub-toolbar"><button class="hub-btn" id="backMy">← My Tours</button><button class="hub-btn primary" id="saveTour">Save Tour</button><button class="hub-btn" id="printTour">Print Preview</button></div>'+
+ '<div class="hub-toolbar"><button class="hub-btn" id="backMy">← My Tours</button><button class="hub-btn primary" id="saveTour">Save Tour</button><button class="hub-btn" id="printTour">Print Preview</button><button class="hub-btn primary" id="v67PartnerPreview">V6.7 White-label · Export PDF</button></div>'+
  '<div class="hub-detail"><div>'+contentMarkup(draft.content,true,draft.agency.brand_name)+'</div>'+
  '<aside class="hub-sidebar"><div class="hub-box hub-section"><h2>Agency Markup</h2><form id="markupForm" class="hub-form"><label>Markup method<select name="markup_type"><option value="PERCENT" '+(draft.markup_type==='PERCENT'?'selected':'')+'>Percentage (%)</option><option value="FIXED" '+(draft.markup_type==='FIXED'?'selected':'')+'>Fixed amount / pax</option></select></label><label>Value<input type="number" name="markup_value" min="0" max="100000" step="0.01" value="'+draft.markup_value+'"></label></form></div>'+
  '<div class="hub-box hub-section"><h2>Quote & Export</h2><form id="quoteForm" class="hub-form"><div class="row"><label>Paying PAX<input name="pax" type="number" min="1" max="1000" value="2" required></label><label>Tour<select name="mode"><option value="PRIVATE">Private</option><option value="SIC">SIC / Group</option></select></label></div><div class="row"><label>Hotel<select name="hotel"><option value="3">3★</option><option value="4" selected>4★</option><option value="5">5★</option></select></label><label>Cruise<select name="cruise"><option value="">Not included</option><option value="4">4★</option><option value="5">5★</option></select></label></div><button type="button" class="hub-btn primary" id="calculateQuote">Check NET & Selling Price</button></form><div id="quoteResult" role="status"><p class="hub-note">Select a reviewed configuration and calculate before issuing a client proposal.</p></div>'+
@@ -133,6 +134,7 @@ async function openDraft(id){
  app.querySelector('#backMy').onclick=()=>{view=null;draft=null;render();};
  app.querySelector('#saveTour').onclick=async()=>{try{await saveWorking();}catch(e){status(e.message,true);}};
  app.querySelector('#printTour').onclick=()=>window.print();
+ app.querySelector('#v67PartnerPreview').onclick=()=>window.open('b2b-partner-edition.html?tour_id='+Number(draft.id),'_blank','noopener');
  app.querySelector('#addDay').onclick=()=>{readDraft();draft.content.days.push({day:draft.content.days.length+1,title:'New Day',description:'',meals:'',overnight:'',notes:''}); const list=app.querySelector('#hubDays');list.insertAdjacentHTML('beforeend',dayMarkup(draft.content.days.at(-1),draft.content.days.length-1,true));wireRemove();};
  function wireRemove(){app.querySelectorAll('[data-remove-day]').forEach(b=>b.onclick=()=>{readDraft();if(draft.content.days.length<=1)return status('A tour needs at least one day',true);b.closest('[data-day]').remove();readDraft();});}wireRemove();
  app.querySelector('#calculateQuote').onclick=calculate;
