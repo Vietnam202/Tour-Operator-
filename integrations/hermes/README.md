@@ -26,40 +26,42 @@ Available MCP tools:
 
 This candidate **does not** implement new autonomous quote creation, price calculation, supplier communications, booking confirmation, marketing publication, approval tokens, or DomainOutbox event delivery. These require scoped business contracts, idempotency and release approval rather than exposing arbitrary writes.
 
-## Local configuration on Windows (isolated staging only)
+## Windows native installation — DPAPI launcher (recommended)
 
-Use Python 3.11+ (standard library only), with the server file in a fixed directory such as `C:\\VTA\\hermes-rc62\\vta_mcp_server.py`.
+**Important fix (2026-10-16):** Hermes filters child-process environment variables; setting PowerShell variables and calling Hermes is insufficient unless those variables are explicitly forwarded in \`mcp_servers.*.env\`. Never put a plaintext agent password inside \`~/.hermes/config.yaml\`. The Windows launcher loads an encrypted user-local DPAPI credential on each start instead.
 
-1. Create a **dedicated limited-permission RC6.2 staging staff account**, with only the necessary read permissions. Confirm the account belongs to the intended company and that the staging host is independently isolated from production.
-2. Set the following environment variables **in the same PowerShell window that launches Hermes**, never in a tracked repo/config file:
+Prerequisites: Python 3.11+, a Windows-native Hermes executable, a **separate** authenticated HTTPS staging hostname, staging docroot and MariaDB database, and a dedicated RC6.2 staff account with the minimal permitted roles. Do not use production \`v2quote\` or \`quote\`. The environment variables in this document are *not* real secrets or URLs.
 
-```powershell
-$env:VTA_API_URL = "https://YOUR-ISOLATED-STAGING-HOST/api/index.php"
-$env:VTA_TARGET_ENV = "staging"
-$env:VTA_AGENT_EMAIL = "agent-staging@your-company.example"
-$env:VTA_AGENT_PASSWORD = Read-Host "Enter staging agent password"
-$env:VTA_EXPECTED_COMPANY_ID = "YOUR_NUMERIC_COMPANY_ID"
-$env:VTA_ENABLE_TASK_WRITES = "0"
-```
+1. Download/clone this PR's \`integrations/hermes/\` directory, preserving the \`windows/\` subfolder.
+2. Open **Windows PowerShell** under the **same Windows user** that runs Hermes. From \`integrations/hermes/windows\`, run the following with **real isolated staging** values (example host is a placeholder):
 
-The hostnames `v2quote.vietnamtraveladvisor.com.vn` and `quote.vietnamtraveladvisor.com.vn` are blocked in this candidate. Merely naming a production mirror "staging" does not provide isolation: verify the docroot, backend DB and account separation before enabling any writes.
+~~~powershell
+.\Install-VTAHermes.ps1 -StagingApiUrl "https://YOUR-ISOLATED-STAGING-HOST/api/index.php" -AgentEmail "hermes-staging@YOUR-EMAIL" -CompanyId 12
+~~~
 
-3. Add to your local Hermes user `config.yaml`:
+3. Confirm the staging environment is isolated by typing \`ISOLATED-STAGING\` when prompted, then enter the staging staff password as a SecureString. The installer writes the encrypted Windows DPAPI blob only to \`%LOCALAPPDATA%\VTA\HermesRC62\agent-password.dpapi\`; the current Windows user is required to decrypt it. The installer **does not modify** RC6.2 or any database.
+4. The installer copies the MCP server and adds a \`vta-rc62-operations\` skill to \`~/.hermes/skills/\`, without overwriting an existing skill of that name. It attempts \`hermes mcp add vta_rc62\`. If the command is unavailable, manually merge **only** the \`vta_rc62\` server block from \`%LOCALAPPDATA%\VTA\HermesRC62\hermes-config-snippet.yaml\` into existing \`~/.hermes/config.yaml\`; never replace the entire config. Keep \`tools.include\` explicitly read-only.
+5. Restart Hermes or run \`/reload-mcp\`, then:
 
-```yaml
-mcp_servers:
-  vta_rc62:
-    command: "python"
-    args: ["C:/VTA/hermes-rc62/vta_mcp_server.py"]
-```
+~~~powershell
+hermes mcp test vta_rc62
+~~~
 
-Run `hermes chat` from the same shell; ask **"Use vta_connection_status to confirm the authorized staging company"**. Hermes documentation: https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp
+6. Ask Hermes to execute \`vta_connection_status\` and \`vta_operations_overview\`, verify the expected company and the **actual staging records**.
 
-4. Run contract tests without network:
+The Windows launcher defaults to **read-only** and explicitly refuses \`enable_task_writes != 0\`. To enable any operation that writes records, a separate reviewed release and durable idempotency contract are required. Do not bypass the launcher or edit the DPAPI file.
 
-```powershell
+### No staging environment yet?
+
+The GitHub CI and local mock tests are available without staging. They do not establish connection to your local Hermes or live RC6.2. Do not point the bridge at production to make the tool respond. Prepare a completely separate staging API, DB and staff account first; then run this installer.
+
+### Verifying code without network
+
+~~~powershell
 python -m unittest discover -s integrations/hermes -p "test_*.py" -v
-```
+~~~
+
+The tests also exercise an actual stdio subprocess handshake (\`initialize\`, \`tools/list\` and disabled-write refusal), but intentionally do not log in to any real RC6.2 server.
 
 ## Optional low-risk task writing on isolated staging
 
