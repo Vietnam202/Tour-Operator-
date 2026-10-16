@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VTA · V6.1 Professional Tour Design Templates — Approval</title>
+<style>/* VTA Tour Operator · V6.1 Design Template Pack · scoped print-preview CSS
+   No changes to application navigation / Tiptap. CSS classes prefixed vta-. */
+:root{--vta-navy:#123653;--vta-ink:#233647;--vta-teal:#067a79;--vta-gold:#c39b55;--vta-slate:#708399;--vta-edge:#dce5ee;--vta-paper:#fff}
+.vta-document,.vta-document *{box-sizing:border-box}
+.vta-document{width:794px;max-width:100%;margin:0 auto;color:var(--vta-ink);background:var(--vta-paper);font:14px/1.65 'Segoe UI',Arial,sans-serif;box-shadow:0 18px 55px #18355016;overflow:hidden}
+.vta-document img{display:block;width:100%;object-fit:cover}
+.vta-document h1,.vta-document h2,.vta-document h3,.vta-document p{margin:0}
+.vta-document h1{font:800 37px/1.17 Georgia,'Times New Roman',serif;letter-spacing:-1.3px}
+.vta-document h2{font:700 22px/1.2 Georgia,'Times New Roman',serif;color:var(--vta-navy)}
+.vta-document h3{font:700 17px/1.3 'Segoe UI',Arial,sans-serif;color:var(--vta-navy)}
+.vta-document p{line-height:1.75;color:#5e7184}
+.vta-document .vta-kicker{font:800 10px/1.3 'Segoe UI',Arial,sans-serif;letter-spacing:2.1px;color:var(--vta-teal)}
+.vta-brand-lockup{display:flex;align-items:center;gap:10px;line-height:1.35;color:var(--vta-navy)}
+.vta-brand-symbol{width:42px;height:42px;border-radius:11px;background:#cdebf0;color:#1b6a86;display:grid;place-items:center;font-weight:900;font-size:15px;letter-spacing:-1px}
+.vta-brand-lockup b{display:block;font-size:12px;letter-spacing:.1px}
+.vta-brand-lockup small{display:block;font-size:9px;color:#7e91a0;letter-spacing:.2px}
+.vta-doc-header{display:flex;align-items:center;justify-content:space-between;padding:23px 42px 17px;border-bottom:1px solid #edf1f5}
+.vta-doc-header-note{font-size:9px;color:#96a5b2;letter-spacing:1.4px;font-weight:750}
+.vta-doc-body{padding:29px 47px 37px}
+.vta-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 19px;border-bottom:1px solid #e5ebf1;padding-bottom:15px;font-size:9px;font-weight:800;letter-spacing:1px;color:#50697d}
+.vta-route{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;font-weight:800;color:var(--vta-navy)}
+.vta-route span{background:#edf5f8;border-radius:5px;padding:4px 9px}
+.vta-route i{font-style:normal;color:var(--vta-teal)}
+.vta-document-foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:17px 42px;border-top:1px solid #e9edf2;font-size:8px;letter-spacing:.4px;color:#84929d}
+.vta-doc-body section{margin:24px 0}
+.vta-section-heading{display:flex;align-items:baseline;gap:15px;margin-bottom:15px}
+.vta-section-heading>span{font-size:9px;font-weight:800;letter-spacing:1.3px;color:var(--vta-teal);min-width:115px}
+.vta-intro>p{max-width:620px}
+.vta-highlight-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.vta-highlight-list li{display:flex;align-items:flex-start;gap:10px;padding:13px 12px;border:1px solid #e4ecf1;border-radius:8px;font-size:12px;color:#3d5968;background:#fafcfd;line-height:1.5}
+.vta-highlight-list li>span{color:var(--vta-teal);font-size:12px;font-weight:800}
+.vta-day{display:flex;gap:18px;padding:19px 0;border-top:1px solid #e9eff2}
+.vta-day:last-child{border-bottom:1px solid #e9eff2}
+.vta-day-number{width:58px;min-width:58px;height:64px;border-radius:8px;background:#eaf4f5;color:var(--vta-teal);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.vta-day-number small{font-size:9px;letter-spacing:1.2px;font-weight:800;line-height:1.4}
+.vta-day-number b{font-size:24px;line-height:1.25}
+.vta-day-content{min-width:0;flex:1}.vta-day-overline{font-size:10px;color:#7893a1;letter-spacing:.3px;margin-bottom:4px}
+.vta-day-content h3{margin:0 0 8px}.vta-day-content p{font-size:12px}
+.vta-day-meta{display:flex;gap:15px;flex-wrap:wrap;margin-top:11px;font-size:10px;color:#4c6375}
+.vta-day-meta b{font-weight:800;color:#2a475b;margin-right:5px}
+.vta-document table{width:100%;border-collapse:collapse;table-layout:auto;font-size:10px}
+.vta-document th{background:#eef4f7;color:#24475b;text-transform:uppercase;letter-spacing:.4px;font-size:9px}
+.vta-document td,.vta-document th{padding:10px 9px;text-align:left;border:1px solid #dfe7ec;vertical-align:top;line-height:1.5}
+.vta-disclaimer{font-size:10px;margin-top:8px!important}
+.vta-services,.vta-quick-services{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.vta-services h2,.vta-quick-services h2{font-size:18px;margin-bottom:10px}
+.vta-service-list{margin:0;padding-left:17px;color:#597185;font-size:11px;line-height:1.7}
+.vta-service-list li{margin-bottom:5px}.vta-service-list li::marker{color:var(--vta-teal)}
+.vta-terms{border-top:1px solid #dce6ea;padding-top:18px}.vta-terms h2{font-size:18px;margin-bottom:12px}
+/* Detailed */
+.vta-detailed-cover{position:relative;min-height:290px;background:#14425f;overflow:hidden}
+.vta-detailed-cover-media img{height:300px;object-position:center 45%}
+.vta-detailed-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0b2943dd 0%,#102f47a8 48%,transparent 100%)}
+.vta-detailed-cover-label{position:absolute;z-index:1;left:47px;top:58px;max-width:470px;color:#fff}
+.vta-detailed-cover-label h1{font-size:49px;margin:18px 0 9px;color:white}
+.vta-detailed-cover-label p{font-size:15px;color:#ebf0ed;line-height:1.55}
+.vta-detailed-cover-label .vta-kicker{color:#e7c997}
+/* Brochure */
+.theme-brochure{background:#fffdf8}
+.vta-brochure-cover{height:530px;position:relative;overflow:hidden;background:#173f50}
+.vta-brochure-cover>img{height:530px}
+.vta-brochure-cover-shade{position:absolute;inset:0;background:linear-gradient(180deg,#09253890,#062b47bb 60%,#092c40d6 100%)}
+.vta-brochure-overlay{position:absolute;inset:0;padding:37px 46px;display:flex;flex-direction:column;align-items:flex-start;color:white}
+.vta-brochure-overlay .vta-brand-lockup{color:white}.vta-brochure-overlay .vta-brand-symbol{background:white;color:#195d75}
+.vta-brochure-overlay .vta-brand-lockup small{color:#d4e6e7}
+.vta-brochure-tag{margin-top:auto;font-size:10px;font-weight:800;letter-spacing:2px;color:#f2d8a0}
+.vta-brochure-overlay h1{font-size:70px;max-width:510px;margin:12px 0;color:white}
+.vta-brochure-overlay p{font-size:17px;max-width:490px;color:#eef6f4}
+.vta-brochure-line{width:68px;height:3px;background:#e7cc9f;margin:22px 0}
+.vta-brochure-overlay .vta-route span{background:#ffffff21;color:white}.vta-brochure-overlay .vta-route i{color:#e8ce99}
+.vta-brochure-intro{text-align:center;padding:48px 86px 27px}
+.vta-brochure-intro h2{font-size:29px;margin:13px auto}.vta-brochure-intro p{font-size:13px}
+.vta-brochure-mosaic{display:grid;grid-template-columns:1.3fr .95fr .95fr;gap:8px;margin:11px 41px}
+.vta-brochure-mosaic figure{margin:0;position:relative;height:173px;overflow:hidden;border-radius:3px}
+.vta-brochure-mosaic figure img{height:100%}.vta-brochure-mosaic figcaption{position:absolute;bottom:8px;left:11px;background:#08354b9c;color:white;font-size:10px;padding:3px 7px;border-radius:3px}
+.vta-brochure-split{display:grid;grid-template-columns:.9fr 1.6fr;gap:22px;margin-bottom:33px}.vta-brochure-split h2{font-size:28px;margin-top:9px}
+.vta-brochure-split .vta-highlight-list{grid-template-columns:1fr;gap:5px}.vta-brochure-split .vta-highlight-list li{background:transparent;border-bottom:1px solid #e8e1d6;border-top:0;border-left:0;border-right:0;border-radius:0;padding:6px}
+.vta-brochure-day{display:grid;grid-template-columns:175px 1fr;gap:20px;padding:18px 0;border-top:1px solid #ece5d9}
+.vta-brochure-day-photo{position:relative;height:150px;overflow:hidden;border-radius:4px}.vta-brochure-day-photo img{height:100%}
+.vta-brochure-day-photo>b{position:absolute;bottom:8px;left:8px;background:#103f55df;color:white;font-size:10px;padding:4px 8px;border-radius:3px}
+.vta-brochure-day-text>span{font-size:10px;color:#ad8960}.vta-brochure-day-text h3{margin:5px 0 7px}.vta-brochure-day-text p{font-size:12px}.vta-brochure-day-text small{display:block;color:#66817e;margin-top:7px;font-size:9px;font-weight:750}
+/* Quick itinerary */
+.vta-quick-top{display:flex;align-items:center;justify-content:space-between;padding:21px 42px;border-bottom:1px solid #dde7ee}
+.vta-quick-top>b{font-size:9px;letter-spacing:1px;color:#8298a8}
+.vta-quick-hero{background:#edf5f7;padding:35px 47px 33px;border-bottom:4px solid #0f747d}
+.vta-quick-hero h1{font-size:38px;margin:10px 0}.vta-quick-hero h1 em{font:800 17px 'Segoe UI',Arial,sans-serif;color:#08847f;vertical-align:middle;white-space:nowrap}
+.vta-quick-hero p{font-size:13px}
+.vta-quick-summary{display:flex;justify-content:space-between;gap:20px;padding:16px 0;margin:18px 0;border-bottom:1px solid #e5ebf0}
+.vta-quick-summary span{display:flex;align-items:center;gap:9px;color:#688297;font-size:10px;letter-spacing:1px;font-weight:800}
+.vta-quick-summary b{font-size:25px;color:#17526d}
+.vta-quick-itinerary h2,.vta-quick-details h2{font-size:21px;margin-bottom:16px}
+.vta-quick-itinerary table{font-size:10px}.vta-quick-itinerary th:first-child{width:37px}.vta-quick-itinerary tbody tr:nth-child(even){background:#f8fbfc}
+.vta-quick-detail{border-bottom:1px solid #e5ecf1;padding:9px 0}.vta-quick-detail b{font-size:11px;color:#26566d}.vta-quick-detail p{font-size:11px;margin:3px 0}
+.theme-quick .vta-doc-body section{margin:21px 0}
+/* B2B trade proposal */
+.theme-b2b{border-top:7px solid #173b60}
+.vta-b2b-top{display:flex;justify-content:space-between;align-items:center;padding:27px 44px;border-bottom:1px solid #d5e1e8}
+.vta-b2b-top>span{text-align:right;font-size:9px;letter-spacing:1px;font-weight:800;color:#b77d3d;line-height:1.7}
+.vta-b2b-title{display:grid;grid-template-columns:1fr auto;gap:25px;align-items:end;padding:40px 44px 33px;background:#153954;color:white}
+.vta-b2b-title h1{color:white;font-size:38px;margin:11px 0}.vta-b2b-title p{color:#d9e4e9;font-size:13px}
+.vta-b2b-title .vta-kicker{color:#e2c58b}
+.vta-b2b-code{display:flex;flex-direction:column;gap:2px;text-align:right;min-width:140px;border-left:1px solid #7191a4;padding-left:20px}
+.vta-b2b-code small{font-size:9px;color:#a9bdc6;letter-spacing:1px}.vta-b2b-code b{font-size:12px;color:white}
+.vta-b2b-facts{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #dce6ee}
+.vta-b2b-facts>div{padding:15px;border-right:1px solid #dce6ee}.vta-b2b-facts>div:last-child{border-right:0}
+.vta-b2b-facts small{display:block;font-size:9px;color:#7b91a2;letter-spacing:.8px}.vta-b2b-facts b{display:block;color:#163d57;margin-top:5px;font-size:10px;line-height:1.45}
+.vta-b2b-route h2,.vta-b2b-program h2{font-size:21px;margin-bottom:12px}.vta-b2b-route p{margin-top:15px;font-size:12px}
+.vta-b2b-day{display:grid;grid-template-columns:74px 1fr;gap:12px;border-top:1px solid #e1e9ee;padding:12px 0}
+.vta-b2b-day>span{font-size:10px;font-weight:800;color:#0c7b7b}.vta-b2b-day h3{font-size:14px}.vta-b2b-day small{display:block;color:#7c8fa1;font-size:10px;margin:5px 0}.vta-b2b-day p{font-size:11px}
+.vta-b2b-rate{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:17px;background:#fff7e8;border:1px solid #eedaba}
+.vta-b2b-rate strong{color:#85632d;font-size:11px}.vta-b2b-rate p{font-size:11px;color:#8f775b}
+.vta-b2b-rate span{font-size:9px;color:#ab712d;white-space:nowrap;font-weight:800}
+@media(max-width:820px){.vta-document{width:100%;}.vta-doc-body{padding:22px 25px}.vta-doc-header,.vta-b2b-top,.vta-quick-top{padding:18px 25px}.vta-detailed-cover-label{left:28px;top:55px}.vta-brochure-overlay{padding:25px}.vta-brochure-overlay h1{font-size:50px}.vta-brochure-intro{padding:28px 35px}.vta-brochure-mosaic{margin:8px 20px}.vta-b2b-title{padding:30px 25px}}
+@media(max-width:520px){.vta-document h1{font-size:29px}.vta-document h2{font-size:18px}.vta-meta{display:block}.vta-meta span{display:block;margin-bottom:5px}.vta-highlight-list{grid-template-columns:1fr}.vta-detailed-cover-media img{height:260px}.vta-detailed-cover-label h1{font-size:32px}.vta-detailed-cover-label{top:48px}.vta-services,.vta-quick-services{grid-template-columns:1fr}.vta-document-foot{padding:12px 20px}.vta-brochure-cover,.vta-brochure-cover>img{height:420px}.vta-brochure-overlay h1{font-size:38px}.vta-brochure-mosaic{grid-template-columns:1fr 1fr}.vta-brochure-mosaic figure:first-child{grid-column:1/-1}.vta-brochure-day{grid-template-columns:95px 1fr;gap:10px}.vta-brochure-day-photo{height:125px}.vta-brochure-split{grid-template-columns:1fr}.vta-quick-summary b{font-size:19px}.vta-quick-summary{gap:8px}.vta-b2b-title{grid-template-columns:1fr}.vta-b2b-code{border:0;padding:0;text-align:left}.vta-b2b-facts{grid-template-columns:1fr}.vta-b2b-facts>div{border-bottom:1px solid #dce6ee;border-right:0}.vta-b2b-rate{display:block}.vta-b2b-rate span{display:block;margin-top:10px}}
+@media print{@page{size:A4;margin:13mm}.vta-document{width:100%!important;max-width:none!important;box-shadow:none!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.vta-document-foot{color:#6c7e8e}.vta-print-section,.vta-day,.vta-brochure-day,.vta-quick-detail,.vta-b2b-day{break-inside:avoid;page-break-inside:avoid}.vta-detailed-cover,.vta-brochure-cover{break-after:page;page-break-after:always}.vta-brochure-cover,.vta-brochure-cover>img{height:235mm}.vta-doc-body{padding:0}.vta-document h1{orphans:3;widows:3}}
+</style><style>
+*{box-sizing:border-box}body{margin:0;background:#f2f6fa;color:#193751;font:13px/1.5 'Segoe UI',Arial,sans-serif}button{cursor:pointer;font:inherit}button:focus-visible{outline:3px solid #8db9f2;outline-offset:3px}.app-header{background:#123550;color:#f3fafb;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px clamp(18px,4vw,60px);border-bottom:4px solid #0c707b}.app-header b{font-size:16px}.app-header small{display:block;color:#acc1ce;font-size:10px;letter-spacing:.6px}.app-header .actions{display:flex;gap:8px}.ui-button{background:#fff;color:#1d4c68;border:1px solid #d5e2ec;border-radius:9px;padding:10px 13px;font-weight:750;font-size:11px}.ui-button.primary{background:#176be6;color:#fff;border-color:#176be6}.status-banner{padding:9px clamp(18px,4vw,60px);background:#fff3dc;color:#926324;font-size:11px;border-bottom:1px solid #efd8a6}.shell{max-width:1375px;margin:0 auto;padding:27px clamp(15px,3vw,35px) 80px}.heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}.eyebrow{letter-spacing:2px;color:#87a0b4;font-size:10px;font-weight:850}.heading h1{margin:5px 0 7px;font-size:26px;letter-spacing:-1px}.heading p{margin:0;color:#768c9d}.heading .meta{background:#e5f4f5;border-radius:7px;padding:7px 12px;color:#207b7a;font-size:11px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:27px 0 22px}.card{background:white;text-align:left;border:1px solid #e0eaf1;border-radius:13px;overflow:hidden;padding:0;box-shadow:0 5px 16px #11324b0b;transition:transform .16s}.card:hover{transform:translateY(-3px)}.card[aria-pressed=true]{border:2px solid #1b70e2;box-shadow:0 0 0 4px #176ee817}.card-art{height:155px;padding:21px;background:linear-gradient(140deg,#b1dce2,#edf4f7);display:flex;align-items:center;justify-content:center}.card[data-layout=brochure] .card-art{background:linear-gradient(130deg,#2f7786,#e9b892)}.card[data-layout=quick] .card-art{background:linear-gradient(130deg,#dfeefa,#f0f3f7)}.card[data-layout=b2b] .card-art{background:linear-gradient(130deg,#273d64,#718da4)}.mini-paper{display:block;background:white;width:95px;height:130px;box-shadow:0 9px 27px #183d4d35;padding:9px}.mini-paper i{display:block;height:5px;margin:6px 0;background:#c5d6df}.mini-paper i:nth-child(2){width:76%}.mini-paper i:nth-child(4){width:58%}.mini-paper strong{display:block;height:35px;background:linear-gradient(155deg,#1a5370,#5eaaa3)}.card[data-layout=brochure] .mini-paper{padding:0}.card[data-layout=brochure] .mini-paper strong{height:86px;background:linear-gradient(140deg,#135277,#65a3a1,#eac08d)}.card[data-layout=brochure] .mini-paper i{margin:7px 11px}.card[data-layout=quick] .mini-paper strong{height:16px}.card[data-layout=quick] .mini-paper i{height:9px;border-bottom:2px solid white}.card[data-layout=b2b] .mini-paper strong{height:21px;background:#193b61}.card[data-layout=b2b] .mini-paper i{border:1px solid #d4e1e8;height:11px;background:#f1f6f8}.card-info{padding:15px}.card-info b{font-size:13px}.card-info small{display:block;color:#0d7f82;font-weight:800;font-size:10px;margin:6px 0}.card-info p{margin:0;color:#8295a5;font-size:11px;min-height:34px}.preview-bar{background:#fff;border:1px solid #e2e9ef;border-radius:12px;padding:15px 19px;display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}.preview-bar>div:first-child strong{font-size:14px}.preview-bar p{color:#8c9eaa;font-size:11px;margin:3px 0 0}.preview-bar .badge{background:#e9f8f4;color:#0b746b;padding:6px 9px;border-radius:6px;white-space:nowrap;font-size:10px}.preview-stage{overflow:auto;background:#e9eef4;border:1px solid #d9e3ec;border-radius:13px;padding:32px 20px 70px;min-height:700px}.bottom{color:#8799a9;text-align:center;font-size:11px;margin-top:24px}.bottom a{color:#1c6caa}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.app-header{flex-direction:column;align-items:stretch}.cards{grid-template-columns:1fr 1fr;gap:10px}.card-art{height:120px}.mini-paper{transform:scale(.85)}.card-info{padding:11px}.card-info b{font-size:11px}.card-info small{font-size:9px}.card-info p{font-size:10px}.preview-bar{flex-wrap:wrap}.preview-stage{padding:15px 8px}.heading h1{font-size:22px}}
+@media print{body{background:white}.app-header,.status-banner,.heading,.cards,.preview-bar,.bottom{display:none!important}.shell,.preview-stage{padding:0;margin:0;border:0;max-width:none;background:white;min-height:0}.preview-stage{overflow:visible}}
+</style></head><body>
+<div class="app-header"><div><b>VTA <span style="color:#7fcac7">/</span> Template Design Studio</b><small>Vietnam Travel Advisor · RC6.2 · Visual Approval V6.1</small></div><div class="actions"><button type="button" class="ui-button" id="download">↓ Download HTML</button><button type="button" class="ui-button primary" id="print">Print / PDF Preview</button></div></div>
+<div class="status-banner">DESIGN DEMO ONLY — 4 reusable layouts. Illustrated media and itinerary text are examples; no client, supplier price, booking or database writes.</div>
+<main class="shell"><div class="heading"><div><div class="eyebrow">VTA MASTER TOUR · DESIGN TEMPLATE CENTER</div><h1>Choose your presentation style</h1><p>One itinerary source · Four truly different layouts · No change to saved Master Tours</p></div><span class="meta">V6.1 / Owner approval preview</span></div>
+<div class="cards" id="cards" role="group" aria-label="Template choices"></div>
+<div class="preview-bar"><div><strong id="currentTitle">Professional Detailed</strong><p id="currentDesc">Rendered from sample program data, not static mock content.</p></div><span class="badge">● REAL HTML TEMPLATE · A4</span></div>
+<div class="preview-stage"><div id="document" aria-live="polite"></div></div><p class="bottom">Template source and integration contract are included in this GitHub-ready pack. No external fonts, CDN, scripts or network calls.</p></main>
+<script>/* Example content for APPROVAL PREVIEW ONLY. No supplier rates, guaranteed services or actual booking data. */
+window.VTA_TEMPLATE_SAMPLE = Object.freeze({
+  schema: 'VTA_DESIGN_PREVIEW_1',
+  code: 'VTA-DEMO-8D7N', version: 'V1 / Design sample', status: 'SAMPLE ONLY',
+  name: 'Vietnam Discovery', subtitle: 'Heritage, landscapes & authentic local experiences',
+  daysCount: 8, nightsCount: 7, travelStyle: 'Private journey · Tailor-made',
+  route: ['Hanoi','Ninh Binh','Ha Long Bay','Da Nang','Hoi An'],
+  cover: 'assets/halong.svg',
+  gallery: ['assets/halong.svg','assets/hoian.svg','assets/bridge.svg'],
+  intro: 'An inspiring route through northern Vietnam’s limestone landscapes and the cultural heart of Central Vietnam. Every day can be refined to match the traveller’s pace and interests.',
+  highlights: ['Explore the heritage streets and traditions of Hanoi','Discover the waterways and karst scenery of Ninh Binh','Experience an overnight cruise in Ha Long Bay','Visit the Golden Bridge and the old town of Hoi An'],
+  days: [
+    {n:1,title:'Arrival in Hanoi',route:'Hanoi',description:'Airport welcome and transfer to Hanoi. Depending on flight arrival, explore Hoan Kiem Lake and the Old Quarter at leisure.',meals:'—',overnight:'Hanoi'},
+    {n:2,title:'Hanoi City Discovery',route:'Hanoi',description:'Discover the city’s cultural highlights, including the Temple of Literature and selected historic landmarks. Visits remain subject to opening schedules.',meals:'B',overnight:'Hanoi'},
+    {n:3,title:'Ninh Binh Landscapes',route:'Hanoi → Ninh Binh → Hanoi',description:'Journey to the limestone countryside for a boat excursion through tranquil waterways and a carefully paced local sightseeing program.',meals:'B',overnight:'Hanoi'},
+    {n:4,title:'Journey to Ha Long Bay',route:'Hanoi → Ha Long Bay',description:'Transfer to the bay and board an overnight cruise. Explore spectacular seascapes; cruise activities depend on the confirmed operator and weather.',meals:'B / L / D*',overnight:'Ha Long Bay cruise'},
+    {n:5,title:'Ha Long Bay to Central Vietnam',route:'Ha Long Bay → Hanoi → Da Nang',description:'Enjoy the bay at sunrise and disembark after the cruise program. Transfer for a domestic flight to Da Nang, subject to flight schedules.',meals:'B / Brunch*',overnight:'Da Nang'},
+    {n:6,title:'Ba Na Hills & Golden Bridge',route:'Da Nang → Ba Na Hills → Da Nang',description:'Ride the cable car to Ba Na Hills and experience the Golden Bridge, French Village and mountain scenery, weather permitting.',meals:'B',overnight:'Da Nang'},
+    {n:7,title:'Hoi An Heritage',route:'Da Nang → Hoi An → Da Nang',description:'Enjoy a cultural day around Hoi An, including a stroll through the ancient streets and an optional coconut basket-boat experience.',meals:'B',overnight:'Da Nang'},
+    {n:8,title:'Da Nang Departure',route:'Da Nang',description:'Free time until the pre-arranged departure transfer. Tour ends with onward travel.',meals:'B',overnight:'—'}
+  ],
+  inclusions:['Accommodation category to be confirmed at quotation','Ground transfers and tours as explicitly confirmed','Meals listed in the final supplier-approved itinerary','English-speaking guide for confirmed guided services'],
+  exclusions:['International/domestic flights unless stated in the quote','E-visa, insurance and optional personal expenses','Tips and services not specifically confirmed'],
+  accommodation:[{city:'Hanoi',nights:'3',category:'3★ / 4★ / 5★',property:'To be confirmed'},{city:'Ha Long Bay',nights:'1',category:'Cruise category TBC',property:'Supplier confirmation required'},{city:'Da Nang',nights:'3',category:'3★ / 4★ / 5★',property:'To be confirmed'}],
+  terms:['This is an illustrative tour program, not a confirmed booking or quotation.','Services, availability, operating times and pricing require supplier verification.','Only an owner-approved quotation may include a selling price or supplier commitment.'],
+  company:'Vietnam Travel Advisor',brandline:'Vietnam DMC · Local Tour Operator',contact:'info@vietnamtraveladvisor.com.vn',website:'vietnamtraveladvisor.com.vn'
+});
+</script><script>/* Vietnam Travel Advisor · Design Template Pack V6.1 · no network / no storage writes.
+ * Pure renderers for approved, public-facing itinerary fields only.
+ * Does not modify VTA_DOC_2, company records, pricing, revisions or permissions.
+ */
+(function(global){
+ 'use strict';
+ const escape = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const art={"assets/halong.svg": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDYyMCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJJbGx1c3RyYXRlZCBsaW1lc3RvbmUgaXNsYW5kcyBpbiBIYSBMb25nIEJheSI+CjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYSIgeDI9Ii44IiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iIzEyM2I2NSIvPjxzdG9wIG9mZnNldD0iLjU2IiBzdG9wLWNvbG9yPSIjNGU5NmFhIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjYjdkOWM5Ii8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImIiIHkyPSIxIiB4Mj0iMCI+PHN0b3Agc3RvcC1jb2xvcj0iIzI1NWQ2OSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzEwM2E1MyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPgo8cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI2MjAiIGZpbGw9InVybCgjYSkiLz48Y2lyY2xlIGN4PSI5MjAiIGN5PSIxMjUiIHI9Ijg1IiBmaWxsPSIjZmZkZmFjIiBvcGFjaXR5PSIuODkiLz4KPHBhdGggZmlsbD0iI2Q1ZjFkZiIgb3BhY2l0eT0iLjIzIiBkPSJNMCAyNzBRMTcwIDI0NCAyNzAgMjc4VDUyMCAyNjlUODUwIDI2N1QxMjAwIDI3NVYzMzBIMFoiLz4KPHBhdGggZmlsbD0iIzE1NDQ1YiIgZD0iTTAgNDE1UTQ1IDI5MiAxMjUgMjc0TDE1MSAyMzZMMTc5IDI4NFEyMjIgMjk3IDI1OSA0MTZaIE0yNTAgNDcwUTI5OCAzNDEgMzcwIDMxOUwzOTMgMjczTDQxNSAzMjJRNTAwIDM1MCA1MjUgNDcwWiBNNjc1IDQzMlE3MjQgMzE4IDc4NCAzMDBMODEyIDI1M0w4MzkgMzAxUTg5NCAzMTggOTQxIDQzMlogTTk2MiA0NDBROTk1IDM2MSAxMDQ1IDM0MUwxMDcxIDI5OEwxMDkyIDM0MlExMTY4IDM2MCAxMjAwIDQzM1oiLz4KPHBhdGggZmlsbD0idXJsKCNiKSIgZD0iTTAgNDQ5UTE5OCA0MTcgMzgzIDQ0OVQ3NTggNDQyVDEyMDAgNDQ3VjYyMEgwWiIvPjxwYXRoIHN0cm9rZT0iI2IwZTBkZCIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIuMjQiIGZpbGw9Im5vbmUiIGQ9Ik0tMjAgNTAzUTMwMCA0NzcgNTk1IDUwMVQxMjIwIDUwMiBNLTIwIDU0OFEyNzAgNTIyIDYxMCA1NDRUMTIzMCA1NDEgTS0yMCA1OTBRMzAwIDU3MiA2MzAgNTg4VDEyNDAgNTg0Ii8+CjxwYXRoIGZpbGw9IiNmZmY4ZDgiIGQ9Ik01NzYgMzYyTDU3NiA0MjBMNjM0IDQyMFoiLz48cGF0aCBmaWxsPSIjYjVkN2NiIiBkPSJNNTY5IDM2OUw1NjkgNDIwTDUzNSA0MjBaIi8+PHBhdGggc3Ryb2tlPSIjMGUzNDUzIiBzdHJva2Utd2lkdGg9IjYiIGQ9Ik01NzQgMzUzTDU3NCA0MzciLz48cGF0aCBmaWxsPSIjMDgyZTQ2IiBkPSJNNTE5IDQzNUg2NTJMNjIxIDQ1M0g1NDZaIi8+Cjx0ZXh0IHg9IjUyIiB5PSI1NzUiIGZpbGw9IiNmMWY4ZjciIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBsZXR0ZXItc3BhY2luZz0iNiIgb3BhY2l0eT0iLjciPlZJRVROQU0g4oCiIEhBIExPTkcgQkFZPC90ZXh0Pgo8L3N2Zz4K", "assets/hoian.svg": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDYyMCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJJbGx1c3RyYXRlZCBIb2kgQW4gcml2ZXJzaWRlIGhlcml0YWdlIGFyY2hpdGVjdHVyZSI+CjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0ic2t5IiB4Mj0iLjQiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjMzE0ZTgwIi8+PHN0b3Agb2Zmc2V0PSIuNTUiIHN0b3AtY29sb3I9IiNkYTk5NzciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmMWMzOTciLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNjIwIiBmaWxsPSJ1cmwoI3NreSkiLz48Y2lyY2xlIGN4PSI5ODQiIGN5PSIxNDAiIHI9IjgzIiBmaWxsPSIjZmZkZmFjIiBvcGFjaXR5PSIuNzUiLz4KPHBhdGggZmlsbD0iIzRjNzc4YSIgZD0iTTAgMzkwTDEyMDAgMzgwVjYyMEgwWiIvPjxwYXRoIGZpbGw9IiNkYWFmODYiIGQ9Ik0wIDM2MEw5OCAzMTBMMjM2IDM2MFY0NjBIMFogTTI0NSAzNDFMMzg3IDI3Nkw1MjkgMzQxVjQ3NEgyNDVaIE01NTUgMzU1TDcxNCAyODJMODY0IDM1NVY0NjNINTU1WiBNODgzIDM0M0wxMDQ1IDI3MEwxMjAwIDM0MFY0NjhIODgzWiIvPgo8cGF0aCBmaWxsPSIjNWEzZDQ1IiBkPSJNMCAzNDlMMTAyIDI4MEwyNDQgMzQ5SDIxMkwxMDEgMzA3TDIzIDM0OVogTTIzNCAzMzBMMzkwIDI0OUw1NDIgMzMzSDUwOEwzOTIgMjc5TDI3MiAzMzNaIE01NDUgMzQ1TDcxNCAyNDlMODgzIDM0NUg4NDdMNzE1IDI4NEw1NzQgMzQ4WiBNODczIDMzMkwxMDM4IDI0MkwxMjEyIDMzMkgxMTc1TDEwNDAgMjc4TDkwMSAzMzlaIi8+CjxnIGZpbGw9IiM0YzM0M2IiPjxyZWN0IHg9IjUzIiB5PSIzNjYiIHdpZHRoPSI0NCIgaGVpZ2h0PSI3NiIvPjxyZWN0IHg9IjEzMyIgeT0iMzY3IiB3aWR0aD0iNTAiIGhlaWdodD0iNzgiLz48cmVjdCB4PSIzMTUiIHk9IjM1OCIgd2lkdGg9IjUzIiBoZWlnaHQ9IjkzIi8+PHJlY3QgeD0iNDEzIiB5PSIzNTgiIHdpZHRoPSI1MyIgaGVpZ2h0PSI5MyIvPjxyZWN0IHg9IjYyNCIgeT0iMzc1IiB3aWR0aD0iNTMiIGhlaWdodD0iNzUiLz48cmVjdCB4PSI3NTEiIHk9IjM3NSIgd2lkdGg9IjUzIiBoZWlnaHQ9Ijc1Ii8+PHJlY3QgeD0iOTUwIiB5PSIzNjMiIHdpZHRoPSI1MyIgaGVpZ2h0PSI4NCIvPjxyZWN0IHg9IjEwNzAiIHk9IjM2MyIgd2lkdGg9IjUzIiBoZWlnaHQ9Ijg0Ii8+PC9nPgo8ZyBmaWxsPSIjZmZkZDlkIiBvcGFjaXR5PSIuODYiPjxjaXJjbGUgY3g9IjEwNyIgY3k9IjM3MiIgcj0iMTQiLz48Y2lyY2xlIGN4PSIyNTQiIGN5PSIzNjUiIHI9IjExIi8+PGNpcmNsZSBjeD0iNTQ1IiBjeT0iMzgwIiByPSIxMiIvPjxjaXJjbGUgY3g9Ijg4MiIgY3k9IjM2MyIgcj0iMTMiLz48Y2lyY2xlIGN4PSIxMTcyIiBjeT0iMzc0IiByPSIxNCIvPjwvZz4KPHBhdGggZD0iTTAgNDcyUTI2NSA0NTMgNTkyIDQ3NFQxMjAwIDQ3M1Y2MjBIMFoiIGZpbGw9IiMzMDVhNzgiLz48cGF0aCBkPSJNMCA1MTZRMTcwIDQ5MCA0MDAgNTE1VDgzNSA1MTVUMTIwMCA1MTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Q5YjhhMCIgb3BhY2l0eT0iLjQiIHN0cm9rZS13aWR0aD0iMyIvPgo8cGF0aCBmaWxsPSIjMWQzYjUwIiBkPSJNMzU1IDQ5M1E0MzUgNTEyIDUxNSA0ODlMNDkyIDUxNUgzODNaIi8+PHBhdGggc3Ryb2tlPSIjMWQzYjUwIiBzdHJva2Utd2lkdGg9IjUiIGQ9Ik00NDAgNDkwVjQ0MCIvPjxwYXRoIGZpbGw9IiNlZGNiOTYiIGQ9Ik00MzkgNDQ1TDQzOSA0OTBMNDg2IDQ5MFoiLz4KPHRleHQgeD0iNTAiIHk9IjU3NSIgZmlsbD0iI2ZmZjJkNyIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGxldHRlci1zcGFjaW5nPSI2IiBvcGFjaXR5PSIuNyI+VklFVE5BTSDigKIgSE9JIEFOPC90ZXh0Pgo8L3N2Zz4K", "assets/bridge.svg": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDYyMCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJJbGx1c3RyYXRlZCBHb2xkZW4gQnJpZGdlIGFtb25nIG1pc3R5IG1vdW50YWlucyI+CjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0ic2t5IiB5Mj0iMSIgeDI9Ii40Ij48c3RvcCBzdG9wLWNvbG9yPSIjNWQ3YmEyIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDdlNWUwIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+CjxyZWN0IHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYyMCIgZmlsbD0idXJsKCNza3kpIi8+PGNpcmNsZSBjeD0iOTQzIiBjeT0iMTI3IiByPSI5MCIgZmlsbD0iI2ZmZjBiYSIgb3BhY2l0eT0iLjgiLz4KPHBhdGggZmlsbD0iIzgwOTZhNyIgb3BhY2l0eT0iLjYiIGQ9Ik0wIDQwMEwxNTAgMjI2TDMwMCAzNjFMNDY3IDE3OEw2ODIgMzc3TDg1MSAyMjZMMTA0NyAzODlMMTIwMCAyNTBWNjIwSDBaIi8+CjxwYXRoIGZpbGw9IiM1MzZlNzgiIG9wYWNpdHk9Ii43IiBkPSJNMCA0ODdMMjAwIDM0MEwzNzYgNDUxTDYxNyAyOTVMODE2IDQ0OUwxMDI5IDMwNEwxMjAwIDQyM1Y2MjBIMFoiLz4KPHBhdGggZmlsbD0iIzIzNGU1ZiIgZD0iTTAgNTM1TDE5NCA0NjBMMzcwIDU1MEw2MDIgNDIwTDg1MCA1NDNMMTA4NyA0MjhMMTIwMCA1MTBWNjIwSDBaIi8+CjxwYXRoIGQ9Ik0xMTIgMzcyUTU1MSAzMTggMTA5MCAzNzUiIHN0cm9rZT0iI2VmYzc3YiIgc3Ryb2tlLXdpZHRoPSIyMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMTIgMzg2UTU1NiAzMzYgMTA5MCAzOTAiIHN0cm9rZT0iIzhlNzY0ZiIgc3Ryb2tlLXdpZHRoPSIxMiIgZmlsbD0ibm9uZSIvPgo8cGF0aCBkPSJNMjIwIDQwMFExNzAgNDU3IDIxMCA0OTJRMjQwIDUwNCAyNDggNDcyTDI2MiA0MzNNODM0IDQwMFE3OTcgNDU4IDgzOCA0OTZRODc1IDUxMCA4ODUgNDY0TDg5NyA0MjMiIHN0cm9rZT0iI2M4YWQ5MSIgc3Ryb2tlLXdpZHRoPSIzMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMjAgMzU0UTU1OCAyOTkgMTA4NCAzNTkiIHN0cm9rZT0iI2VmZjFlYSIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBzdHJva2UtZGFzaGFycmF5PSI0IDMyIiBvcGFjaXR5PSIuOSIvPgo8dGV4dCB4PSI1MiIgeT0iNTc1IiBmaWxsPSIjZjVmYWY3IiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgbGV0dGVyLXNwYWNpbmc9IjYiIG9wYWNpdHk9Ii44Ij5WSUVUTkFNIOKAoiBHT0xERU4gQlJJREdFPC90ZXh0Pgo8L3N2Zz4K"};
+ const img = v => art[String(v||'')] || art['assets/halong.svg'];
+ const arr=v=>Array.isArray(v)?v:[];
+ const brand = t=>`<div class="vta-brand-lockup"><span class="vta-brand-symbol">VTA</span><span><b>${escape(t.company||'Vietnam Travel Advisor')}</b><small>${escape(t.brandline||'Vietnam DMC · Local Tour Operator')}</small></span></div>`;
+ const route=t=>`<div class="vta-route" aria-label="Tour route">${arr(t.route).map((r,i)=>`<span>${escape(r)}</span>${i<arr(t.route).length-1?'<i aria-hidden="true">→</i>':''}`).join('')}</div>`;
+ const highlights=t=>`<ul class="vta-highlight-list">${arr(t.highlights).map((h,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span>${escape(h)}</li>`).join('')}</ul>`;
+ const meta=t=>`<div class="vta-meta"><span>${escape(t.daysCount)} DAYS / ${escape(t.nightsCount)} NIGHTS</span><span>${escape(t.travelStyle)}</span><span>${escape(t.code)} · ${escape(t.version)}</span></div>`;
+ const foot=t=>`<footer class="vta-document-foot"><span>${escape(t.company)}</span><span>${escape(t.contact)} · ${escape(t.website)}</span><span>PREVIEW · NO CONFIRMED PRICE</span></footer>`;
+ const list=(items)=>`<ul class="vta-service-list">${arr(items).map(i=>`<li>${escape(i)}</li>`).join('')}</ul>`;
+ const services=t=>`<section class="vta-services vta-print-section"><div><h2>Inclusions</h2>${list(t.inclusions)}</div><div><h2>Exclusions</h2>${list(t.exclusions)}</div></section>`;
+ const policy=t=>`<section class="vta-terms vta-print-section"><h2>Notes & booking conditions</h2>${list(t.terms)}</section>`;
+ const daybox=(d,mode='detailed')=>`<article class="vta-day vta-day--${mode} vta-print-section" data-day="${escape(d.n)}"><div class="vta-day-number"><small>DAY</small><b>${String(Number(d.n)||0).padStart(2,'0')}</b></div><div class="vta-day-content"><div class="vta-day-overline">${escape(d.route||'')}</div><h3>${escape(d.title||'Day itinerary')}</h3><p>${escape(d.description||'')}</p><div class="vta-day-meta"><span><b>Meals</b> ${escape(d.meals||'To confirm')}</span><span><b>Overnight</b> ${escape(d.overnight||'To confirm')}</span></div></div></article>`;
+ function accommodation(t){return `<section class="vta-accomm vta-print-section"><h2>Accommodation & cruise options</h2><table><thead><tr><th>Destination</th><th>Nights</th><th>Category</th><th>Hotel / cruise</th></tr></thead><tbody>${arr(t.accommodation).map(a=>`<tr><td>${escape(a.city)}</td><td>${escape(a.nights)}</td><td>${escape(a.category)}</td><td>${escape(a.property)}</td></tr>`).join('')}</tbody></table><p class="vta-disclaimer">Accommodation names and categories require supplier approval and availability.</p></section>`}
+ function detailed(t){return `<article class="vta-document theme-detailed" aria-label="Professional Detailed itinerary">
+  <header class="vta-doc-header">${brand(t)}<div class="vta-doc-header-note">MASTER TOUR DESIGN / PROFESSIONAL</div></header>
+  <div class="vta-detailed-cover"><div class="vta-detailed-cover-media"><img alt="Illustrated Ha Long Bay sample cover" src="${img(t.cover)}"></div><div class="vta-detailed-cover-label"><div class="vta-kicker">DISCOVER VIETNAM · PRIVATE JOURNEYS</div><h1>${escape(t.name)}</h1><p>${escape(t.subtitle)}</p></div></div>
+  <div class="vta-doc-body">${meta(t)}${route(t)}<section class="vta-intro vta-print-section"><div class="vta-section-heading"><span>01 / INTRODUCTION</span><h2>A journey worth remembering</h2></div><p>${escape(t.intro)}</p></section><section class="vta-highlights vta-print-section"><div class="vta-section-heading"><span>02 / EXPERIENCES</span><h2>Tour highlights</h2></div>${highlights(t)}</section>
+  <section class="vta-itinerary"><div class="vta-section-heading"><span>03 / DAILY PROGRAM</span><h2>Day-by-day itinerary</h2></div>${arr(t.days).map(d=>daybox(d)).join('')}</section>${accommodation(t)}${services(t)}${policy(t)}</div>${foot(t)}</article>`}
+ function brochure(t){const gallery=arr(t.gallery);return `<article class="vta-document theme-brochure" aria-label="Photo-rich brochure itinerary">
+  <header class="vta-brochure-cover" style="--cover-image:url('${img(t.cover)}')"><img alt="Illustrated Ha Long Bay sample cover" src="${img(t.cover)}"><div class="vta-brochure-cover-shade"></div><div class="vta-brochure-overlay">${brand(t)}<div class="vta-brochure-tag">THE VIETNAM COLLECTION / ${escape(t.daysCount)} DAYS</div><h1>${escape(t.name)}</h1><p>${escape(t.subtitle)}</p><div class="vta-brochure-line"></div>${route(t)}</div></header>
+  <div class="vta-brochure-intro vta-print-section"><span class="vta-kicker">CURATED BY LOCAL EXPERTS</span><h2>Discover more. Experience deeper.</h2><p>${escape(t.intro)}</p></div>
+  <div class="vta-brochure-mosaic">${gallery.map((g,i)=>`<figure><img src="${img(g)}" alt="Vietnam destination illustration ${i+1}"><figcaption>${escape(t.route[Math.min(t.route.length-1,i*2)]||'Vietnam')}</figcaption></figure>`).join('')}</div>
+  <div class="vta-doc-body"><div class="vta-brochure-split"><div><span class="vta-kicker">TRAVEL NOTES</span><h2>Unforgettable moments</h2></div><div>${highlights(t)}</div></div>
+  <section class="vta-itinerary"><div class="vta-section-heading"><span>ITINERARY</span><h2>The journey, day by day</h2></div>${arr(t.days).map((d,i)=>`<article class="vta-brochure-day vta-print-section"><div class="vta-brochure-day-photo"><img alt="Illustrative destination artwork" src="${img(gallery[i%gallery.length]||t.cover)}"><b>DAY ${String(d.n).padStart(2,'0')}</b></div><div class="vta-brochure-day-text"><span>${escape(d.route)}</span><h3>${escape(d.title)}</h3><p>${escape(d.description)}</p><small>MEALS ${escape(d.meals)} · OVERNIGHT ${escape(d.overnight)}</small></div></article>`).join('')}</section>
+  ${accommodation(t)}${services(t)}${policy(t)}</div>${foot(t)}</article>`}
+ function quick(t){return `<article class="vta-document theme-quick" aria-label="Quick Itinerary">
+  <header class="vta-quick-top">${brand(t)}<b>QUICK ITINERARY / ${escape(t.code)}</b></header>
+  <div class="vta-quick-hero"><span class="vta-kicker">ESSENTIAL VIETNAM · AT A GLANCE</span><h1>${escape(t.name)} <em>${escape(t.daysCount)}D${escape(t.nightsCount)}N</em></h1><p>${escape(t.subtitle)}</p></div>
+  <div class="vta-doc-body">${route(t)}<div class="vta-quick-summary"><span><b>${escape(t.daysCount)}</b> DAYS</span><span><b>${escape(t.nightsCount)}</b> NIGHTS</span><span><b>${escape(t.route.length)}</b> DESTINATIONS</span></div>
+  <section class="vta-quick-itinerary"><h2>Travel plan at a glance</h2><table><thead><tr><th>Day</th><th>Program</th><th>Route</th><th>Meals</th><th>Overnight</th></tr></thead><tbody>${arr(t.days).map(d=>`<tr><td><b>${escape(d.n)}</b></td><td>${escape(d.title)}</td><td>${escape(d.route)}</td><td>${escape(d.meals)}</td><td>${escape(d.overnight)}</td></tr>`).join('')}</tbody></table></section>
+  <section class="vta-quick-details"><h2>Program details</h2>${arr(t.days).map(d=>`<div class="vta-quick-detail vta-print-section"><b>DAY ${String(d.n).padStart(2,'0')} · ${escape(d.title)}</b><p>${escape(d.description)}</p></div>`).join('')}</section>
+  <section class="vta-quick-services vta-print-section"><div><h2>Included services</h2>${list(t.inclusions)}</div><div><h2>Not included</h2>${list(t.exclusions)}</div></section>${policy(t)}</div>${foot(t)}</article>`}
+ function b2b(t){return `<article class="vta-document theme-b2b" aria-label="B2B Tour Proposal">
+  <header class="vta-b2b-top">${brand(t)}<span>CONFIDENTIAL TRADE DRAFT<br>SUBJECT TO APPROVAL</span></header>
+  <div class="vta-b2b-title"><div><span class="vta-kicker">TRAVEL PARTNER PROPOSAL</span><h1>${escape(t.name)}</h1><p>${escape(t.subtitle)}</p></div><div class="vta-b2b-code"><small>REFERENCE</small><b>${escape(t.code)}</b><small>${escape(t.version)}</small></div></div>
+  <div class="vta-doc-body"><div class="vta-b2b-facts"><div><small>PROGRAM DURATION</small><b>${escape(t.daysCount)} DAYS · ${escape(t.nightsCount)} NIGHTS</b></div><div><small>TOUR TYPE</small><b>${escape(t.travelStyle)}</b></div><div><small>TRADE STATUS</small><b>REQUEST APPROVED NET RATES</b></div></div>
+  <section class="vta-b2b-route"><h2>Route & program overview</h2>${route(t)}<p>${escape(t.intro)}</p></section>
+  <section class="vta-b2b-program"><h2>Detailed itinerary</h2>${arr(t.days).map(d=>`<article class="vta-b2b-day vta-print-section"><span>DAY ${String(d.n).padStart(2,'0')}</span><div><h3>${escape(d.title)}</h3><small>${escape(d.route)} · Meals: ${escape(d.meals)} · Overnight: ${escape(d.overnight)}</small><p>${escape(d.description)}</p></div></article>`).join('')}</section>
+  ${accommodation(t)}<section class="vta-b2b-rate vta-print-section"><div><strong>PRICE & AVAILABILITY</strong><p>Not quoted · supplier-confirmed VND net rates and authorized selling price required.</p></div><span>AWAITING APPROVAL</span></section>${services(t)}${policy(t)}</div>${foot(t)}</article>`}
+ const handlers={detailed,brochure,quick,b2b};
+ const templates=[
+  {id:'detailed',name:'Professional Detailed',type:'B2B + B2C',hint:'Tài liệu chi tiết, bố cục A4, timeline theo ngày.',sample:'Full itinerary · editorial'},
+  {id:'brochure',name:'Photo-rich Brochure',type:'B2C',hint:'Bìa lớn, bộ sưu tập ảnh, nội dung giàu cảm hứng.',sample:'Visual editorial · brochure'},
+  {id:'quick',name:'Quick Itinerary',type:'B2C + sales',hint:'Lịch trình dạng bảng, dễ gửi khách và rà soát nhanh.',sample:'Compact summary · print'},
+  {id:'b2b',name:'B2B Tour Proposal',type:'B2B',hint:'Bố cục thương mại, dịch vụ và giá cần xác minh.',sample:'Partner-ready · controlled'}
+ ];
+ function validate(t){if(!t||typeof t!=='object')throw Error('Expected itinerary object.');if(!Array.isArray(t.days))throw Error('Missing day array.');if(t.days.length>60)throw Error('Preview accepts maximum 60 days.');return t;}
+ function render(t,layout){validate(t);if(!handlers[layout])throw Error('Unsupported layout: '+layout);return handlers[layout](t)}
+ global.VTATemplateDesignV6=Object.freeze({render,validate,templates,escape});
+})(typeof window!=='undefined'?window:globalThis);
+</script>
+<script>
+(function(){'use strict';const api=window.VTATemplateDesignV6,data=window.VTA_TEMPLATE_SAMPLE,cards=document.getElementById('cards'),output=document.getElementById('document');let selected='detailed';
+function paint(){const current=api.templates.find(t=>t.id===selected);cards.innerHTML=api.templates.map(t=>`<button type="button" class="card" data-layout="${t.id}" aria-pressed="${String(selected===t.id)}"><span class="card-art"><span class="mini-paper"><strong></strong><i></i><i></i><i></i><i></i></span></span><span class="card-info"><b>${api.escape(t.name)}</b><small>${api.escape(t.type)}</small><p>${api.escape(t.hint)}</p></span></button>`).join('');output.innerHTML=api.render(data,selected);document.getElementById('currentTitle').textContent=current.name;document.getElementById('currentDesc').textContent=current.sample+' · '+data.daysCount+' days '+data.nightsCount+' nights · no supplier pricing';cards.querySelectorAll('[data-layout]').forEach(button=>button.addEventListener('click',()=>{selected=button.dataset.layout;paint();document.getElementById('document').scrollIntoView({behavior:'smooth',block:'start'});}));}
+function download(){const styles=[...document.querySelectorAll('style,link[rel=stylesheet]')].map(node=>node.tagName==='STYLE'?node.textContent:'').join('\n');const cssUrl=document.querySelector('link[rel=stylesheet]')?.getAttribute('href')||'design-templates.css';const content='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VTA '+selected+' itinerary sample</title><link rel="stylesheet" href="'+cssUrl+'"><style>'+styles+'</style></head><body>'+output.innerHTML+'</body></html>';const a=document.createElement('a');const href=URL.createObjectURL(new Blob([content],{type:'text/html;charset=utf-8'}));a.href=href;a.download='VTA_'+selected+'_design_preview.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),1000);}
+document.getElementById('download').addEventListener('click',download);document.getElementById('print').addEventListener('click',()=>window.print());paint();})();
+</script></body></html>
