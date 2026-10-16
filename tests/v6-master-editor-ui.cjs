@@ -13,7 +13,7 @@ async function settle(){for(let k=0;k<7;k++)await tick();}
 async function start(perms=['tour_library.view','tour_library.manage','product.manage']){
  const dom=new JSDOM('<main id="workspace" data-view="product"></main>',{url:'https://vta.invalid/',runScripts:'outside-only'});
  const w=dom.window,d=w.document,posts=[],notices=[];
- w.VTA_PREVIEW=false;w.confirm=()=>true;
+ w.VTA_PREVIEW=false;w.confirm=()=>true;w.crypto.randomUUID=()=>`v6-test-${Date.now()}`;
  let next=100;
  const programs=[item,template,rich];
  const api={request:async(route,option={})=>{
