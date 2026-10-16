@@ -93,6 +93,11 @@ $db->exec("INSERT INTO rates(company_id,rate_ref,supplier_id,category,product_na
 $db->exec("INSERT INTO rate_versions(rate_id,version_no,amount,currency,rate_basis,approval_status,created_by) VALUES(1,1,100,'USD','PER_TRANSFER','APPROVED',1)");
 $criteria=['category'=>'TRANSPORT','destination'=>'Hanoi','travel_date'=>'2027-01-02','pax'=>10];
 check(count(RateEngine::match($db,1,$criteria))===1,'approved matching rate found');
+$db->exec("UPDATE rates SET market='ALL' WHERE id=1");
+check(count(RateEngine::match($db,1,array_replace($criteria,['market'=>'Acceptance test'])))===1,'ALL market rate matches a named inquiry market');
+$db->exec("UPDATE rates SET market='Europe' WHERE id=1");
+check(RateEngine::match($db,1,array_replace($criteria,['market'=>'Acceptance test']))===[],'named market still requires an exact match');
+$db->exec("UPDATE rates SET market=NULL WHERE id=1");
 check(RateEngine::match($db,2,$criteria)===[],'rate matching tenant isolation');
 check(RateEngine::match($db,1,array_replace($criteria,['pax'=>11]))===[],'pax band applied');
 $db->exec("INSERT INTO rate_date_periods(rate_version_id,period_type,start_date,end_date) VALUES(1,'BLACKOUT','2027-01-02','2027-01-02')");

@@ -7,6 +7,7 @@ require_once __DIR__.'/QuoteProposal.php';
 require_once __DIR__.'/ProposalOutput.php';
 require_once __DIR__.'/PriceMatrix.php';
 require_once __DIR__.'/SalesHandover.php';
+require_once __DIR__.'/InquiryLifecycle.php';
 final class QuoteOptions {
     private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
     private static function atomic(PDO $db,callable $fn): array {if($db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql')$db->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');$db->beginTransaction();try{$out=$fn();$db->commit();return $out;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}}
@@ -40,7 +41,7 @@ final class QuoteOptions {
     }
     public static function save(PDO $db,array $user,int $version,array $body): array {
         return self::atomic($db,function()use($db,$user,$version,$body){
-            $cid=(int)$user['company_id'];$v=self::version($db,$cid,$version,true);self::mutable($v);QuoteVs2Repository::legacy($v);
+            $cid=(int)$user['company_id'];$v=self::actionVersion($db,$user,$version,null);self::mutable($v);QuoteVs2Repository::legacy($v);
             if(self::q($db,'SELECT 1 FROM quote_sent_bundles WHERE quote_version_id=?',[$version])->fetchColumn())throw new DomainException('Sent bundle is immutable');
             $segments=self::guestSegments($v);$total=$segments['total_guests'];$pay=$segments['paying_pax'];$foc=$segments['foc'];
             if($total<1||$pay<1||$pay+$foc>$total)throw new InvalidArgumentException('Correct total guests, paying pax and FOC first');
@@ -193,6 +194,7 @@ final class QuoteOptions {
     }
     private static function actionVersion(PDO $db,array $u,int $version,?int $expected): array {
         $v=self::version($db,(int)$u['company_id'],$version);
+        InquiryLifecycle::quote($db,(int)$u['company_id'],(int)$v['quote_id']);
         return QuoteVs2Repository::engine($v)==='VS2_1'?QuoteVs2Repository::lock($db,(int)$u['company_id'],$version,$expected):self::version($db,(int)$u['company_id'],$version,true);
     }
     public static function confirmation(PDO $db,array $user,int $version): array {

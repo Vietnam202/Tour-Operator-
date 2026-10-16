@@ -14,7 +14,7 @@ final class RateEngine {
             FROM rates r JOIN rate_versions rv ON rv.rate_id=r.id JOIN suppliers s ON s.id=r.supplier_id AND s.company_id=r.company_id
             WHERE r.company_id=? AND r.status='ACTIVE' AND s.status='ACTIVE' AND rv.approval_status='APPROVED'
             AND r.category=? AND (r.destination IS NULL OR r.destination='' OR LOWER(r.destination)=LOWER(?))
-            AND (r.market IS NULL OR r.market='' OR LOWER(r.market)=LOWER(?))
+            AND (r.market IS NULL OR r.market='' OR UPPER(r.market)='ALL' OR LOWER(r.market)=LOWER(?))
             AND (r.min_pax IS NULL OR r.min_pax<=?) AND (r.max_pax IS NULL OR r.max_pax>=?)
             AND (rv.valid_from IS NULL OR rv.valid_from<=?) AND (rv.valid_to IS NULL OR rv.valid_to>=?)
             AND (rv.booking_valid_from IS NULL OR rv.booking_valid_from<=?) AND (rv.booking_valid_to IS NULL OR rv.booking_valid_to>=?)

@@ -2,19 +2,37 @@
  'use strict';
  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  window.VTAB2CStudio=async function(o){
-  const {root,can,modal,toast}=o;const api=window.VTA_PREVIEW?{request:(route,opt)=>window.VTAB2CDemo.handle(o.api,route,opt)}:o.api;let ticket=0,creating=false;const owner='b2c-'+crypto.randomUUID();root.dataset.b2cInstance=owner;const back=()=>{ticket++;delete root.dataset.b2cInstance;return o.onBack();};
+  const {root,can,modal,toast}=o;const api=window.VTA_PREVIEW?{request:(route,opt)=>window.VTAB2CDemo.handle(o.api,route,opt)}:o.api;let ticket=0,creating=false;const errorText=e=>e?.message||'Không tải được dữ liệu. Vui lòng thử lại.';const owner='b2c-'+crypto.randomUUID();root.dataset.b2cInstance=owner;const back=()=>{ticket++;delete root.dataset.b2cInstance;return o.onBack();};
   const alive=()=>root.isConnected&&root.dataset.view==='product'&&root.dataset.b2cInstance===owner;
   async function load(){if(!alive())return;const at=++ticket;root.innerHTML='<div class="page tour-library"><h1>Kho chương trình B2C</h1><p role="status">Đang tải…</p></div>';try{
    const r=await api.request('b2c');if(!alive()||at!==ticket)return;
-root.innerHTML='<div class="page tour-library" data-no-translate><header class="tl-heading"><div><h1>Kho chương trình B2C</h1><p>'+(window.VTA_PREVIEW?'PREVIEW · Dữ liệu mô phỏng, mất khi tải lại. ':'')+'Bản biên tập riêng từ Master Tour · Giá khách cần báo giá được duyệt</p></div><div class="tl-head-actions"><button class="btn" data-master>← Kho Master</button>'+(can('b2c.edit')?'<button class="btn primary" data-create>Nhân bản từ Master</button>':'')+'</div></header><div class="tl-tabs"><button class="btn" data-master-tab>Master</button><button class="btn primary" aria-current="page">B2C</button></div><div class="tl-grid">'+r.items.map(p=>'<article class="tl-card"><div class="tl-card-body"><strong>'+esc(p.title)+'</strong><p>'+esc(p.destination)+'</p><small>'+esc(p.status)+' · Revision '+Number(p.revision)+'</small></div><div class="tl-card-actions"><button class="btn" data-edit="'+p.id+'">'+(can('b2c.edit')?'Soạn thảo Word':'Xem chương trình')+'</button><button class="btn" data-actions="'+p.id+'">Duyệt / Xuất bản</button>'+(can('quote.edit')&&can('proposal.edit')?'<button class="btn" data-quote="'+p.id+'">Dùng cho báo giá</button>':'')+'</div></article>').join('')+'</div><p data-error role="alert"></p></div>';
-   root.querySelector('[data-master]').onclick=back;root.querySelector('[data-master-tab]').onclick=back;root.querySelector('[data-create]')?.addEventListener('click',create);
+   if(!Array.isArray(r?.items))throw Error('Dữ liệu kho B2C chưa đầy đủ. Vui lòng thử lại.');
+root.innerHTML='<div class="page tour-library" data-no-translate><header class="tl-heading"><div><h1>Kho chương trình B2C</h1><p>'+(window.VTA_PREVIEW?'PREVIEW · Dữ liệu mô phỏng, mất khi tải lại. ':'')+'Bản biên tập riêng từ Master Tour · Giá khách cần báo giá được duyệt</p></div><div class="tl-head-actions"><button class="btn" data-master>← Kho Master</button><button class="btn" data-refresh>Làm mới</button>'+(can('b2c.edit')?'<button class="btn primary" data-create>Nhân bản từ Master</button>':'')+'</div></header><div class="tl-tabs"><button class="btn" data-master-tab>Master</button><button class="btn primary" aria-current="page">B2C</button></div>'+(!r.items.length?'<section class="empty" role="status" data-b2c-empty><h2>Chưa có chương trình B2C</h2><p>'+(can('b2c.edit')?'Chọn “Nhân bản từ Master” để tạo chương trình B2C đầu tiên.':'Nhờ người có quyền biên tập tạo chương trình từ kho Master, sau đó chọn Làm mới.')+'</p></section>':'')+'<div class="tl-grid">'+r.items.map(p=>'<article class="tl-card"><div class="tl-card-body"><strong>'+esc(p.title)+'</strong><p>'+esc(p.destination)+'</p><small>'+esc(p.status)+' · Revision '+Number(p.revision)+'</small></div><div class="tl-card-actions"><button class="btn" data-edit="'+p.id+'">'+(can('b2c.edit')?'Soạn thảo Word':'Xem chương trình')+'</button><button class="btn" data-actions="'+p.id+'">Duyệt / Xuất bản</button>'+(can('quote.edit')&&can('proposal.edit')?'<button class="btn" data-quote="'+p.id+'">Dùng cho báo giá</button>':'')+'</div></article>').join('')+'</div></div>';
+   root.querySelector('[data-master]').onclick=back;root.querySelector('[data-master-tab]').onclick=back;root.querySelector('[data-create]')?.addEventListener('click',create);root.querySelector('[data-refresh]').onclick=load;
    root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(r.items.find(p=>p.id===Number(b.dataset.edit))));root.querySelectorAll('[data-quote]').forEach(b=>b.onclick=()=>quote(r.items.find(p=>p.id===Number(b.dataset.quote))));root.querySelectorAll('[data-actions]').forEach(b=>b.onclick=()=>actions(r.items.find(p=>p.id===Number(b.dataset.actions))));
-  }catch(e){if(alive())root.innerHTML='<div class="page"><h1>Kho B2C</h1><p role="alert">'+esc(e.message)+'</p><button class="btn" data-retry>Thử lại</button><button class="btn" data-master>← Kho Master</button></div>';root.querySelector('[data-retry]')?.addEventListener('click',load);root.querySelector('[data-master]')?.addEventListener('click',back);}}
-  async function create(){if(creating)return;creating=true;try{
-   let items=[],offset=0,total=0;do{const r=await api.request('tour-library?limit=100&offset='+offset);items.push(...r.items);total=r.total??items.length;if(!r.items.length)break;offset=items.length;}while(offset<total);
-   const m=modal('Tạo bản B2C từ Master','<form><label>Master Tour<select name="master" required>'+items.filter(p=>p.status!=='ARCHIVED').map(p=>'<option value="'+Number(p.id)+'">'+esc(p.title)+'</option>').join('')+'</select></label><p>Nội dung Master và B2B giữ nguyên. Bản mới chưa được duyệt và chưa xuất bản.</p><button class="btn primary" type="submit">Tạo bản B2C</button><p role="alert"></p></form>');let key='',master='';
-   m.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=m.querySelector('button'),id=m.querySelector('select').value;button.disabled=true;if(id!==master||!key){master=id;key=crypto.randomUUID();}try{await api.request('b2c',{method:'POST',body:{master_program_id:Number(id),creation_key:key}});m.remove();if(alive())await load();}catch(error){if(m.isConnected){m.querySelector('[role=alert]').textContent=error.message;button.disabled=false;}}};
-  }catch(e){toast(e.message,true);}finally{creating=false;}}
+  }catch(e){
+   if(!alive()||at!==ticket)return;
+   root.innerHTML='<div class="page"><h1>Kho B2C</h1><p role="alert">'+esc(errorText(e))+'</p><button class="btn" data-retry>Thử lại</button><button class="btn" data-master>← Kho Master</button></div>';
+   root.querySelector('[data-retry]').onclick=load;root.querySelector('[data-master]').onclick=back;
+  }}
+  async function create(){if(creating||!alive()||!can('b2c.edit'))return;creating=true;try{
+   let items=[],offset=0,total=0;
+   do{
+    const r=await api.request('tour-library?limit=100&offset='+offset);
+    if(!alive())return;
+    if(!Array.isArray(r?.items))throw Error('Dữ liệu kho Master chưa đầy đủ. Vui lòng thử lại.');
+    items.push(...r.items);total=Number(r.total??r.pagination?.total??items.length);
+    if(!Number.isFinite(total)||total<0)throw Error('Số chương trình Master trả về chưa hợp lệ.');
+    if(!r.items.length)break;offset=items.length;
+   }while(offset<total);
+   const choices=items.filter(p=>p.status!=='ARCHIVED');
+   if(!choices.length){
+    modal('Tạo bản B2C từ Master','<p role="status">Chưa có Master Tour khả dụng. Quay lại Kho Master để tạo hoặc nhập chương trình trước khi nhân bản sang B2C.</p>');
+    return;
+   }
+   const m=modal('Tạo bản B2C từ Master','<form><label>Master Tour<select name="master" required>'+choices.map(p=>'<option value="'+Number(p.id)+'">'+esc(p.title)+'</option>').join('')+'</select></label><p>Nội dung Master và B2B giữ nguyên. Bản mới chưa được duyệt và chưa xuất bản.</p><button class="btn primary" type="submit">Tạo bản B2C</button><p role="alert"></p></form>');let key='',master='';
+   m.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=m.querySelector('button'),id=m.querySelector('select').value;button.disabled=true;if(id!==master||!key){master=id;key=crypto.randomUUID();}try{await api.request('b2c',{method:'POST',body:{master_program_id:Number(id),creation_key:key}});m.remove();if(alive())await load();}catch(error){if(m.isConnected){m.querySelector('[role=alert]').textContent=errorText(error);button.disabled=false;}}};
+  }catch(e){if(alive())toast(errorText(e),true);}finally{creating=false;}}
   async function edit(p){try{await window.mountVisualProposal(root,{api,can,modal,toast,quoteData:{quote:{id:0},version:{id:p.id,version_status:'DRAFT'}},b2cProgram:p,canEdit:can('b2c.edit'),onBack:load});}catch(e){toast(e.message,true);await load();}}
   async function quote(p){try{
    const r=await api.request('quotes');const choices=r.items.filter(q=>['DRAFT','WORKING'].includes(q.version_status||q.status));
