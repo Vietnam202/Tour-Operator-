@@ -110,7 +110,8 @@ final class MarketingShareBooking {
             $form='<p role="status">Online enquiry is temporarily unavailable. Please contact Vietnam Travel Advisor directly.</p>';
         }
         $html=str_replace('</style>',''.self::formCss().'</style>',$html);
-        $html=str_replace('</main>','</main>'.$form,$html);
+        if(!str_contains($form,'<form'))$html=str_replace('<a class="vta-cta-anchor" href="#book-tour">Request Booking ↗</a>','',$html);
+        $html=str_replace('</main>',$form.'</main>',$html);
         header('Content-Type: text/html; charset=utf-8');
         echo $html;
         exit;
