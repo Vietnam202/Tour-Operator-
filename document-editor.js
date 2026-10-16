@@ -52,6 +52,10 @@
   const q=s=>host.querySelector(s),notice=msg=>{if(q('[data-wd-notice]'))q('[data-wd-notice]').textContent=msg;},status=msg=>{if(q('[data-wd-status]'))q('[data-wd-status]').textContent=msg;};
   if(hasLegacy&&!stored&&editable)notice('Blank document. Existing proposal data is available under Insert → Existing itinerary / proposal.');
   if(hasLegacy&&!stored&&!editable)notice('Existing sent proposal is available under Export → Preview. Saved snapshots remain unchanged.');
+  if(libraryProgram&&!canEdit&&!ctx.immutable&&version.version_status!=='SUPERSEDED'&&library?.manage(can)){
+   status('Xem trước · '+version.version_status);
+   notice('Đang xem trước chương trình. Quay lại Kho chương trình và chọn “Mở & sửa” để chỉnh sửa.');
+  }
   if(!window.VtaDocumentEngine)throw Error('Document editor engine failed to load. Refresh and retry.');
   const linkedIds=()=>links.map(l=>Number(l.asset_id));
   const editor=window.VtaDocumentEngine.create(q('[data-wd-surface]'),{content:stored?.content||blank(),editable,autofocus:editable?'start':false,editorProps:{attributes:{'aria-label':'Document content',role:'textbox','aria-multiline':'true'},transformPastedHTML:html=>sanitizeHTML(html,linkedIds(),notice),handlePaste:(view,event)=>{const images=[...(event.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(!images.length)return false;event.preventDefault();uploadFiles(images).catch(error);return true;}},onUpdate:()=>changed(),onSelectionUpdate:()=>toolbar()});

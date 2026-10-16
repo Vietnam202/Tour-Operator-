@@ -74,9 +74,9 @@ function shell(body){if(!alive())return;if(root.__vtpsAbort)root.__vtpsAbort.abo
     const statusClass=p.status==='ARCHIVED'?'archived':p.status==='DRAFT'?'draft':'active';
     const manage=allowedManage()&&p.status!=='ARCHIVED',quote=p.status!=='ARCHIVED'&&can('quote.edit');
     return '<article class="tl-card" data-tl-card="'+id+'">'+
-      '<button class="tl-card-open" data-tl-open="'+id+'">'+
-        '<span class="tl-cover tl-cover--'+v.theme+'"><span class="tl-cover-icon" aria-hidden="true">'+v.icon+'</span><span class="tl-cover-duration">'+safe(days)+' ngày</span><span class="tl-cover-status tl-cover-status--'+statusClass+'">'+status+'</span></span>'+
-        '<span class="tl-card-body"><strong>'+safe(p.title)+'</strong><span class="tl-card-destination">📍 '+safe(p.destination||'Chưa ghi điểm đến')+'</span><small class="tl-card-language">'+safe(p.language||'vi').toUpperCase()+'</small></span>'+
+      '<button class="tl-card-open" data-tl-open="'+id+'" aria-label="Xem trước: '+safe(p.title)+'">'+
+        '<span class="tl-cover tl-cover--'+v.theme+'"><span class="tl-cover-icon" aria-hidden="true">'+v.icon+'</span><span class="tl-cover-duration">'+(days>0?safe(days)+' ngày':'Chưa rõ số ngày')+'</span><span class="tl-cover-status tl-cover-status--'+statusClass+'">'+status+'</span></span>'+
+        '<span class="tl-card-body"><strong>'+safe(p.title)+'</strong><span class="tl-card-destination">📍 '+safe(p.destination||'Chưa ghi điểm đến')+'</span><small class="tl-card-language">'+safe(p.language||'vi').toUpperCase()+' · Xem trước</small></span>'+
       '</button>'+
       '<p class="tl-source">'+safe(sourceName(p))+'</p>'+
       '<div class="tl-tags">'+array(p.tags).slice(0,4).map(t=>'<span>'+safe(t)+'</span>').join('')+'</div>'+

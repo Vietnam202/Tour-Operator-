@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/ScheduleImport.php';
+require_once __DIR__.'/InquiryLifecycle.php';
 final class QuoteCostItems {
  private static function q(PDO $db,string $sql,array $args=[]): PDOStatement {$s=$db->prepare($sql);$s->execute($args);return $s;}
  public static function defaultPax(array $v,string $basis='PAYING_PAX'): float {
@@ -9,6 +10,7 @@ final class QuoteCostItems {
  }
  public static function write(PDO $db,array $u,int $version,array $body,?int $delete=null): array {
   $own=!$db->inTransaction();if($own)$db->beginTransaction();try{
+   InquiryLifecycle::version($db,(int)$u['company_id'],$version);
    $v=QuoteOptions::version($db,(int)$u['company_id'],$version,true);QuoteVs2Repository::legacy($v);
    if(in_array($v['version_status'],['SENT','CONFIRMED','SUPERSEDED'],true))throw new DomainException('Issued version is immutable');
    if(self::q($db,'SELECT 1 FROM quote_options WHERE quote_version_id=? LIMIT 1',[$version])->fetchColumn())throw new DomainException('Edit the selected 3*/4*/5* option costs for this quote');
@@ -55,7 +57,7 @@ final class QuoteCostItems {
   $db->beginTransaction();try{$ids=[];foreach($items as $item){if(!is_array($item))throw new InvalidArgumentException('Invalid cost row');unset($item['_copied']);$out=self::write($db,$u,$version,$item);$ids[]=$out['id'];}$db->commit();return ['ids'=>$ids,'pricing'=>$out['pricing']];}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
  }
  public static function duplicate(PDO $db,array $u,int $version,int $id): array {
-  $db->beginTransaction();try{$v=QuoteOptions::version($db,(int)$u['company_id'],$version,true);$row=self::q($db,'SELECT * FROM quote_cost_items WHERE id=? AND quote_version_id=?',[$id,$version])->fetch();if(!$row)throw new OutOfBoundsException('Cost item not found');
+  $db->beginTransaction();try{InquiryLifecycle::version($db,(int)$u['company_id'],$version);$v=QuoteOptions::version($db,(int)$u['company_id'],$version,true);$row=self::q($db,'SELECT * FROM quote_cost_items WHERE id=? AND quote_version_id=?',[$id,$version])->fetch();if(!$row)throw new OutOfBoundsException('Cost item not found');
    unset($row['id']);$row['rate_version_id']=null;$row['_copied']=true;$row['notes']='Copied cost; review current travel dates and rates.';$out=self::write($db,$u,$version,$row);$db->commit();return $out;
   }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
  }

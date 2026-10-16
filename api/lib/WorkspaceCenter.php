@@ -45,7 +45,7 @@ final class WorkspaceCenter {
             'base'=>'r.company_id=?','args'=>[$cid],'order'=>'r.created_at DESC,r.id DESC'];
         $inquiry=['permission'=>'sales.view','kind'=>'inquiry','from'=>'inquiries i JOIN trips t ON t.id=i.trip_id AND t.company_id=i.company_id LEFT JOIN users u ON u.id=t.sales_owner_id AND u.company_id=i.company_id',
             'select'=>'i.id,i.inquiry_ref ref,t.title,t.lead_contact_name contact,i.status,u.full_name owner_name,i.next_action_due due_at,i.created_at event_date',
-            'base'=>'i.company_id=?','args'=>[$cid],'order'=>'i.next_action_due ASC,i.id ASC'];
+            'base'=>'i.company_id=? AND i.deleted_at IS NULL','args'=>[$cid],'order'=>'i.next_action_due ASC,i.id ASC'];
         $quote=['permission'=>'sales.view','kind'=>'quote','from'=>'quotes q JOIN quote_versions v ON v.quote_id=q.id AND v.version_no=q.current_version_no JOIN trips t ON t.id=q.trip_id AND t.company_id=q.company_id LEFT JOIN users u ON u.id=t.sales_owner_id AND u.company_id=q.company_id',
             'select'=>'q.id,q.quote_ref ref,v.tour_name title,t.lead_contact_name contact,q.status,u.full_name owner_name,NULL due_at,v.sent_at event_date',
             'base'=>'q.company_id=?','args'=>[$cid],'order'=>'q.updated_at DESC,q.id DESC'];
@@ -92,7 +92,7 @@ final class WorkspaceCenter {
         if($p['lead.view'])$out['metrics']['marketing_pending']=self::count($db,'marketing_content m',"m.company_id=? AND m.status='PENDING'",[$cid]);
         $specs=self::specs($cid,$clock);
         if($p['lead.view'])$out['metrics']['new_leads']=self::count($db,$specs['new_leads']['from'],$specs['new_leads']['where'],$specs['new_leads']['args']);
-        $sales=$specs['followup_today'];$sales['where']="i.company_id=? AND i.status NOT IN ('CONFIRMED','LOST','CANCELLED') AND i.next_action_due<?";$sales['args']=[$cid,$d['end']];
+        $sales=$specs['followup_today'];$sales['where']="i.company_id=? AND i.deleted_at IS NULL AND i.status NOT IN ('CONFIRMED','LOST','CANCELLED') AND i.next_action_due<?";$sales['args']=[$cid,$d['end']];
         $out['attention']['sales']=self::queue($db,$sales,$p['sales.view'],8,0);$out['metrics']['sales_followups_due']=$out['attention']['sales']['total'];
         $opsActive="b.operations_status NOT IN ('OPERATION_COMPLETED','COMPLETED','CANCELLED')";
         if($p['operations.view']){

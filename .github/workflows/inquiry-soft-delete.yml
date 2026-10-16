@@ -1,0 +1,60 @@
+name: VIE-15 Inquiry Trash
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'api/lib/CoreOS.php'
+      - 'api/lib/WorkspaceCenter.php'
+      - 'api/lib/InquiryLifecycle.php'
+      - 'api/lib/QuoteOptions.php'
+      - 'api/lib/QuoteVs2.php'
+      - 'api/lib/QuoteCostItems.php'
+      - 'api/lib/QuoteSmartCosting.php'
+      - 'api/lib/QuoteReuse.php'
+      - 'api/migrations/049_inquiry_soft_delete.sql'
+      - 'api/migrations/050_inquiry_lifecycle_version.sql'
+      - 'tests/inquiry-soft-delete-ui.cjs'
+      - 'tests/inquiry-soft-delete-http.cjs'
+      - 'tests/inquiry-soft-delete-fixture.php'
+      - '.github/workflows/inquiry-soft-delete.yml'
+  workflow_dispatch:
+
+jobs:
+  inquiry-trash-contract:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: fixture_only_ci
+        ports:
+          - 33317:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -u root -pfixture_only_ci"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql
+      - name: UI and contract tests
+        run: node --test tests/inquiry-soft-delete-ui.cjs
+      - name: PHP syntax checks
+        run: |
+          php -l api/lib/CoreOS.php
+          php -l api/lib/WorkspaceCenter.php
+          php -l api/lib/InquiryLifecycle.php
+          php -l api/lib/QuoteOptions.php
+          php -l api/lib/QuoteVs2.php
+          php -l api/lib/QuoteCostItems.php
+          php -l api/lib/QuoteSmartCosting.php
+          php -l api/lib/QuoteReuse.php
+      - name: MariaDB lifecycle HTTP checks
+        env:
+          VTA_TEST_DB_PASSWORD: fixture_only_ci
+          VTA_TEST_DB_PORT: '33317'
+        run: node tests/inquiry-soft-delete-http.cjs

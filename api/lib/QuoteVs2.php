@@ -10,6 +10,7 @@ require_once __DIR__.'/Vs2LineEditor.php';
 require_once __DIR__.'/QuoteVs2Validator.php';
 require_once __DIR__.'/Vs2Snapshots.php';
 require_once __DIR__.'/QuoteVs2Projection.php';
+require_once __DIR__.'/InquiryLifecycle.php';
 
 /** Extension of the existing dispatcher; no independent quote lifecycle. */
 final class QuoteVs2 {
@@ -31,7 +32,9 @@ final class QuoteVs2 {
         return ['schema'=>'VS2_1','costing_revision'=>(int)$v['costing_revision'],'sent_content_hash'=>$sent?:null,'items'=>$variants,'supplier_choices'=>$suppliers,'rate_choices'=>$rates];
     }
     public static function mutate(PDO $db,array $u,int $version,array $body,callable $fn,string $event): array {
-        return QuoteVs2Repository::atomic($db,function()use($db,$u,$version,$body,$fn,$event){$v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$version,QuoteVs2Repository::expected($body));QuoteVs2Repository::mutable($db,$v);if(QuoteVs2Repository::engine($v)!=='VS2_1')throw new DomainException('ACTIVATE_SMART_COSTING');$out=$fn($v);QuoteVs2Repository::finish($db,$v,$u,$event,$out);return $out+['costing_revision'=>(int)$v['costing_revision']+1];});
+        return QuoteVs2Repository::atomic($db,function()use($db,$u,$version,$body,$fn,$event){
+            InquiryLifecycle::version($db,(int)$u['company_id'],$version);
+            $v=QuoteVs2Repository::lock($db,(int)$u['company_id'],$version,QuoteVs2Repository::expected($body));QuoteVs2Repository::mutable($db,$v);if(QuoteVs2Repository::engine($v)!=='VS2_1')throw new DomainException('ACTIVATE_SMART_COSTING');$out=$fn($v);QuoteVs2Repository::finish($db,$v,$u,$event,$out);return $out+['costing_revision'=>(int)$v['costing_revision']+1];});
     }
     /** Spreadsheet commands compose existing writers; arithmetic and lifecycle stay in VS2.1. */
     public static function sheet(PDO $db,array $u,array $v,array $b): array {
