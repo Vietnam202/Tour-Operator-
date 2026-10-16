@@ -339,11 +339,11 @@ html{scroll-behavior:smooth}body{margin:0;background:#eaf0f4;font:14px/1.58 syst
 <script id="partner-state" type="application/json">{}</script>
 <script>(function(){'use strict';
 const $=id=>document.getElementById(id);
-const DEFAULT={agency:'',tagline:'',email:'',phone:'',whatsapp:'',website:'',address:'',logo:'',currency:'USD',price3:'',price4:'',price5:'',single3:'',single4:'',single5:'',expiry:'',note:'',ref:''};
-const fields=['agency','tagline','email','phone','whatsapp','website','address','currency','price3','price4','price5','single3','single4','single5','expiry','note','ref'];
+const DEFAULT={agency:'',tagline:'',email:'',phone:'',whatsapp:'',website:'',address:'',logo:'',currency:'USD',price3:'',price4:'',price5:'',single3:'',single4:'',single5:'',expiry:'',note:'',ref:'',layout:'b2b',cover:'',dayPhotos:{}};
+const fields=['agency','tagline','email','phone','whatsapp','website','address','currency','price3','price4','price5','single3','single4','single5','expiry','note','ref','layout'];
 let state={...DEFAULT};
 const stored=$('partner-state');
-try{const v=JSON.parse(stored.textContent||'{}');if(v&&typeof v==='object'){for(const key of Object.keys(DEFAULT))if(typeof v[key]==='string')state[key]=v[key].slice(0,key==='logo'?1900000:2000)}}catch(err){$('partner-status').textContent='Could not restore edits. Please enter your details again.'}
+try{const v=JSON.parse(stored.textContent||'{}');if(v&&typeof v==='object'){for(const key of Object.keys(DEFAULT))if(typeof v[key]==='string')state[key]=v[key].slice(0,['logo','cover'].includes(key)?1900000:2000);else if(key==='dayPhotos'&&v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){for(const [d,uri] of Object.entries(v[key]).slice(0,60))if(/^\d{1,2}$/.test(d)&&typeof uri==='string'&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(uri)&&uri.length<1200000)state.dayPhotos[d]=uri;}}}catch(err){$('partner-status').textContent='Could not restore edits. Please enter your details again.'}
 function safe(value){return String(value||'').trim()}
 function cur(){return state.currency||'USD'}
 function numberText(v){if(!v)return 'Price on request';let n=Number(v);if(!Number.isFinite(n)||n<=0||n>9999999)return 'Price on request';return new Intl.NumberFormat('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}).format(n)+' '+cur();}
@@ -368,8 +368,68 @@ function refresh(){
  $('partner-quote-notes').textContent=safe(state.note)||'Hotels, cruises, transfers, admission and operating conditions are subject to reconfirmation.';
  $('partner-reference').textContent=safe(state.ref)||'PARTNER-TOUR';
  logoRender();
+ applyLayout();
  updateReady();
 }
+
+/* Four source-equivalent template views use the same live nodes. Price/contact never reset on layout switch. */
+const LAYOUTS={detailed:'Professional Detailed',brochure:'Photo-rich Brochure',quick:'Quick Itinerary',b2b:'B2B Tour Proposal'};
+function selectedLayout(){return Object.hasOwn(LAYOUTS,state.layout)?state.layout:'b2b';}
+function applyLayout(){
+ const article=document.querySelector('#partner-print-area .vta-document');
+ if(!article)return;
+ const mode=selectedLayout();
+ article.classList.remove('theme-detailed','theme-brochure','theme-quick','theme-b2b');
+ article.classList.add('theme-'+mode);
+ article.setAttribute('aria-label',LAYOUTS[mode]);
+ article.setAttribute('data-active-template',mode);
+ const kicker=article.querySelector('.vta-b2b-title .vta-kicker');
+ if(kicker)kicker.textContent={detailed:'PROFESSIONAL DETAILED',brochure:'PHOTO-RICH BROCHURE',quick:'QUICK ITINERARY',b2b:'TRAVEL PARTNER PROPOSAL'}[mode];
+ const heading=article.querySelector('.vta-b2b-program>h2');
+ if(heading)heading.textContent=mode==='quick'?'Itinerary at a glance':'Detailed itinerary';
+ const title=article.querySelector('.vta-b2b-title');
+ if(title)title.style.backgroundImage=mode==='brochure'&&/^data:image\/(?:jpeg|png|webp);base64,/.test(state.cover)
+     ?'linear-gradient(0deg,rgba(7,32,47,.9),rgba(7,32,47,.15)),url("'+state.cover+'")':'';
+ const photos=article.querySelectorAll('[data-v67=days] .vta-b2b-day');
+ for(let i=0;i<photos.length;i++){
+   let pic=photos[i].querySelector('.vta-day-photo');
+   if(!pic){pic=document.createElement('img');pic.className='vta-day-photo';pic.loading='lazy';pic.alt='Travel photograph for day '+(i+1);pic.decoding='async';const d=photos[i].querySelector('div');if(d)d.insertBefore(pic,d.querySelector('p'));}
+   const src=state.dayPhotos[String(i+1)]||'';
+   if(/^data:image\/(?:jpeg|png|webp);base64,/.test(src)){pic.src=src;pic.hidden=false;}
+   else{pic.removeAttribute('src');pic.hidden=true;}
+ }
+ const modeSelect=$('in-layout');
+ if(modeSelect&&modeSelect.value!==mode)modeSelect.value=mode;
+}
+async function imageToData(file,maxW,maxH,maxLen){
+ if(!file||!/^image\/(?:jpeg|png|webp)$/.test(file.type)||file.size>3*1024*1024||file.size===0)throw Error('Choose a JPEG, PNG or WebP under 3 MB.');
+ const img=await createImageBitmap(file);
+ try{
+   if(img.width*img.height>16000000)throw Error('Image exceeds 16 MP limit.');
+   const scale=Math.min(1,maxW/img.width,maxH/img.height),cv=document.createElement('canvas');
+   cv.width=Math.max(1,Math.round(img.width*scale));cv.height=Math.max(1,Math.round(img.height*scale));
+   const g=cv.getContext('2d');if(!g)throw Error('Canvas not supported');
+   g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(img,0,0,cv.width,cv.height);
+   const encoded=cv.toDataURL('image/jpeg',.79);
+   if(encoded.length>maxLen)throw Error('Processed image is too large.');
+   return encoded;
+ }finally{if(img.close)img.close();}
+}
+async function photoUpload(file,day){
+ if(!file)return;
+ if(!$('in-media-rights').checked){status('Please confirm image usage rights before importing a photograph.');return;}
+ try{
+   const data=await imageToData(file,day?1040:1520,day?720:980,day?1200000:1900000);
+   if(day){if(!/^\d{1,2}$/.test(String(day))||!document.querySelector('[data-v67=days] .vta-b2b-day:nth-child('+Number(day)+')'))throw Error('Select a valid day');state.dayPhotos[String(day)]=data;}
+   else{state.cover=data;}
+   refresh();status('Photo applied locally; no media was uploaded to VTA servers.');
+ }catch(e){status('Photo could not be applied: '+e.message);}
+}
+$('in-cover').addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';photoUpload(file,null);});
+$('in-day-photo').addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';const day=$('in-photo-day').value;if(!day){status('Choose a tour day first');return;}photoUpload(file,day);});
+$('partner-clear-cover').addEventListener('click',()=>{state.cover='';refresh();status('Cover removed from local edition.');});
+$('partner-clear-day').addEventListener('click',()=>{const day=$('in-photo-day').value;if(!day){status('Choose a day to remove its photo.');return;}delete state.dayPhotos[day];refresh();status('Day photo removed.');});
+
 function updateReady(){const ready=Boolean(safe(state.agency)&& (safe(state.email)||safe(state.phone)||safe(state.whatsapp)));
  $('partner-print-btn').disabled=!ready;
  $('partner-save-btn').disabled=!ready;
@@ -409,8 +469,8 @@ $('partner-save-btn').addEventListener('click',()=>{
  a.href=u;a.download='B2B_Partner_Edition_Editable.html';a.click();setTimeout(()=>URL.revokeObjectURL(u),1800);
  status('Editable HTML saved. Send this partner edition to your agency team. Use Export PDF for customer delivery.');
 });
-$('partner-reset-btn').addEventListener('click',()=>{if(!confirm('Clear all agency edits (logo, contact, prices) from this local copy?'))return;state={...DEFAULT};for(const name of fields){const input=$('in-'+name);if(input)input.value=state[name];}refresh();status('Partner edits cleared; the itinerary is unchanged.');});
-window.VTA67PartnerEdition=Object.freeze({preload(values){for(const key of Object.keys(DEFAULT)){if(typeof values[key]==='string'){state[key]=values[key].slice(0,key==='logo'?1900000:2000);const input=$('in-'+key);if(input)input.value=state[key];}}refresh();}});
+$('partner-reset-btn').addEventListener('click',()=>{if(!confirm('Clear all agency edits (logo, contact, prices) from this local copy?'))return;state={...DEFAULT,dayPhotos:{}};for(const name of fields){const input=$('in-'+name);if(input)input.value=state[name];}refresh();status('Partner edits cleared; the itinerary is unchanged.');});
+window.VTA67PartnerEdition=Object.freeze({refresh,preload(values){for(const key of Object.keys(DEFAULT)){if(typeof values[key]==='string'){state[key]=values[key].slice(0,key==='logo'?1900000:2000);const input=$('in-'+key);if(input)input.value=state[key];}}refresh();}});
 refresh();})();</script>
 <script id="vta67-loader">
 (async()=>{
