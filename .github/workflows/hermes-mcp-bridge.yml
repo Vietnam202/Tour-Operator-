@@ -24,3 +24,17 @@ jobs:
         run: python3 -m py_compile integrations/hermes/vta_mcp_server.py
       - name: MCP and session security tests
         run: python3 -m unittest discover -s integrations/hermes -p 'test_*.py' -v
+
+      - name: Validate PowerShell launcher and installer syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem integrations/hermes/windows -Filter '*.ps1'
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error $_.Message }
+              exit 1
+            }
+          }
