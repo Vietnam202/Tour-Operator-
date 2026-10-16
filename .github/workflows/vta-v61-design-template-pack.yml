@@ -1,0 +1,24 @@
+name: RC6.2 V6.1 Design Template Pack QA
+on:
+  pull_request:
+    paths:
+      - 'design-templates/v6.1/**'
+      - '.github/workflows/vta-v61-design-template-pack.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  templates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Four template JavaScript syntax
+        run: |
+          node --check design-templates/v6.1/design-templates.js
+          node --check design-templates/v6.1/sample-data.js
+          node --check design-templates/v6.1/tests/validate-templates.cjs
+      - name: Rendering / XSS / complete itinerary tests
+        run: node design-templates/v6.1/tests/validate-templates.cjs
