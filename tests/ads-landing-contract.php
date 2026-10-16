@@ -27,7 +27,7 @@ $mal=$s;$mal['title']='<script>alert("oops")</script>';
 $out=AdsLandingPresentation::html($mal,$landing,'brochure',$csrf,$nonce);
 chk(!str_contains($out,'<script>alert("oops")</script>')&&str_contains($out,'&lt;script&gt;'),'XSS escaping');
 try{AdsLandingPresentation::html([...$s,'pricing'=>'NET'],$landing,'quick',$csrf,$nonce);throw new RuntimeException('unsafe snapshot accepted');}catch(DomainException $e){chk(true,'NET publication fails closed');}
-try{AdsLandingPresentation::html(['schema'=>'OTHER'],'detailed','quick',$csrf,$nonce);throw new RuntimeException('unreviewed content accepted');}catch(Throwable $e){chk(true,'unapproved content fails closed');}
+try{AdsLandingPresentation::html(['schema'=>'OTHER'],$landing,'quick',$csrf,$nonce);throw new RuntimeException('unreviewed content accepted');}catch(Throwable $e){chk(true,'unapproved content fails closed');}
 chk(AdsLandingPages::slug('vietnam-7d6n-india')==='vietnam-7d6n-india','public slug accepted');
 foreach(['VietNam','a b','https://evil.test','x','a/b'] as $bad){try{AdsLandingPages::slug($bad);throw new RuntimeException('bad slug accepted');}catch(InvalidArgumentException $e){}}
 chk(true,'invalid slug fails closed');
