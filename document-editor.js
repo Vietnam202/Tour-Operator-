@@ -59,7 +59,9 @@
     const target=q('[data-v6-outline]');if(!target||disposed)return;
     target.replaceChildren();
     const headings=[];
-    editor.state.doc.descendants((node,pos)=>{
+    const doc=editor?.state?.doc;
+    if(!doc||typeof doc.descendants!=='function'){const info=document.createElement('p');info.textContent='Mục lục hiển thị khi tài liệu đã sẵn sàng.';target.append(info);return;}
+    doc.descendants((node,pos)=>{
       if(node.type?.name==='heading')headings.push({title:node.textContent||'Tiêu đề',level:node.attrs.level||2,pos});
     });
     if(!headings.length){const empty=document.createElement('p');empty.textContent='Thêm Heading 1/2 để tạo mục lục.';target.append(empty);return;}
