@@ -38,3 +38,13 @@ jobs:
               exit 1
             }
           }
+
+      - name: Package reviewed Windows MCP installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: vta-rc62-hermes-windows-installer
+          path: |
+            integrations/hermes/
+            !integrations/hermes/**/__pycache__/**
+          if-no-files-found: error
+          retention-days: 14
