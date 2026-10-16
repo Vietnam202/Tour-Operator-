@@ -1,0 +1,33 @@
+name: RC6.2 Public Tour Share Booking Lead QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/MarketingShareBooking.php'
+      - 'api/lib/ClientTourPresentation.php'
+      - 'api/index.php'
+      - 'api/bootstrap.php'
+      - 'tests/tour-share-booking-contract.php'
+      - 'tests/client-tour-share-layouts.php'
+      - '.github/workflows/rc62-public-tour-share-lead.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-share-lead:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax for public lead flow
+        run: |
+          php -l api/lib/MarketingShareBooking.php
+          php -l api/lib/ClientTourPresentation.php
+          php -l api/index.php
+          php -l api/bootstrap.php
+      - name: Contract regression
+        run: |
+          php tests/tour-share-booking-contract.php
+          php tests/client-tour-share-layouts.php

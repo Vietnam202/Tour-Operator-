@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const code=fs.readFileSync(path.join(root,'vta-image-cropper.js'),'utf8');
+const ctx={window:{},Blob};vm.runInNewContext(code,ctx,{filename:'vta-image-cropper.js'});
+const tool=ctx.window.VTAImageCropper;
+assert.equal(typeof tool.open,'function');assert.equal(typeof tool.calculate,'function');
+const crop=tool.calculate(1600,1200,16/9);
+assert.equal(crop.width/crop.height>1.7,true,'wide cover uses landscape dimensions');
+assert.ok(crop.drawWidth>=crop.width&&crop.drawHeight>=crop.height,'cover fit cannot leave a blank area');
+const a=tool.calculate(1000,700,1,1,.1,.9),b=tool.calculate(1000,700,1,2,.9,.1);
+assert.ok(b.drawWidth>a.drawWidth,'zoom moves crop into image not image dimensions');
+assert.ok(Number.isFinite(b.x)&&Number.isFinite(b.y));
+for(const params of [[0,500,1],[500,0,1],[5000,5000,1],[100,100,-1],[100,100,Infinity]])assert.throws(()=>tool.calculate(...params));
+tool.assertFile(new Blob(['a'],{type:'image/jpeg'}));
+tool.assertFile(new Blob(['a'],{type:'image/png'}));
+tool.assertFile(new Blob(['a'],{type:'image/webp'}));
+for(const blob of [new Blob(['x'],{type:'image/svg+xml'}),new Blob(['x'],{type:'image/gif'}),new Blob([], {type:'image/jpeg'})])assert.throws(()=>tool.assertFile(blob));
+const editor=fs.readFileSync(path.join(root,'document-editor.js'),'utf8');
+for(const marker of ["data-wd-image-replace-file","function imageCrop()","function replaceImageFile(file,prior)","vta-image-cropper.js","Edit description","Crop / Zoom","form.append('visibility','COMPANY')"])
+ assert.ok(editor.includes(marker),'missing Word editor action: '+marker);
+assert.ok(editor.includes("form.append('visibility','PERSONAL')"),'quote image visibility preserved');
+console.log('PASS image crop math, size/type guards, editor upload/replace/crop/alt wiring, company/quote isolation');

@@ -1,0 +1,25 @@
+name: RC6.2 Tour Image Edit QA
+on:
+  pull_request:
+    paths:
+      - 'vta-image-cropper.js'
+      - 'document-editor.js'
+      - 'tests/tour-image-edit.cjs'
+      - '.github/workflows/rc62-tour-image-edit-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tour-image-edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check vta-image-cropper.js
+          node --check document-editor.js
+      - name: Image tooling contract
+        run: node tests/tour-image-edit.cjs
