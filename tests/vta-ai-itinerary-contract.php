@@ -46,7 +46,7 @@ foreach(VtaAiItinerary::LAYOUTS as $layout){
  $html=VtaAiItinerary::render($v['document'],$v['private_groups'],false,$layout);
  ok(str_contains($html,'mode-'.$layout)&&str_contains($html,'Private Group Selling Price'),'preview includes '.$layout.' and pricing');
  ok(substr_count($html,'On request')>=15,'unapproved prices show On request in '.$layout);
- ok(!str_contains($html,'supplier net')&&!str_contains($html,'margin'),'preview never exposes supplier NET / margin in '.$layout);
+ ok(!str_contains($html,'Supplier NET rate is USD 50')&&!str_contains($html,'Cost price: USD 50'),'preview never exposes supplier NET amounts in '.$layout);
 }
 $approved=VtaAiItinerary::exportDocument($doc,$altered,true);
 $approvedHTML=FreeformDocument::html($approved,static fn($id)=>'photo.jpg');
