@@ -80,7 +80,10 @@ button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wr
    const copy=asText('button','Copy URL');copy.onclick=()=>{const u=routeUrl(item.url);navigator.clipboard.writeText(u.toString()).then(()=>message('Đã sao chép link quảng cáo')).catch(()=>message('Không thể copy, hãy chọn URL và sao chép bằng tay',true));};controls.append(copy);
    if(item.status==='PUBLISHED'){
      const view=asText('button','Preview tour');view.onclick=()=>window.open(routeUrl(item.url).toString(),'_blank','noopener');controls.append(view);
-     const utm=asText('button','Copy Facebook Ads URL');utm.onclick=()=>{const u=routeUrl(item.url);u.searchParams.set('utm_source','facebook');u.searchParams.set('utm_medium','paid_social');u.searchParams.set('utm_campaign',$('campaignName').value||'vta_vietnam');navigator.clipboard.writeText(u.toString()).then(()=>message('Đã copy link có UTM'));};controls.append(utm);
+     for(const [channel,medium,label] of [['facebook','paid_social','Facebook Ads'],['google','cpc','Google Ads'],['whatsapp','social','WhatsApp']]){
+       const utm=asText('button','Copy '+label+' URL');
+       utm.onclick=()=>{try{const u=routeUrl(item.url);u.searchParams.set('utm_source',channel);u.searchParams.set('utm_medium',medium);u.searchParams.set('utm_campaign',$('campaignName').value||'vta_vietnam');navigator.clipboard.writeText(u.toString()).then(()=>message('Đã copy link '+label+' có UTM')).catch(()=>message('Không thể copy tự động',true));}catch(e){message(e.message,true);}};controls.append(utm);
+     }
      const withdraw=asText('button','Withdraw');withdraw.className='danger';withdraw.onclick=async()=>{if(!confirm('Thu hồi link này? Khách không thể gửi Lead sau khi thu hồi.'))return;try{await api('ads/landing-admin/'+item.id+'/withdraw','POST',{});message('Đã thu hồi link');await update();}catch(e){message(e.message,true);}};controls.append(withdraw);
    }
    const metrics=asText('button','Thống kê');metrics.onclick=async()=>{
