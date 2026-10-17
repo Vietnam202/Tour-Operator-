@@ -22,6 +22,7 @@ assert.equal(d.schema,'VTA_MASTER_ITINERARY_V1');
 assert(ui.includes("btn('ai-itinerary','AI Edit Itinerary'"),'Master editor must expose AI editing');
 assert(ui.includes('if(dirty||saving)throw Error('),'unsaved changes must block AI review');
 assert(html.includes('vta-ai-itinerary-editor.js?v=VIE16-AI-1'),'new module must load before editor');
+assert(fs.readFileSync('preview.html','utf8').includes('vta-ai-itinerary-editor.js?v=VIE16-AI-1'),'preview must load identical module versions');
 assert(js.includes("tour-library/'+libraryProgram.id+'/ai-edit/preview"),'preview goes to authenticated server API');
 assert(js.includes("tour-library/'+libraryProgram.id+'/ai-edit/commit"),'commit goes to audited draft API');
 assert(js.includes("creation_key:creationKey"),'commit must include idempotency key');
