@@ -1,0 +1,80 @@
+name: RC6.2 AI Itinerary Draft Review
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaAiItinerary.php'
+      - 'api/lib/TourLibrary.php'
+      - 'api/lib/TourProgramWorkspace.php'
+      - 'vta-ai-itinerary-editor.js'
+      - 'document-editor.js'
+      - 'index.html'
+      - 'tests/vta-ai-itinerary-*'
+      - '.github/workflows/rc62-ai-itinerary-review.yml'
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: PHP lint
+        run: |
+          php -l api/lib/VtaAiItinerary.php
+          php -l api/lib/TourLibrary.php
+          php -l api/lib/TourProgramWorkspace.php
+          php -l tests/vta-ai-itinerary-contract.php
+      - name: AI itinerary domain and data privacy contract
+        run: php tests/vta-ai-itinerary-contract.php
+      - name: JavaScript syntax
+        run: |
+          node --check vta-ai-itinerary-editor.js
+          node --check document-editor.js
+      - name: Existing Word editor and new AI UI contract
+        run: |
+          node tests/vta-ai-itinerary-ui.cjs
+          php tests/tour-program-workspace-unit.php
+  native-mariadb-and-exports:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ai-fixture-only
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 33319:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, gd, dom, curl, pdo_mysql, pdo_sqlite
+          coverage: none
+      - name: Preview to new Draft to real DOCX/PDF on disposable MariaDB
+        env:
+          VTA_TEST_DB_PASSWORD: ai-fixture-only
+          VTA_TEST_DB_PORT: '33319'
+          VS22_OUTPUT_DIR: ${{ runner.temp }}/vta-ai-itinerary-native
+        run: |
+          set -euo pipefail
+          mkdir -p "$VS22_OUTPUT_DIR"
+          php tests/vta-ai-itinerary-native.php | tee "$VS22_OUTPUT_DIR/native-results.log"
+      - name: Retain synthetic fixture evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vta-ai-itinerary-native-ci-fixture
+          path: |
+            ${{ runner.temp }}/vta-ai-itinerary-native/native-results.log
+          if-no-files-found: warn
+          retention-days: 14

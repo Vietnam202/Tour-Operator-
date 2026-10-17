@@ -133,7 +133,25 @@ final class TourProgramWorkspace {
         });}catch(Throwable $e){foreach($newFiles as $path)if(is_file($path))unlink($path);throw $e;}
     }
     public static function output(PDO $db,array $cfg,array $u,array $p,string $format): never {
-        $ctx=self::context($db,$u,$p);$snapshot=['quote_ref'=>'PROGRAM-'.$p['id'],'tour_name'=>$p['title'],'presentation'=>['settings'=>$ctx['settings'],'media'=>$ctx['links']]];
+        $ctx=self::context($db,$u,$p);
+        $proposal=json_decode($p['proposal_json']??'null',true)?:[];
+        $raw=$proposal['private_prices']??[];
+        if(count($raw)===5&&class_exists('VtaAiItinerary')){
+            $grid=[];$valid=true;
+            foreach($raw as $row){
+                if(!isset($row['min'],$row['max'])||(int)$row['min']!==(int)$row['max']){$valid=false;break;}
+                $grid[]=['pax'=>(int)$row['min'],'prices'=>[
+                    '3star'=>(string)($row['three']??'')!==''?(string)$row['three']:null,
+                    '4star'=>(string)($row['four']??'')!==''?(string)$row['four']:null,
+                    '5star'=>(string)($row['five']??'')!==''?(string)$row['five']:null]];
+            }
+            if($valid){
+                $grid=VtaAiItinerary::priceGrid($grid);
+                $ctx['settings']['document']=VtaAiItinerary::exportDocument(
+                    $ctx['settings']['document'],$grid,($proposal['private_prices_reviewed']??false)===true);
+            }
+        }
+        $snapshot=['quote_ref'=>'PROGRAM-'.$p['id'],'tour_name'=>$p['title'],'presentation'=>['settings'=>$ctx['settings'],'media'=>$ctx['links']]];
         $path=function($id)use($db,$cfg,$u){$a=MediaLibrary::asset($db,$u,(int)$id);$p=MediaLibrary::path($cfg,$a);if(!hash_equals($a['content_sha256'],hash_file('sha256',$p)))throw new OutOfBoundsException('Media bytes changed');return $p;};
         ProposalOutput::respond($format,$snapshot,$cfg,fn($id)=>'index.php?route=media/'.$id.'/image',$path,true);
     }
