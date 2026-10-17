@@ -58,7 +58,7 @@ final class AdsLandingPresentation {
             .'<label>Accommodation<select name="hotel_level"><option value="">To be advised</option><option value="3-star">3-star</option><option value="4-star">4-star</option><option value="5-star">5-star</option></select></label>'
             .'<label class="span2">Special requests<textarea name="message" rows="3" maxlength="3000"></textarea></label>'
             .'<label class="span2 consent"><input type="checkbox" name="consent" value="yes" required>I consent to being contacted by Vietnam Travel Advisor about this tour enquiry.</label>'
-            .'<label class="span2 consent"><input type="checkbox" name="analytics_consent" value="yes">I optionally agree to marketing measurement for this campaign. This does not affect my enquiry.</label>'
+            .'<label class="span2 consent"><input type="checkbox" name="analytics_consent" value="yes">Optional: I agree to third-party ad conversion measurement if separately enabled later. No third-party tracking is active on this page.</label>'
             .'<input tabindex="-1" aria-hidden="true" name="website" class="honeypot" autocomplete="off">'
             .'<button class="submit" type="submit">Request Booking / Get a Quote</button></form></section>';
         $hotel='<section class="info-section"><h2>Hotel &amp; Cruise Options</h2><p>Hotels and cruises will be proposed and confirmed in the final quotation.</p>'
