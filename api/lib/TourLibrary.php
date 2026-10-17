@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/TourProgramWorkspace.php';
+require_once __DIR__.'/VtaAiItinerary.php';
 
 /** Company-scoped reusable programs. Import text is data; it is never executed. */
 final class TourLibrary {
@@ -71,6 +72,10 @@ final class TourLibrary {
             'hotels'=>$hotelRows,
             'policies'=>$policy
         ];
+        if(array_key_exists('private_prices_reviewed',$raw)){
+            if(!is_bool($raw['private_prices_reviewed']))throw new InvalidArgumentException('Price review must be true or false');
+            $out['private_prices_reviewed']=$raw['private_prices_reviewed'];
+        }
         if(array_key_exists('document',$raw))$out['document']=TourProgramWorkspace::reusableDocument($raw['document']);
         if(isset($raw['duration_days'])){$duration=filter_var($raw['duration_days'],FILTER_VALIDATE_INT);if($duration===false||$duration<0||$duration>90)throw new InvalidArgumentException('Invalid program duration');$out['duration_days']=$duration;}
         return $out;
@@ -426,6 +431,16 @@ final class TourLibrary {
     public static function handle(string $route,string $method,PDO $db,array $config,array $u): void {
         if($route!=='tour-library'&&!str_starts_with($route,'tour-library/'))return;
         try {
+            if(preg_match('#^tour-library/(\d+)/ai-edit/(preview|commit)$#D',$route,$ai)){
+                if($method!=='POST')Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
+                self::permission($db,$u,true);
+                Auth::requirePermission($db,$u,'tour_library.manage');
+                $body=Http::body();
+                if(strlen(MediaLibrary::json($body))>950000)throw new InvalidArgumentException('AI JSON is too large');
+                $programId=(int)$ai[1];
+                if($ai[2]==='preview')Http::json(['ok'=>true]+VtaAiItinerary::preview($db,$u,$programId,$body));
+                Http::json(['ok'=>true]+VtaAiItinerary::commit($db,$u,$programId,$body),201);
+            }
             if($route==='tour-library/from-quote'&&$method==='POST'){
                 self::permission($db,$u,true);Auth::requirePermission($db,$u,'quote.edit');Auth::requirePermission($db,$u,'proposal.edit');
                 $b=Http::body();$version=filter_var($b['version_id']??null,FILTER_VALIDATE_INT);if(!$version||$version<1)throw new InvalidArgumentException('Select a quote version');
