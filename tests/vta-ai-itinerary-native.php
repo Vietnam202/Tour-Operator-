@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 require __DIR__.'/tour-program-workspace-native.php';
 require_once __DIR__.'/../api/lib/VtaAiItinerary.php';
+if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 
 $sourceBefore=TourProgramWorkspace::program($db,$user,$programId);
 $sourceCtx=TourProgramWorkspace::context($db,$user,$sourceBefore);
@@ -41,6 +42,7 @@ $payload=[
  'review_acknowledged'=>true
 ];
 $preview=VtaAiItinerary::preview($db,$user,$programId,$payload+['layout'=>'brochure']);
+$payload['review_token']=$preview['review_token'];
 check(($preview['changed']['document']??false)===true&&str_contains($preview['preview_html'],'mode-brochure'),
  'AI native preview displays altered rich text in brochure layout');
 check(str_contains($preview['preview_html'],'USD 250.50')&&str_contains($preview['preview_html'],'On request'),
