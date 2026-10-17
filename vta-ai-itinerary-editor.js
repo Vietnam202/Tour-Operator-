@@ -12,7 +12,7 @@ function baseDraft(ctx,editor){
  else rows=groupSizes.map(pax=>({pax,prices:{'3star':null,'4star':null,'5star':null}}));
  return {schema:'VTA_MASTER_ITINERARY_V1',source_program_id:Number(p.id),source_revision:ctx.costing_revision,
   title:p.title||'Untitled',document:{schema:'VTA_DOC_2',title:p.title||'Untitled',content:copy(editor.getJSON())},
-  days:copy(p.days||[]),private_groups:rows,currency:'USD',agent:'manual',selling_prices_reviewed:false};
+  days:(p.days||[]).map(d=>({...copy(d),notes:''})),private_groups:rows,currency:'USD',agent:'manual',selling_prices_reviewed:false};
 }
 function css(){
  if(document.getElementById('vta-ai-editor-css'))return;
@@ -45,7 +45,7 @@ async function open(input){
  '<div class="vta-ai-action"><button type="button" data-ai-preview>Validate & Preview</button><button class="light" type="button" data-ai-reset>Reset JSON</button></div>'+
  '<p data-ai-status role="status"></p><div data-ai-diff class="vta-ai-small"></div></div>'+
  '<div><label for="ai-layout">Preview layout</label><select id="ai-layout" data-ai-layout>'+Object.entries(layouts).map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join('')+'</select>'+
- '<iframe title="Draft preview" class="vta-ai-viewport" data-ai-frame sandbox=""></iframe>'+
+ '<iframe title="Draft preview" class="vta-ai-viewport" data-ai-frame sandbox="allow-same-origin"></iframe>'+
  '<label class="vta-ai-check"><input type="checkbox" data-ai-ack> I reviewed the changes, transport, meals, accommodation, supplier confirmations and pricing.</label>'+
  '<div class="vta-ai-action"><button data-ai-commit type="button" disabled>Create NEW Draft, keep source</button></div><p data-ai-result role="status"></p></div></div></div></section>';
  document.body.appendChild(mask);
