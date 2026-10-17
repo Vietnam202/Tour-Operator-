@@ -19,7 +19,7 @@ final class VtaAiItinerary {
             if($pax===false||$pax<1||$pax>1000||$pax<=$last)
                 throw new InvalidArgumentException('Private Group sizes must be unique, ascending positive integers');
             $last=$pax;$prices=$row['prices']??null;
-            if(!is_array($prices)||array_keys($prices)!==['3star','4star','5star'])
+            if(!is_array($prices)||count($prices)!==3||array_diff(['3star','4star','5star'],array_keys($prices))||array_diff(array_keys($prices),['3star','4star','5star']))
                 throw new InvalidArgumentException('Three hotel tiers are required in order');
             $values=[];
             foreach(['3star','4star','5star'] as $tier){
@@ -67,6 +67,7 @@ final class VtaAiItinerary {
         $candidate=$body['document']??null;
         if(!is_array($candidate))throw new InvalidArgumentException('Complete VTA_DOC_2 document is required');
         $document=TourProgramWorkspace::reusableDocument($candidate);
+        $document['title']=$title;
         self::stripConfidential($document);
         $sourceDocument=TourProgramWorkspace::document($source);
         if(array_diff(FreeformDocument::imageIds($document),FreeformDocument::imageIds($sourceDocument)))
@@ -82,7 +83,8 @@ final class VtaAiItinerary {
         $origDoc=$sourceDocument;
         $sameDoc=hash('sha256',MediaLibrary::json($origDoc))===hash('sha256',MediaLibrary::json($document));
         $sameDays=MediaLibrary::json(ScheduleImport::normalize($sourceData['days']))===MediaLibrary::json($days);
-        $hasChanges=!$sameDoc||!$sameDays||$title!==(string)$source['title']||$hasRates;
+        $priorRows=$sourceData['proposal']['private_prices']??[];
+        $hasChanges=!$sameDoc||!$sameDays||$title!==(string)$source['title']||$hasRates||count($priorRows)!==5;
         if(!$hasChanges)throw new DomainException('No changes detected. Edit the candidate before creating a draft.');
         $warnings=[];
         $type=(string)($sourceData['tour_type']??'');
@@ -119,7 +121,7 @@ final class VtaAiItinerary {
     public static function render(array $doc,array $grid,bool $reviewed,string $layout):string {
         if(!in_array($layout,self::LAYOUTS,true))throw new InvalidArgumentException('Unknown layout');
         $print=self::exportDocument($doc,$grid,$reviewed);
-        $body=FreeformDocument::html($print,static fn($id)=>'index.php?route=media/'.(int)$id.'/image');
+        $body=FreeformDocument::html($print,static fn($id)=>'api/index.php?route=media/'.(int)$id.'/image');
         $labels=['detailed'=>'Professional Detailed','brochure'=>'Photo-rich Brochure','quick'=>'Quick Itinerary','b2b'=>'Tour Proposal'];
         $label=htmlspecialchars($labels[$layout],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         $title=htmlspecialchars((string)$doc['title'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
@@ -166,6 +168,7 @@ final class VtaAiItinerary {
             $copy['source_text']='';
             $copy['creation_key']=$key;
             $saved=TourLibrary::save($db,$u,$copy);
+            if(!empty($saved['replayed']))return ['id'=>$saved['id'],'source_program_id'=>$sourceId,'status'=>'DRAFT','replayed'=>true,'warnings'=>$v['warnings']];
             Audit::log($db,(int)$u['company_id'],(int)$u['id'],'AI_ITINERARY_DRAFT_CREATED','tour_library',(int)$saved['id'],null,
                 ['source_program_id'=>$sourceId,'agent'=>$v['agent'],'private_group_rows'=>5,'prices_reviewed'=>$v['selling_prices_reviewed']]);
             return ['id'=>$saved['id'],'source_program_id'=>$sourceId,'status'=>'DRAFT','replayed'=>$saved['replayed']??false,
