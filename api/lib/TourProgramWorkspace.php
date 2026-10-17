@@ -141,9 +141,9 @@ final class TourProgramWorkspace {
             foreach($raw as $row){
                 if(!isset($row['min'],$row['max'])||(int)$row['min']!==(int)$row['max']){$valid=false;break;}
                 $grid[]=['pax'=>(int)$row['min'],'prices'=>[
-                    '3star'=>$row['three']!==''?(string)$row['three']:null,
-                    '4star'=>$row['four']!==''?(string)$row['four']:null,
-                    '5star'=>$row['five']!==''?(string)$row['five']:null]];
+                    '3star'=>(string)($row['three']??'')!==''?(string)$row['three']:null,
+                    '4star'=>(string)($row['four']??'')!==''?(string)$row['four']:null,
+                    '5star'=>(string)($row['five']??'')!==''?(string)$row['five']:null]];
             }
             if($valid){
                 $grid=VtaAiItinerary::priceGrid($grid);
