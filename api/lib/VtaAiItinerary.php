@@ -128,14 +128,53 @@ final class VtaAiItinerary {
         $css='*{box-sizing:border-box}body{background:#eef3f6;color:#193e54;font:15px/1.7 system-ui;margin:0}main{background:#fff;max-width:940px;margin:auto;padding:35px 42px;min-height:100vh}header{padding:35px;color:#fff;background:#133e58}h1{font-size:30px}h2{color:#115875;border-bottom:1px solid #cedde3}img{max-width:100%}table{border-collapse:collapse;width:100%;font-size:12px;display:block;overflow-x:auto}td,th{border:1px solid #cbd9df;padding:10px;text-align:left}th{background:#eaf4f5}p{overflow-wrap:anywhere}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase}.mode-brochure header{background:linear-gradient(120deg,#12334e,#2a98a1);padding:65px 35px}.mode-brochure h1,.mode-brochure h2{font-family:Georgia,serif}.mode-quick main{max-width:760px}.mode-quick header{background:#f0f6f7;color:#163d58;border-top:6px solid #157f83}.mode-quick h2{font-size:18px}.mode-b2b header{background:#193659}.mode-b2b main{border-left:5px solid #193659}@media(max-width:600px){main{padding:20px 17px}header{padding:25px 17px}h1{font-size:25px}table{font-size:11px}}';
         return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.'</title><style>'.$css.'</style></head><body class="mode-'.$layout.'"><main><header><div class="eyebrow">Vietnam Travel Advisor · '.$label.' · Unpublished DRAFT</div><h1>'.$title.'</h1><p>Subject to review and supplier confirmation</p></header>'.$body.'<p><small>Draft preview only. Rates not approved are On request. No booking confirmed.</small></p></main></body></html>';
     }
+    /**
+     * A commit is permitted only for the exact normalized proposal that the
+     * authenticated operator previewed. This is server-side session state,
+     * never a DB write, and expires after 15 minutes. Layout is excluded.
+     */
+    public static function reviewFingerprint(int $sourceId,string $revision,array $v):string {
+        return hash('sha256',MediaLibrary::json([
+            'schema'=>self::SCHEMA,'source_program_id'=>$sourceId,'source_revision'=>$revision,
+            'title'=>$v['title'],'document'=>$v['document'],'days'=>$v['days'],
+            'private_groups'=>$v['private_groups'],
+            'selling_prices_reviewed'=>$v['selling_prices_reviewed'],'agent'=>$v['agent'],
+        ]));
+    }
+    public static function issueReview(array $u,int $sourceId,string $revision,array $v):string {
+        if(session_status()!==PHP_SESSION_ACTIVE)throw new DomainException('Review session unavailable');
+        $token=bin2hex(random_bytes(24));
+        $_SESSION['vta_ai_itinerary_review']=[
+            'token_hash'=>hash('sha256',$token),
+            'fingerprint'=>self::reviewFingerprint($sourceId,$revision,$v),
+            'company_id'=>(int)$u['company_id'],'user_id'=>(int)$u['id'],
+            'source_id'=>$sourceId,'expires_at'=>time()+900,
+        ];
+        return $token;
+    }
+    public static function requireReview(array $u,int $sourceId,string $revision,array $v,$token):void {
+        $r=$_SESSION['vta_ai_itinerary_review']??null;
+        if(session_status()!==PHP_SESSION_ACTIVE||!is_array($r)||!is_string($token)
+           ||!preg_match('/^[a-f0-9]{48}$/D',$token)
+           ||($r['expires_at']??0)<time()
+           ||(int)($r['company_id']??0)!==(int)$u['company_id']
+           ||(int)($r['user_id']??0)!==(int)$u['id']
+           ||(int)($r['source_id']??0)!==$sourceId
+           ||!hash_equals((string)($r['token_hash']??''),hash('sha256',$token))
+           ||!hash_equals((string)($r['fingerprint']??''),self::reviewFingerprint($sourceId,$revision,$v)))
+            throw new DomainException('REVIEW_REQUIRED: preview this exact proposal again; the data or session changed');
+    }
     public static function preview(PDO $db,array $u,int $sourceId,array $body):array {
         $source=TourProgramWorkspace::program($db,$u,$sourceId);
         $v=self::validate($body,$source);
         TourProgramWorkspace::images($db,$u,$v['document']);
         $layout=$body['layout']??'detailed';
         $html=self::render($v['document'],$v['private_groups'],$v['selling_prices_reviewed'],(string)$layout);
+        $revision=TourProgramWorkspace::revision($source);
+        $reviewToken=self::issueReview($u,$sourceId,$revision,$v);
         return ['preview_html'=>$html,'warnings'=>$v['warnings'],'changed'=>$v['changed'],
-            'source_revision'=>TourProgramWorkspace::revision($source),'source_program_id'=>$sourceId];
+            'review_token'=>$reviewToken,'review_expires_in'=>900,
+            'source_revision'=>$revision,'source_program_id'=>$sourceId];
     }
     public static function commit(PDO $db,array $u,int $sourceId,array $body):array {
         if(($body['review_acknowledged']??false)!==true)
@@ -146,6 +185,7 @@ final class VtaAiItinerary {
         return QuoteVs2Repository::atomic($db,static function()use($db,$u,$sourceId,$body,$key):array{
             $source=TourProgramWorkspace::program($db,$u,$sourceId,true);
             $v=self::validate($body,$source);
+            self::requireReview($u,$sourceId,TourProgramWorkspace::revision($source),$v,$body['review_token']??null);
             TourProgramWorkspace::images($db,$u,$v['document']);
             $original=TourLibrary::publicProgram($source);
             $proposal=$original['proposal']??[];
