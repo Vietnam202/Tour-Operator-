@@ -207,7 +207,7 @@ final class VtaAiItinerary {
             $copy['source_url']='';
             $copy['source_text']='';
             $copy['creation_key']=$key;
-            $saved=TourLibrary::save($db,$u,$copy);
+            $saved=TourLibrary::save($db,$u,$copy,0,true);
             if(!empty($saved['replayed']))return ['id'=>$saved['id'],'source_program_id'=>$sourceId,'status'=>'DRAFT','replayed'=>true,'warnings'=>$v['warnings']];
             Audit::log($db,(int)$u['company_id'],(int)$u['id'],'AI_ITINERARY_DRAFT_CREATED','tour_library',(int)$saved['id'],null,
                 ['source_program_id'=>$sourceId,'agent'=>$v['agent'],'private_group_rows'=>5,'prices_reviewed'=>$v['selling_prices_reviewed']]);
