@@ -88,6 +88,7 @@ async function open(input){
   try{
    data=loadJson();data.layout=q('[data-ai-layout]').value;
    const result=await api.request('tour-library/'+libraryProgram.id+'/ai-edit/preview',{method:'POST',body:data});
+   if(!result.review_token)throw Error('Preview returned no review token; saving is disabled');
    lastPreview=result;frame.srcdoc=result.preview_html;
    const section=q('[data-ai-diff]');section.replaceChildren();
    const flags=result.changed||{};
@@ -105,7 +106,7 @@ async function open(input){
   if(getContext().costing_revision!==data.source_revision){setStatus('Master Tour changed; reopen the editor.',true);return}
   busy=true;q('[data-ai-commit]').disabled=true;
   try{
-   const payload={...data,review_acknowledged:true,creation_key:creationKey};delete payload.layout;
+   const payload={...data,review_acknowledged:true,creation_key:creationKey,review_token:lastPreview.review_token};delete payload.layout;
    const saved=await api.request('tour-library/'+libraryProgram.id+'/ai-edit/commit',{method:'POST',body:payload});
    q('[data-ai-result]').textContent='Created Master Tour DRAFT #'+saved.id+'. Original #'+saved.source_program_id+' remains unchanged. Open it in Tour Library.';
    setStatus('Saved new Draft. Nothing was published to B2C or Ads.');
