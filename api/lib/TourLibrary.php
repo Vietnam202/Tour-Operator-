@@ -360,14 +360,49 @@ final class TourLibrary {
         if($detail){$out['days']=$days;foreach(['included_text','excluded_text','terms_text','source_text'] as $k)$out[$k]=$r[$k]??'';$out['proposal']=json_decode($r['proposal_json']??'null',true)?:[];}
         return $out;
     }
-    public static function save(PDO $db,array $u,array $b,int $id=0): array {
+    /**
+     * Reviewed selling prices belong to the exact approved program snapshot.
+     * Generic Tour Library CRUD cannot self-approve a draft by setting a flag.
+     * Only the server-side AI preview+commit path may create an approved grid.
+     */
+    public static function priceReviewPolicy(array $data,?array $before,bool $verifiedCreation=false):array {
+        if(empty($data['proposal']['private_prices_reviewed']))return $data;
+        if($before===null){
+            if(!$verifiedCreation)$data['proposal']['private_prices_reviewed']=false;
+            return $data;
+        }
+        $old=json_decode($before['proposal_json']??'null',true)?:[];
+        if(($old['private_prices_reviewed']??false)!==true){
+            $data['proposal']['private_prices_reviewed']=false;
+            return $data;
+        }
+        foreach(['title','destination','included_text','excluded_text','terms_text'] as $key){
+            if((string)($before[$key]??'')!==(string)($data[$key]??'')){
+                $data['proposal']['private_prices_reviewed']=false;
+                return $data;
+            }
+        }
+        if(MediaLibrary::json(json_decode($before['days_json']??'[]',true)?:[])!==MediaLibrary::json($data['days']??[])){
+            $data['proposal']['private_prices_reviewed']=false;
+            return $data;
+        }
+        foreach(['document','private_prices','group_prices','hotels','tour_type','duration_days','overview','highlights','policies'] as $key){
+            if(MediaLibrary::json($old[$key]??null)!==MediaLibrary::json($data['proposal'][$key]??null)){
+                $data['proposal']['private_prices_reviewed']=false;
+                return $data;
+            }
+        }
+        return $data;
+    }
+    public static function save(PDO $db,array $u,array $b,int $id=0,bool $verifiedPriceCreation=false): array {
         $data=self::normalize($b);$company=(int)$u['company_id'];$user=(int)$u['id'];$token=$b['import_token']??'';
         if(!is_string($token)||($token!==''&&!preg_match('/^[a-f0-9]{64}$/D',$token)))throw new InvalidArgumentException('Invalid import token');
         $key=$id?'':($b['creation_key']??'');if(!is_string($key)||($key!==''&&!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key)))throw new InvalidArgumentException('Invalid creation key');
-        $digest=hash('sha256',self::json($data).$token);
         $own=!$db->inTransaction();if($own)$db->beginTransaction();try {
-            if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');if($own)$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
             $before=$id?self::program($db,$company,$id,true):null;
+            $data=self::priceReviewPolicy($data,$before,$verifiedPriceCreation);
+            $digest=hash('sha256',self::json($data).$token);
+            if($key!==''){$prior=self::q($db,'SELECT * FROM tour_library_programs WHERE company_id=? AND creation_key=? FOR UPDATE',[$company,$key])->fetch(PDO::FETCH_ASSOC);if($prior){if(!hash_equals((string)$prior['creation_hash'],$digest))throw new DomainException('This creation key was already used with different program content. Refresh and review the saved program.');if($own)$db->commit();return ['id'=>(int)$prior['id'],'program'=>self::publicProgram($prior),'replayed'=>true];}}
             if($before&&$before['status']==='ARCHIVED')throw new DomainException('Archived programs cannot be edited');
             if(!array_key_exists('proposal',$data))$data['proposal']=$before?json_decode($before['proposal_json']??'null',true):[];
             if(isset($data['proposal']['document']))TourProgramWorkspace::images($db,$u,$data['proposal']['document']);
