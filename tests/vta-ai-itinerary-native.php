@@ -6,9 +6,9 @@ declare(strict_types=1);
  * Runs ONLY on a freshly created disposable MariaDB fixture inherited from
  * tour-program-workspace-native.php. NEVER run on an existing staging DB.
  */
+if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 require __DIR__.'/tour-program-workspace-native.php';
 require_once __DIR__.'/../api/lib/VtaAiItinerary.php';
-if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 
 $sourceBefore=TourProgramWorkspace::program($db,$user,$programId);
 $sourceCtx=TourProgramWorkspace::context($db,$user,$sourceBefore);
