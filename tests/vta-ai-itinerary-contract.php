@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/../api/lib/ScheduleImport.php';
 require_once __DIR__.'/../api/lib/TourLibrary.php';
 if(session_status()!==PHP_SESSION_ACTIVE)session_start();
+if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 
 function ok(bool $condition,string $message):void {
  if(!$condition)throw new RuntimeException('FAILED '.$message);
@@ -100,4 +101,53 @@ rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandi
 VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,$newToken);
 ok(true,'latest preview token stays valid');
 
+// Exact-proposal review token is bound to current company, user, revision and validated content.
+$operator=['company_id'=>4,'id'=>18];
+$revision=TourProgramWorkspace::revision($source);
+$validated=VtaAiItinerary::validate($data,$source);
+$token=VtaAiItinerary::issueReview($operator,7,$revision,$validated);
+VtaAiItinerary::requireReview($operator,7,$revision,$validated,$token);
+ok(true,'exact reviewed proposal may proceed to draft create');
+$modified=$validated;$modified['private_groups'][0]['pax']=5;
+rejects(fn()=>VtaAiItinerary::requireReview($operator,7,$revision,$modified,$token),'changed price group invalidates review token');
+$modified=$validated;$modified['document']['title']='Tampered';
+rejects(fn()=>VtaAiItinerary::requireReview($operator,7,$revision,$modified,$token),'document tampering invalidates review token');
+rejects(fn()=>VtaAiItinerary::requireReview(['company_id'=>5,'id'=>18],7,$revision,$validated,$token),'cross-tenant token is rejected');
+rejects(fn()=>VtaAiItinerary::requireReview(['company_id'=>4,'id'=>19],7,$revision,$validated,$token),'cross-user token is rejected');
+rejects(fn()=>VtaAiItinerary::requireReview($operator,7,$revision,$validated,str_repeat('0',48)),'forged token is rejected');
+rejects(fn()=>VtaAiItinerary::requireReview($operator,7,str_repeat('f',64),$validated,$token),'new source revision invalidates review token');
+$_SESSION['vta_ai_itinerary_review']['expires_at']=time()-1;
+rejects(fn()=>VtaAiItinerary::requireReview($operator,7,$revision,$validated,$token),'expired review token fails closed');
+
+// Standalone Tour Library endpoints may not self-approve customer price amounts.
+// Changing the Word document, day sequence or price matrix revokes old approval.
+$privatePrices=[['min'=>4,'max'=>4,'three'=>'250','four'=>'','five'=>'']];
+$approvedCreate=TourLibrary::normalize([
+ 'title'=>'Approved Tour','destination'=>'Hanoi','language'=>'en','status'=>'DRAFT','days'=>[],
+ 'proposal'=>['document'=>$baseDoc,'private_prices'=>$privatePrices,'private_prices_reviewed'=>true]]);
+ok(TourLibrary::priceReviewPolicy($approvedCreate,null,true)['proposal']['private_prices_reviewed']===true,
+ 'verified AI creation may preserve explicitly approved selling price');
+ok(TourLibrary::priceReviewPolicy($approvedCreate,null,false)['proposal']['private_prices_reviewed']===false,
+ 'generic Master creation cannot self-approve selling price');
+$previous=[
+ 'title'=>$approvedCreate['title'],'destination'=>$approvedCreate['destination'],
+ 'included_text'=>$approvedCreate['included_text'],'excluded_text'=>$approvedCreate['excluded_text'],
+ 'terms_text'=>$approvedCreate['terms_text'],'days_json'=>json_encode($approvedCreate['days'],JSON_THROW_ON_ERROR),
+ 'proposal_json'=>json_encode($approvedCreate['proposal'],JSON_THROW_ON_ERROR)
+];
+ok(TourLibrary::priceReviewPolicy($approvedCreate,$previous)['proposal']['private_prices_reviewed']===true,
+ 'unchanged approved tour retains price review');
+$changedTour=$approvedCreate;$changedTour['title']='Different title';
+ok(TourLibrary::priceReviewPolicy($changedTour,$previous)['proposal']['private_prices_reviewed']===false,
+ 'tour title change revokes approved price');
+$changedDoc=$approvedCreate;$changedDoc['proposal']['document']['content']['content'][]=paragraph('Extra hotel services');
+ok(TourLibrary::priceReviewPolicy($changedDoc,$previous)['proposal']['private_prices_reviewed']===false,
+ 'Word itinerary edit revokes approved price');
+$changedPrices=$approvedCreate;$changedPrices['proposal']['private_prices'][0]['three']='350';
+ok(TourLibrary::priceReviewPolicy($changedPrices,$previous)['proposal']['private_prices_reviewed']===false,
+ 'changing price itself revokes prior review');
+$unreviewedOld=$previous;$other=json_decode($previous['proposal_json'],true);$other['private_prices_reviewed']=false;
+$unreviewedOld['proposal_json']=json_encode($other,JSON_THROW_ON_ERROR);
+ok(TourLibrary::priceReviewPolicy($approvedCreate,$unreviewedOld)['proposal']['private_prices_reviewed']===false,
+ 'generic update cannot escalate unreviewed price to approved');
 echo "AI Itinerary contract checks complete. DB/auth and staging checks are separate gates.\n";
