@@ -53,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
@@ -64,7 +64,7 @@ jobs:
         env:
           VTA_TEST_DB_PASSWORD: ai-fixture-only
           VTA_TEST_DB_PORT: '33319'
-          VS22_OUTPUT_DIR: ${ runner.temp }}/vta-ai-itinerary-native
+          VS22_OUTPUT_DIR: ${{ runner.temp }}/vta-ai-itinerary-native
         run: |
           set -euo pipefail
           mkdir -p "$VS22_OUTPUT_DIR"
@@ -75,6 +75,6 @@ jobs:
         with:
           name: vta-ai-itinerary-native-ci-fixture
           path: |
-            ${ runner.temp }}/vta-ai-itinerary-native/native-results.log
+            ${{ runner.temp }}/vta-ai-itinerary-native/native-results.log
           if-no-files-found: warn
           retention-days: 14
