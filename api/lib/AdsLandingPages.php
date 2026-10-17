@@ -35,6 +35,7 @@ final class AdsLandingPages {
         if($out['utm_campaign']==='')$out['utm_campaign']=self::utmValue($landing['default_utm_campaign']??'',100);
         $out['referrer']=''; // Never collect arbitrary referring URLs/PII.
         $out['landing_url']='api/index.php?route=ads/landing/'.self::slug($landing['slug']);
+        $out['approved_campaign']=self::utmValue($landing['default_utm_campaign']??'',100);
         return $out;
     }
     public static function publicUrl(array $cfg,string $slug):string {
@@ -49,12 +50,20 @@ final class AdsLandingPages {
     }
     public static function metric(PDO $db,int $landingId,string $type,array $utm):void {
         if(!in_array($type,['VIEW','CTA','LEAD'],true))throw new InvalidArgumentException('Invalid analytics event');
+        // Public GET parameters must not generate unlimited analytics-cardinality:
+        // group into known traffic channels and the one publisher-approved campaign.
+        $source=strtolower(self::utmValue($utm['utm_source']??''));
+        $medium=strtolower(self::utmValue($utm['utm_medium']??''));
+        $sources=['facebook','instagram','google','bing','tiktok','youtube','whatsapp','email','newsletter','direct','other'];
+        $mediums=['cpc','paid_social','social','organic','email','referral','unknown','other'];
+        if(!in_array($source,$sources,true))$source='other';
+        if(!in_array($medium,$mediums,true))$medium='other';
+        $approved=self::utmValue($utm['approved_campaign']??'',100);
+        $campaign=self::utmValue($utm['utm_campaign']??'',100);
+        $campaign=$approved!==''&&hash_equals($approved,$campaign)?$approved:'other';
         self::q($db,'INSERT INTO ads_landing_metrics(landing_id,day,event_type,utm_source,utm_medium,utm_campaign,count_total)
                     VALUES(?,CURRENT_DATE(),?,?,?,?,1) ON DUPLICATE KEY UPDATE count_total=count_total+1',[
-            $landingId,$type,
-            self::utmValue($utm['utm_source']??''),
-            self::utmValue($utm['utm_medium']??''),
-            self::utmValue($utm['utm_campaign']??'',100)
+            $landingId,$type,$source,$medium,$campaign
         ]);
     }
     /** Validation of campaign/form and live B2C approval is mandatory on EVERY GET / POST. */
