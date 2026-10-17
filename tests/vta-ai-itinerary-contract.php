@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/../api/lib/ScheduleImport.php';
 require_once __DIR__.'/../api/lib/TourLibrary.php';
+if(session_status()!==PHP_SESSION_ACTIVE)session_start();
 
 function ok(bool $condition,string $message):void {
  if(!$condition)throw new RuntimeException('FAILED '.$message);
@@ -71,4 +72,32 @@ $invalid=$data;$invalid['document']['content']['content'][]=['type'=>'image','at
 rejects(fn()=>VtaAiItinerary::validate($invalid,$source),'AI cannot add unknown media asset IDs');
 $invalid=$data;$invalid['document']['content']['content'][]=['type'=>'script'];
 rejects(fn()=>VtaAiItinerary::validate($invalid,$source),'unknown document node blocked');
+
+$identity=['company_id'=>21,'id'=>33];
+$revision=TourProgramWorkspace::revision($source);
+$reviewedCandidate=VtaAiItinerary::validate($data,$source);
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,null),'commit without preview token blocked');
+$reviewToken=VtaAiItinerary::issueReview($identity,7,$revision,$reviewedCandidate);
+ok(preg_match('/^[a-f0-9]{48}$/D',$reviewToken)===1,'opaque 192-bit review token');
+VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,$reviewToken);
+ok(true,'exact reviewed JSON and current operator accepted');
+$other=$identity;$other['company_id']=22;
+rejects(fn()=>VtaAiItinerary::requireReview($other,7,$revision,$reviewedCandidate,$reviewToken),'cross-tenant preview token blocked');
+$other=$identity;$other['id']=34;
+rejects(fn()=>VtaAiItinerary::requireReview($other,7,$revision,$reviewedCandidate,$reviewToken),'other staff preview token blocked');
+rejects(fn()=>VtaAiItinerary::requireReview($identity,8,$revision,$reviewedCandidate,$reviewToken),'wrong source tour token blocked');
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,str_repeat('0',64),$reviewedCandidate,$reviewToken),'stale preview source revision blocked');
+$changedCandidate=$reviewedCandidate;$changedCandidate['title']='Unreviewed changed title';
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$changedCandidate,$reviewToken),'changed title after preview blocked');
+$changedCandidate=$reviewedCandidate;$changedCandidate['private_groups'][0]['prices']['3star']='99';
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$changedCandidate,$reviewToken),'changed price after preview blocked');
+$changedCandidate=$reviewedCandidate;$changedCandidate['document']['content']['content'][1]['content'][0]['text']='Unreviewed changes after preview';
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$changedCandidate,$reviewToken),'changed Word document after preview blocked');
+$_SESSION['vta_ai_itinerary_review']['expires_at']=time()-1;
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,$reviewToken),'expired preview token blocked');
+$newToken=VtaAiItinerary::issueReview($identity,7,$revision,$reviewedCandidate);
+rejects(fn()=>VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,$reviewToken),'prior preview token invalidated on new preview');
+VtaAiItinerary::requireReview($identity,7,$revision,$reviewedCandidate,$newToken);
+ok(true,'latest preview token stays valid');
+
 echo "AI Itinerary contract checks complete. DB/auth and staging checks are separate gates.\n";
