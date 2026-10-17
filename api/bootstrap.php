@@ -70,6 +70,8 @@ require_once __DIR__ . '/lib/B2CStudio.php';
 require_once __DIR__ . '/lib/B2CPublicationBridge.php';
 require_once __DIR__ . '/lib/B2CStorefront.php';
 require_once __DIR__ . '/lib/ClientTourPresentation.php';
+require_once __DIR__ . '/lib/AdsLandingPresentation.php';
+require_once __DIR__ . '/lib/AdsLandingPages.php';
 require_once __DIR__ . '/lib/MarketingShareBooking.php';
 require_once __DIR__ . '/lib/PartnerHub.php';
 require_once __DIR__ . '/lib/ServiceTravelDetails.php';

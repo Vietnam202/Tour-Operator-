@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Publish for Ads | Vietnam Travel Advisor</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#13394d;background:#f1f6f7}
+*{box-sizing:border-box}body{margin:0}.hero{background:#113b52;color:white;padding:28px max(22px,calc((100vw - 1160px)/2))}
+.hero h1{margin:10px 0;font-size:clamp(26px,4vw,40px)}.hero p{margin:0;color:#c9e1e8}
+main{max-width:1160px;margin:auto;padding:22px 16px 60px}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:19px}
+.panel{background:white;border:1px solid #d1e3e8;border-radius:14px;padding:24px;box-shadow:0 7px 22px #173f5010}
+h2{margin:0 0 14px;font-size:20px}h3{font-size:15px}p{line-height:1.6}
+.notice{background:#fff8e8;border:1px solid #ead29f;padding:12px 16px;border-radius:8px;font-size:13px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:13px}.form label{display:grid;gap:6px;font-weight:720;font-size:12px}.form label.wide{grid-column:1/-1}
+input,select{padding:11px;width:100%;min-width:0;border:1px solid #c2d5df;border-radius:8px;font:inherit;color:#183a54}
+input[type=checkbox]{width:18px;min-width:18px}label.check{display:flex!important;align-items:start;gap:8px;font-weight:500}
+button{border:1px solid #a6c2d0;border-radius:8px;background:white;color:#174153;font-weight:740;padding:10px 13px;cursor:pointer}
+button.primary{background:#087f88;color:white;border-color:#087f88}button.danger{color:#a03631;border-color:#dfc7c4}
+button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:7px}.item{padding:17px 0;border-bottom:1px solid #e1ebee}
+.item h3{margin:0}.item small{color:#547486}.item code{overflow-wrap:anywhere;font-size:11px}.item p{font-size:12px;margin:5px 0}
+.muted{color:#617c8b;font-size:12px}.error{color:#aa3333}.status{min-height:26px;margin:8px 0 18px;font-size:13px;font-weight:700}
+.metric{font-size:12px;max-height:220px;overflow:auto}.metric table{border-collapse:collapse;width:100%}.metric td,.metric th{padding:7px;text-align:left;border-bottom:1px solid #dae4e8}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}.hero{padding:25px 18px}.panel{padding:17px}}
+</style></head>
+<body><header class="hero"><small>VIETNAM TRAVEL ADVISOR · RC6.2</small><h1>Publish for Ads</h1>
+<p>B2C tour publication → public URL → Facebook / Google / WhatsApp → Request Booking → LeadHub</p></header>
+<main><div id="status" role="status" class="status"></div>
+<div class="notice">Bắt buộc B2C Publication đã duyệt, campaign và Lead Form đang hoạt động. Không xuất giá NET, không đăng ngay lên Facebook/Google; chức năng này chỉ tạo landing link cho chiến dịch. Cần duyệt riêng trước khi dùng ngân sách quảng cáo.</div>
+<div class="grid" style="margin-top:20px">
+<section class="panel"><h2>1. Tạo landing page quảng cáo</h2>
+<form class="form" id="publish">
+<label class="wide">Chương trình tour B2C đã Published<select name="publication_event_id" id="program" required></select></label>
+<label class="wide">Lead Form / Campaign đang Active<select id="leadform" name="lead_form_id" required></select></label>
+<input type="hidden" name="campaign_id" id="campaign">
+<label class="wide">URL slug<input id="slug" name="slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" minlength="4" maxlength="90" required placeholder="vietnam-7d6n-india"></label>
+<label>Template<select name="layout" id="layout"><option value="detailed">1. Professional Detailed</option><option value="brochure">2. Photo-rich Brochure</option><option value="quick">3. Quick Itinerary</option><option value="b2b">4. Tour Proposal</option></select></label>
+<label>UTM campaign mặc định<input id="campaignName" name="default_utm_campaign" maxlength="100" placeholder="vietnam_7d6n_2026"></label>
+<label class="wide check"><input required type="checkbox" id="reviewed"> Tôi đã rà soát bản B2C xuất bản, quyền ảnh, nội dung tour và xác nhận không có giá NET hoặc dữ liệu nội bộ.</label>
+<div class="wide actions"><button type="submit" class="primary" id="publishBtn">Publish for Ads</button><button type="button" id="refresh">Tải lại danh sách</button></div>
+</form><p class="muted">Link tồn tại ổn định cho đến khi thu hồi hoặc publication bị withdraw/đổi phiên bản. Có thể đổi mẫu bằng tham số <code>&amp;layout=brochure</code>.</p>
+</section>
+<section class="panel"><h2>2. Link đã xuất bản và tracking</h2><div id="list"><p>Đang tải...</p></div></section>
+</div><section class="panel" style="margin-top:19px"><h2>3. Nguyên tắc đo hiệu quả quảng cáo</h2>
+<p>Hệ thống ghi số lượt <b>VIEW</b>, <b>CTA</b> và <b>LEAD</b> theo UTM Source / Medium / Campaign ở dạng tổng hợp. LeadHub lưu nguồn link, chiến dịch và ngày khách yêu cầu khởi hành. Không ghi IP, user agent, fingerprint hay dữ liệu cá nhân vào bảng thống kê.</p>
+<p><b>GA4 / Meta Pixel / Google Ads conversion API chưa tự kích hoạt.</b> Cần cấu hình tài khoản, cơ chế consent và đối soát trước khi bật provider tracking hoặc tối ưu quảng cáo theo conversion.</p>
+</section></main>
+<script>
+(()=>{'use strict';
+ const $=id=>document.getElementById(id),root=$('list'),status=$('status');
+ let csrf='',forms=[],publications=[];
+ const api=async(route,method='GET',body)=>{
+  const response=await fetch('api/index.php?route='+encodeURIComponent(route),{method,credentials:'same-origin',headers:{Accept:'application/json',...(method!=='GET'?{'Content-Type':'application/json','X-VTA-CSRF':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw Error((data.message||data.error||'Request error')+' (HTTP '+response.status+')');
+  return data;
+ };
+ const message=(v,bad=false)=>{status.textContent=v;status.className='status'+(bad?' error':'');};
+ const asText=(tag,text)=>{const e=document.createElement(tag);e.textContent=String(text??'');return e;};
+ const option=(select,value,label)=>{const op=document.createElement('option');op.value=String(value);op.textContent=String(label);select.append(op);};
+ const routeUrl=(value)=>{const u=new URL(value,location.href);if(u.origin!==location.origin||u.protocol!=='https:')throw Error('Landing URL phải HTTPS và cùng domain');return u;};
+ async function update(){
+  const me=await api('auth/me');
+  if(!me.user?.csrf)throw Error('Cần đăng nhập vào RC6.2 với quyền b2c.approve + campaign.manage');
+  csrf=me.user.csrf;
+  const opts=await api('ads/landing-admin/options');
+  forms=opts.forms||[];publications=opts.publications||[];
+  $('program').replaceChildren();option($('program'),'','Chọn B2C Publication');
+  publications.forEach(p=>option($('program'),p.publication_event_id,p.title+' · v'+p.revision+' · #'+p.publication_event_id));
+  $('leadform').replaceChildren();option($('leadform'),'','Chọn Lead Form');
+  forms.forEach(f=>option($('leadform'),f.lead_form_id,'Campaign #'+f.campaign_id+' · '+f.source+' · Form #'+f.lead_form_id));
+  $('leadform').onchange=()=>{
+   const match=forms.find(f=>String(f.lead_form_id)===$('leadform').value);
+   $('campaign').value=match?String(match.campaign_id):'';
+  };
+  const list=await api('ads/landing-admin');
+  root.replaceChildren();
+  for(const item of list.items||[]){
+   const box=asText('article','');box.className='item';
+   const h=asText('h3',item.slug);box.append(h,asText('small',item.status+' · '+item.layout+' · B2C publication #'+item.publication_event_id));
+   const url=asText('p',item.url);url.style.overflowWrap='anywhere';box.append(url);
+   const controls=asText('div','');controls.className='actions';
+   const copy=asText('button','Copy URL');copy.onclick=()=>{const u=routeUrl(item.url);navigator.clipboard.writeText(u.toString()).then(()=>message('Đã sao chép link quảng cáo')).catch(()=>message('Không thể copy, hãy chọn URL và sao chép bằng tay',true));};controls.append(copy);
+   if(item.status==='PUBLISHED'){
+     const view=asText('button','Preview tour');view.onclick=()=>window.open(routeUrl(item.url).toString(),'_blank','noopener');controls.append(view);
+     for(const [channel,medium,label] of [['facebook','paid_social','Facebook Ads'],['google','cpc','Google Ads'],['whatsapp','social','WhatsApp']]){
+       const utm=asText('button','Copy '+label+' URL');
+       utm.onclick=()=>{try{const u=routeUrl(item.url);u.searchParams.set('utm_source',channel);u.searchParams.set('utm_medium',medium);u.searchParams.set('utm_campaign',$('campaignName').value||'vta_vietnam');navigator.clipboard.writeText(u.toString()).then(()=>message('Đã copy link '+label+' có UTM')).catch(()=>message('Không thể copy tự động',true));}catch(e){message(e.message,true);}};controls.append(utm);
+     }
+     const withdraw=asText('button','Withdraw');withdraw.className='danger';withdraw.onclick=async()=>{if(!confirm('Thu hồi link này? Khách không thể gửi Lead sau khi thu hồi.'))return;try{await api('ads/landing-admin/'+item.id+'/withdraw','POST',{});message('Đã thu hồi link');await update();}catch(e){message(e.message,true);}};controls.append(withdraw);
+   }
+   const metrics=asText('button','Thống kê');metrics.onclick=async()=>{
+     try{
+      const v=await api('ads/landing-admin/'+item.id+'/metrics');let area=box.querySelector('.metric');
+      if(area){area.remove();return;}
+      area=asText('div','');area.className='metric';
+      const table=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');
+      ['Ngày','Event','Source','Medium','Campaign','Số lượt'].forEach(k=>hr.append(asText('th',k)));head.append(hr);table.append(head);
+      const tb=document.createElement('tbody');
+      (v.metrics||[]).forEach(row=>{const tr=document.createElement('tr');['day','event_type','utm_source','utm_medium','utm_campaign','total'].forEach(k=>tr.append(asText('td',row[k])));tb.append(tr);});
+      table.append(tb);area.append(table);box.append(area);
+     }catch(e){message(e.message,true);}
+   };controls.append(metrics);
+   box.append(controls);root.append(box);
+  }
+  if(!root.children.length)root.append(asText('p','Chưa có landing page. Hãy chọn tour và publish.'));
+  message('Đã kết nối RC6.2. '+publications.length+' B2C Publication hợp lệ.');
+ }
+ $('publish').onsubmit=async e=>{
+  e.preventDefault();const form=e.target;
+  if(!$('campaign').value){message('Chọn form/campaign hợp lệ',true);return;}
+  if(!publications.some(x=>String(x.publication_event_id)===$('program').value)){message('Chọn publication đã xuất bản',true);return;}
+  const b={slug:$('slug').value.trim(),publication_event_id:Number($('program').value),
+   campaign_id:Number($('campaign').value),lead_form_id:Number($('leadform').value),
+   layout:$('layout').value,default_utm_campaign:$('campaignName').value.trim(),
+   public_content_reviewed:$('reviewed').checked};
+  $('publishBtn').disabled=true;
+  try{const r=await api('ads/landing-admin','POST',b);message('Đã tạo landing '+r.landing.slug+'; kiểm tra preview và gate staging trước khi chạy quảng cáo.');await update();}
+  catch(err){message(err.message,true);}
+  finally{$('publishBtn').disabled=false;}
+ };
+ $('refresh').onclick=()=>update().catch(e=>message(e.message,true));
+ update().catch(e=>{root.replaceChildren(asText('p',e.message));message(e.message,true);});
+})();
+</script></body></html>

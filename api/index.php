@@ -129,6 +129,7 @@ try {
     WebsiteInbox::publicHandle($route,$method,$db,$config);
     MetaInbox::publicHandle($route,$method,$db,$config);
     WebsiteChatDelivery::publicHandle($route,$method,$db,$config);
+    AdsLandingPages::publicHandle($route,$method,$db,$config);
     MarketingShareBooking::publicHandle($route,$method,$db,$config);
     MarketingTourShare::publicHandle($route,$method,$db);
 
@@ -148,6 +149,7 @@ try {
     WebsiteChatDelivery::adminHandle($route,$method,$db,$config,$user);
     MarketingTourAdvisor::adminHandle($route,$method,$db,$user);
     MarketingTourShare::adminHandle($route,$method,$db,$user);
+    AdsLandingPages::manage($route,$method,$db,$config,$user);
     SocialPublishing::adminHandle($route,$method,$db,$config,$user);
     LandingPages::handle($route,$method,$db,$user);
     MarketingStudio::handle($route,$method,$db,$user);

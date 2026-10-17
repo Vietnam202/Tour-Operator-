@@ -1,0 +1,68 @@
+name: RC6.2 Ads Publish Tracking Lead QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/AdsLandingPages.php'
+      - 'api/lib/AdsLandingPresentation.php'
+      - 'api/index.php'
+      - 'api/bootstrap.php'
+      - 'api/migrations/090_ads_landing_publish.sql'
+      - 'ads-landing-publisher.html'
+      - 'marketing-studio.js'
+      - 'tests/ads-landing-*.php'
+      - 'tests/ads-landing-*.cjs'
+      - '.github/workflows/rc62-ads-publish-track-lead.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          php -l api/lib/AdsLandingPages.php
+          php -l api/lib/AdsLandingPresentation.php
+          php -l api/bootstrap.php
+          php -l api/index.php
+          php -l tests/ads-landing-contract.php
+          php -l tests/ads-landing-mariadb-ci.php
+      - name: Browser publisher contract
+        run: node tests/ads-landing-admin-ui.cjs
+      - name: Safe four-template PHP source contract
+        run: php tests/ads-landing-contract.php
+  real-mariadb-lead:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-not-staging
+          MARIADB_DATABASE: vta_ads_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_DATABASE: vta_ads_ci
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: ci-only-not-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql
+          coverage: none
+      - name: Real MariaDB migration and LeadHub request + analytics
+        run: php tests/ads-landing-mariadb-ci.php
