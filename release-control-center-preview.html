@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>RC6.2 — Release Control Center (Read-only Design Preview)</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172334;background:#f5f7fa;line-height:1.5}
+*{box-sizing:border-box}body{margin:0}a{color:#145aaf}button{font:inherit}
+.layout{min-height:100vh;display:grid;grid-template-columns:240px minmax(0,1fr)}
+aside{background:#0d1d31;color:#edf5ff;padding:24px 16px}
+aside small{color:#a7bfd9}nav{display:grid;gap:8px;margin-top:28px}
+nav button{color:#dce9f9;background:transparent;border:1px solid transparent;border-radius:10px;text-align:left;padding:12px;cursor:pointer}
+nav button[aria-current="page"]{background:#203c5a;border-color:#526f90}
+main{padding:30px;max-width:1380px;width:100%;margin:0 auto}
+header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+h1{font-size:1.75rem;margin:0 0 4px}h2{font-size:1.1rem;margin-top:0}
+.muted{color:#5e6b80}.status{display:inline-flex;border:1px solid #dba3a4;border-radius:30px;padding:5px 12px;background:#fff2f2;color:#a02c2c;font-weight:750;font-size:.8rem}
+.warning{display:block;background:#fff8e9;color:#775c24;border-left:4px solid #cfab5c;padding:13px 16px;border-radius:8px;margin:18px 0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:20px 0}
+.card{border:1px solid #dce2e9;background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 8px #101c3010}
+.statnum{font-size:1.65rem;font-weight:800}.small{font-size:.84rem}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tag{font-size:.75rem;color:#9a3f3f;background:#feeaea;border-radius:20px;padding:4px 8px;white-space:nowrap}
+.issue-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+table{border-collapse:collapse;width:100%;min-width:770px}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e7ebef;vertical-align:top;font-size:.89rem}th{background:#f4f6f9}
+.scroll{overflow:auto}.rows{display:grid;gap:12px}.check{display:flex;gap:10px;align-items:flex-start;padding:13px 14px;border:1px solid #e3e8ef;border-radius:10px}.check input{margin-top:5px;accent-color:#165c9f}
+.links{display:flex;gap:12px;flex-wrap:wrap}
+.panel{margin-top:20px}section[hidden]{display:none!important} .pill{font-size:.7rem;background:#e9edf4;padding:4px 8px;border-radius:999px;font-weight:700}
+footer{border-top:1px solid #dce2e9;margin-top:24px;padding-top:16px;font-size:.78rem;color:#59677b}
+@media(max-width:950px){.layout{grid-template-columns:1fr}aside{padding:14px}nav{display:flex;flex-wrap:wrap;margin-top:14px}main{padding:18px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.statnum{font-size:1.25rem}main{padding:12px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+ <strong>VTA · RC6.2</strong><br><small>Release Control Center</small>
+ <nav aria-label="Module tabs">
+  <button data-tab="overview" aria-current="page">Tổng quan</button>
+  <button data-tab="matrix">Acceptance Matrix</button>
+  <button data-tab="evidence">Evidence Checklist</button>
+  <button data-tab="decision">Owner Decision</button>
+ </nav>
+ <p class="small" style="margin-top:30px;color:#a7bfd9">DESIGN PREVIEW<br>Không đồng bộ Linear/GitHub thời gian thực.<br>Không cấp quyền deploy.</p>
+</aside>
+<main>
+ <header><div><h1>Release Readiness & Acceptance</h1><div class="muted">Snapshot đối chiếu ngày 20/10/2026 · Repo Vietnam202/Tour-Operator-</div></div><span class="status">DRAFT / NO-GO</span></header>
+ <div class="warning"><strong>Điều kiện an toàn:</strong> Đây là bản xem trước chỉ đọc theo snapshot, không phải bằng chứng vận hành thật. Checkbox chỉ hỗ trợ rà soát cục bộ, không thay đổi release status hay quyết định owner.</div>
+ <section id="overview">
+  <div class="stats">
+   <div class="card"><div class="muted small">P0 blockers</div><div class="statnum">2</div><span class="tag">VIE-6, VIE-11</span></div>
+   <div class="card"><div class="muted small">Feature status</div><div class="statnum">In Progress</div><div class="small">VIE-16</div></div>
+   <div class="card"><div class="muted small">CI tại PR #106 HEAD</div><div class="statnum">14/14</div><div class="small">PASS · fixture only</div></div>
+   <div class="card"><div class="muted small">Staging + Owner</div><div class="statnum">Not verified</div><div class="small">Production NO-GO</div></div>
+  </div>
+  <div class="grid">
+   <article class="card"><div class="issue-head"><h2>1 · VIE-6</h2><span class="tag">P0 / TODO</span></div><p>Existing-data backup, isolated MariaDB restore, migration ledger/checksum, SELECT-only preflight, rollback.</p><a href="https://linear.app/vietnamtraveladvisor/issue/VIE-6/rc62-p0-mariadb-clone-migration-ledger-va-cyberpanel-fail-closed">Mở Linear ↗</a></article>
+   <article class="card"><div class="issue-head"><h2>2 · VIE-11</h2><span class="tag">P0 / TODO</span></div><p>Exact running SHA, approved HTTPS stage, real-auth browser/mobile UAT, scoped owner approval.</p><a href="https://linear.app/vietnamtraveladvisor/issue/VIE-11/rc62-p0-release-gate-exact-sha-staging-signoff-cyberpanel-upload-and">Mở Linear ↗</a></article>
+   <article class="card"><div class="issue-head"><h2>3 · VIE-16</h2><span class="pill">IN PROGRESS</span></div><p>AI Edit → new Master Draft; 4 HTML previews, 5 price groups, DOCX/PDF. CI does not prove staging.</p><a href="https://github.com/Vietnam202/Tour-Operator-/pull/106">Mở PR #106 ↗</a></article>
+  </div>
+  <div class="card panel"><h2>Dependency release order</h2><p><strong>VIE-5 SHA freeze</strong> → <strong>VIE-6 data/environment evidence</strong> → <strong>VIE-11 staging-only authorization</strong> → <strong>VIE-16 + B2B/B2C real UAT</strong> → <strong>VIE-11 owner signoff</strong> → manual decision.</p><p class="muted small">Owner-approved offline VIE-16 demo is not staging acceptance or permission to deploy. Preview/commit of new DRAFTs is a separate safe action.</p></div>
+ </section>
+ <section id="matrix" hidden>
+  <div class="card panel"><h2>Acceptance Matrix — phân biệt evidence level</h2><div class="scroll"><table>
+   <thead><tr><th>Gate</th><th>Code / CI</th><th>Staging thực</th><th>Owner</th><th>Decision</th></tr></thead>
+   <tbody>
+   <tr><td>VIE-6 DB restore</td><td>PASS_CI_FIXTURE</td><td>Existing data chưa xác minh</td><td>Chưa signoff</td><td>BLOCKED_DATA</td></tr>
+   <tr><td>VIE-6 ledger + guards</td><td>SELECT-only / fail-closed CI</td><td>Chưa reconcile stage</td><td>Chưa signoff</td><td>BLOCKED_DATA</td></tr>
+   <tr><td>VIE-11 build / host</td><td>PR #86/87 fixture</td><td>Exact running SHA chưa xác minh</td><td>Chưa signoff</td><td>BLOCKED_ENV</td></tr>
+   <tr><td>VIE-16 AI / templates</td><td>PR #106, 14/14 workflow PASS</td><td>Real-auth + visual parity chưa xác minh</td><td>Demo only</td><td>BLOCKED_UAT</td></tr>
+   <tr><td>B2C / LeadHub / WP</td><td>PR #104 CI fixture</td><td>Signed publish/intake chưa xác minh</td><td>Chưa B2C scope signoff</td><td>BLOCKED_SCOPE</td></tr>
+   <tr><td>Release GO</td><td>CI không cấp quyền deploy</td><td>UAT/rollback chưa hoàn tất</td><td>Production chưa duyệt</td><td>BLOCKED_APPROVAL</td></tr>
+   </tbody></table></div></div>
+ </section>
+ <section id="evidence" hidden>
+  <div class="card panel"><h2>Evidence tối thiểu — operator checklist</h2><p class="muted small">Chọn mục để chuẩn bị bàn giao nội bộ. Việc đánh dấu không chứng minh PASS, không upload evidence, không thay đổi GitHub/Linear hoặc trạng thái release.</p><div class="rows">
+  <label class="check"><input type="checkbox"><span><strong>Candidate identity</strong><br>Exact full SHA, base/dependencies, ZIP and manifest digest</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Isolated environment</strong><br>Approved TLS/hostname/docroot/DB/storage; secrets redacted</span></label>
+  <label class="check"><input type="checkbox"><span><strong>SELECT-only preflight</strong><br>Operator-approved redacted logs, exit codes and effective grants</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Existing-data backup → restore</strong><br>Encrypted backup digest, clone restore, rows/inventory reconciliation</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Migration ledger rehearsal</strong><br>Before/after ledger, duplicate 037 and migration 090 review, drift check</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Rollback rehearsal</strong><br>Code/data recovery proof on an isolated clone and operator approval</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Real-auth UAT</strong><br>Role and tenant isolation, AI DRAFT, 4 templates, price tiers, real DOCX/PDF, B2C/LeadHub/mobile</span></label>
+  <label class="check"><input type="checkbox"><span><strong>Scoped owner signoff</strong><br>Explicit staging and separate production decisions</span></label>
+  </div></div>
+ </section>
+ <section id="decision" hidden>
+  <div class="card panel"><h2>Owner Decision — view only</h2><p><span class="status">KEEP DRAFT / NO-GO</span></p><p>Không merge các PR stacked, không upload CyberPanel, không migrate production. Chỉ tiếp tục code/CI, preflight read-only và backup/restore clone nếu được operator phê duyệt.</p><p><strong>Hard stops:</strong> SHA không xác minh, DB drift, sai host/config/ACL, thiếu real UAT, thiếu rollback, chưa có scoped owner approval.</p><p class="muted small">Không có nút cấp GO ở trang preview. Production authorization cần quy trình backend và chữ ký owner riêng.</p><div class="links"><a href="https://github.com/Vietnam202/Tour-Operator-/issues/45">GitHub Issue #45</a><a href="https://github.com/Vietnam202/Tour-Operator-/pull/106">PR #106</a></div>
+  </div>
+ </section>
+ <footer>Prototype for design review only. No live data, API calls, deployment authority, or persistence. Full implementation spec: docs/RC62_RELEASE_CONTROL_CENTER_MODULE_V1_20261020.md.</footer>
+</main>
+</div>
+<script>
+const btns=[...document.querySelectorAll("nav button[data-tab]")];
+for(const b of btns){b.addEventListener("click",()=>{
+ for(const other of btns){const active=other===b;if(active)other.setAttribute("aria-current","page");else other.removeAttribute("aria-current");}
+ for(const id of ["overview","matrix","evidence","decision"]){document.getElementById(id).hidden=id!==b.dataset.tab;}
+});}
+</script>
+</body>
+</html>
