@@ -1,0 +1,96 @@
+name: RC6.2 M05 Native DOCX PDF Export Evidence
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaProposalExportEvidence.php'
+      - 'tests/rc62-m05-native-export-evidence.php'
+      - '.github/workflows/rc62-m05-native-export-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m05-real-document-export:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact candidate HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Fail closed if any original RC6.2 file was modified
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess
+          git=lambda *args:subprocess.check_output(['git',*args],text=True).strip()
+          assert git('rev-parse','HEAD')==os.environ['HEAD_SHA'], 'Unpinned HEAD'
+          expected={
+            'api/lib/VtaProposalExportEvidence.php',
+            'tests/rc62-m05-native-export-evidence.php',
+            '.github/workflows/rc62-m05-native-export-evidence.yml',
+          }
+          records=git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').splitlines()
+          actual=[r.split('\t',1) for r in records]
+          assert all(len(x)==2 for x in actual), actual
+          assert {p for _,p in actual}==expected and len(actual)==3, actual
+          assert all(status=='A' for status,_ in actual), 'Modification of existing file forbidden'
+          print('PASS M05 strict additive, 3 new files, exact SHA pinned')
+          PY
+      - name: Set up PHP 8.3 with real document rendering extensions
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, dom, gd, mbstring, xml
+          tools: none
+          coverage: none
+      - name: Install isolated PDF extraction/rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          command -v pdfinfo
+          command -v pdftotext
+          command -v pdftoppm
+          php -m | grep -Ei 'zip|dom|gd|mbstring'
+      - name: Lint native inspector and real export fixture
+        run: |
+          php -l api/lib/VtaProposalExportEvidence.php
+          php -l tests/rc62-m05-native-export-evidence.php
+          php -l api/lib/ProposalOutput.php
+          php -l api/lib/FreeformDocument.php
+      - name: Generate and validate 4 real DOCX/PDF pairs plus saved Word fixture
+        env:
+          VTA_M05_OUTPUT_DIR: ${{ runner.temp }}/vta-m05-native-evidence
+        run: |
+          php tests/rc62-m05-native-export-evidence.php
+      - name: Verify synthetic evidence artifact inventory and no private data
+        env:
+          VTA_M05_OUTPUT_DIR: ${{ runner.temp }}/vta-m05-native-evidence
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,json
+          folder=pathlib.Path(os.environ['VTA_M05_OUTPUT_DIR'])
+          report=json.loads((folder/'m05-evidence-summary.json').read_text())
+          assert report['status']=='SYNTHETIC_FIXTURE_ONLY'
+          assert report['real_templates']==4
+          assert report['visual_acceptance']=='NOT_PROVEN'
+          assert len(list(folder.glob('*.docx')))==6, '4 templates + Word + canary negative'
+          assert len(list(folder.glob('*.pdf')))==6
+          assert len(list(folder.glob('*-page1.png')))==6
+          assert all((folder/name).is_file() for name in ['m05-evidence-summary.json'])
+          print('PASS 6 real DOCX/PDF pairs + 6 rasterized first-page evidence + SHA256 report')
+          PY
+      - name: Archive synthetic review evidence (never stage/deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc62-m05-synthetic-docx-pdf-evidence
+          path: |
+            ${{ runner.temp }}/vta-m05-native-evidence/*.docx
+            ${{ runner.temp }}/vta-m05-native-evidence/*.pdf
+            ${{ runner.temp }}/vta-m05-native-evidence/*-page1.png
+            ${{ runner.temp }}/vta-m05-native-evidence/m05-evidence-summary.json
+          retention-days: 14
+          if-no-files-found: error
