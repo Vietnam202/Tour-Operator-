@@ -10,9 +10,9 @@ function csv(array $rows):string {
     rewind($f);$s=stream_get_contents($f);fclose($f);return $s;
 }
 function row(string $amount='1000000',string $from='2027-01-01',string $to='2027-02-01',string $currency='VND',string $product='Lake Hotel',string $supplier='19'):array {
-    return [$supplier,'HOTEL',$product,'CONTRACT','PER_ROOM_NIGHT',$currency,$amount,$from,$to,'500','NET','2','8','INDIA','Double','','','',''];
+    return [$supplier,'HOTEL',$product,'CONTRACT','PER_ROOM_NIGHT',$currency,$amount,$from,$to,'500','NET','2','8','INDIA','Double','','','','','agreement paragraph 2',''];
 }
-$h=['supplier_id','category','product_name','rate_type','rate_basis','currency','amount_vnd','valid_from','valid_to','source_document_id','tax_basis','min_pax','max_pax','market','option_name','season_from','season_to','blackout_from','blackout_to'];
+$h=['supplier_id','category','product_name','rate_type','rate_basis','currency','amount_vnd','valid_from','valid_to','source_document_id','tax_basis','min_pax','max_pax','market','option_name','season_from','season_to','blackout_from','blackout_to','source_locator','linked_trip_ref'];
 $scope=['company_id'=>55,'supplier_id'=>19];
 $input=csv([$h,row(),row('1100000','2027-01-15','2027-03-01'),row('1200000','2027-04-01','2027-05-01')]);
 $before=hash('sha256',$input);
@@ -23,6 +23,7 @@ must($r['total_rows']===3 && $r['blocked_rows']===0 && $r['review_rows']===3,'th
 must(hasCode($r['rows'][0],'CANDIDATE_RATE_OVERLAP') && hasCode($r['rows'][1],'CANDIDATE_RATE_OVERLAP'),'overlapping VND contract same supplier/product/pax');
 must(!hasCode($r['rows'][2],'CANDIDATE_RATE_OVERLAP'),'non-overlapping season not conflated');
 must($r['rows'][0]['candidate']['amount']==='1000000','keep money as exact decimal strings');
+must($r['rows'][0]['candidate']['tax_basis']==='NET' && $r['rows'][0]['candidate']['source_locator']==='agreement paragraph 2','retain reviewable contract tax and source location');
 must($r['rows'][0]['candidate']['company_id']===55,'explicit company context retained');
 must(hasCode($r['rows'][0],'SUPPLIER_OWNERSHIP_AND_EXISTING_RATES_NOT_CHECKED'),'do not claim ownership or matching DB');
 
@@ -42,6 +43,11 @@ $invalid=VtaRateIntakeReview::previewCsv(csv([$h,row('100','2027-02-30','2027-01
 must($invalid['blocked_rows']===2,'impossible/reversed dates refused');
 $special=row();$special[3]='SPECIAL_QUOTE';
 must(hasCode(VtaRateIntakeReview::previewCsv(csv([$h,$special]),$scope)['rows'][0],'SPECIAL_QUOTE_TRIP_REQUIRED'),'trip-specific rate cannot silently become generic');
+$special[20]='TR-2027-001';
+$reviewedSpecial=VtaRateIntakeReview::previewCsv(csv([$h,$special]),$scope);
+must(!hasCode($reviewedSpecial['rows'][0],'SPECIAL_QUOTE_TRIP_REQUIRED') && $reviewedSpecial['rows'][0]['candidate']['linked_trip_ref']==='TR-2027-001','trip-restricted source is preserved, not published');
+$overPax=row();$overPax[12]='10001';
+must(hasCode(VtaRateIntakeReview::previewCsv(csv([$h,$overPax]),$scope)['rows'][0],'PAX_RANGE_INVALID'),'supplier PAX cannot exceed existing RateEngine maximum');
 $season=row();$season[15]='2027-01-01';$season[16]='2027-02-01';
 must(hasCode(VtaRateIntakeReview::previewCsv(csv([$h,$season]),$scope)['rows'][0],'DATE_PERIOD_REQUIRES_RATE_RULES_REVIEW'),'seasons must enter existing RateRules after review');
 
