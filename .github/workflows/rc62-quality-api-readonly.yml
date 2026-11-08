@@ -36,14 +36,36 @@ jobs:
             'tests/rc62-quality-api-readonly-native.php':'A',
             '.github/workflows/rc62-quality-api-readonly.yml':'A',
           }
-          assert len(changes)==4 and dict((path,status) for status,path in changes)==expected, repr(changes)
-          before=git('show',os.environ['BASE_SHA']+':api/index.php')
-          anchor="    Auth::checkCsrf();\n    SmartEnhancements::handle($route,$method,$db,$user);"
-          addition="    Auth::checkCsrf();\n    // Optional, default-OFF read-only diagnostics inside existing M01/M03/M04 module routes.\n    require_once __DIR__.'/lib/VtaAdvancedQualityApi.php';\n    VtaAdvancedQualityApi::handle($route,$method,$db,$user);\n    SmartEnhancements::handle($route,$method,$db,$user);"
-          assert before.count(anchor)==1,'Original hook changed unexpectedly'
-          after=pathlib.Path('api/index.php').read_text()
-          assert after==before.replace(anchor,addition),'Existing router code was changed outside 3 added lines'
-          print('PASS exact source HEAD and locked original RC6.2 router structure')
+          actual={path:status for status,path in changes}
+          if 'api/lib/VtaAiEvidenceReview.php' in actual:
+              # Later M02 extension is stacked AFTER the original bridge PR.
+              # Keep the old application's auth/router completely untouched,
+              # while retaining a hard fail-closed inventory for the new route.
+              m02={
+                'api/lib/VtaAiEvidenceReview.php':'A',
+                'api/lib/VtaAdvancedQualityApi.php':'M',
+                'tests/rc62-m02-ai-evidence-native.php':'A',
+                '.github/workflows/rc62-m02-ai-evidence.yml':'A',
+                '.github/workflows/rc62-quality-api-readonly.yml':'M',
+              }
+              assert len(changes)==5 and actual==m02,'Unexpected M02 file changes: '+repr(changes)
+              before=git('show',os.environ['BASE_SHA']+':api/index.php')
+              after=pathlib.Path('api/index.php').read_text()
+              assert after==before,'RC6.2 auth/router changed by follow-up'
+              diff=git('diff','--unified=0',os.environ['BASE_SHA']+'...HEAD','--','api/lib/VtaAdvancedQualityApi.php')
+              assert not any(line.startswith('-') and not line.startswith('---') for line in diff.splitlines()),'Original quality routes changed'
+              assert "getenv('VTA_RC62_AI_EVIDENCE_REVIEW')!=='1'" in pathlib.Path('api/lib/VtaAdvancedQualityApi.php').read_text()
+              print('PASS stacked M02: original authenticated router unchanged; additive-only audited quality route')
+          else:
+              # Initial M01/M03/M04 bridge PR must still pass its ORIGINAL gate.
+              assert len(changes)==4 and actual==expected, repr(changes)
+              before=git('show',os.environ['BASE_SHA']+':api/index.php')
+              anchor="    Auth::checkCsrf();\n    SmartEnhancements::handle($route,$method,$db,$user);"
+              addition="    Auth::checkCsrf();\n    // Optional, default-OFF read-only diagnostics inside existing M01/M03/M04 module routes.\n    require_once __DIR__.'/lib/VtaAdvancedQualityApi.php';\n    VtaAdvancedQualityApi::handle($route,$method,$db,$user);\n    SmartEnhancements::handle($route,$method,$db,$user);"
+              assert before.count(anchor)==1,'Original hook changed unexpectedly'
+              after=pathlib.Path('api/index.php').read_text()
+              assert after==before.replace(anchor,addition),'Existing router code was changed outside 3 added lines'
+              print('PASS initial quality bridge exact source HEAD and locked RC6.2 router structure')
           PY
       - name: Set up PHP 8.3 + SQLite isolated test database
         uses: shivammathur/setup-php@v2

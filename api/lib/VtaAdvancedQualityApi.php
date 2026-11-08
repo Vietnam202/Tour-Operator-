@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/VtaTourItineraryQuality.php';
 require_once __DIR__.'/VtaRateIntakeReview.php';
 require_once __DIR__.'/VtaPriceMatrixAudit.php';
+require_once __DIR__.'/VtaAiEvidenceReview.php';
 
 /**
  * OPTIONAL internal diagnostics for RC6.2 M01/M03/M04.
@@ -32,6 +33,36 @@ final class VtaAdvancedQualityApi
             Http::json(['ok'=>false,'error'=>'AUTH_SCOPE_MISMATCH'],401);
         }
         Auth::checkCsrf();
+
+        // M02 is an independently opt-in extension of the existing quality
+        // endpoints. No AI provider call, review token, DB write or draft commit.
+        if (preg_match('#^quality/tour-programs/([1-9][0-9]*)/ai-evidence$#D',$route,$m)) {
+            if (getenv('VTA_RC62_AI_EVIDENCE_REVIEW')!=='1')
+                Http::json(['ok'=>false,'error'=>'ROUTE_NOT_FOUND'],404);
+            if ($method!=='POST') Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
+            Auth::checkCsrf();
+            Auth::requirePermission($db,$u,'tour_library.manage');
+            $body=Http::body();
+            if(strlen(json_encode($body,JSON_THROW_ON_ERROR))>900000)
+                throw new InvalidArgumentException('AI review input exceeds 900 KB.');
+            $id=(int)$m[1];$company=(int)$u['company_id'];
+            $lookup=$db->prepare('SELECT * FROM tour_library_programs WHERE company_id=? AND id=? LIMIT 1');
+            $lookup->execute([$company,$id]);
+            $source=$lookup->fetch(PDO::FETCH_ASSOC);
+            if(!$source)Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);
+            // Preserve the original authoritative validation/stale revision/
+            // private price and Word document security guards unchanged.
+            $v=VtaAiItinerary::validate($body,$source);
+            $public=TourLibrary::publicProgram($source,true);
+            $report=VtaAiEvidenceReview::inspect($public,$v,[
+                'source_program_id'=>$id,
+                'source_revision'=>TourProgramWorkspace::revision($source),
+                'change_reasons'=>$body['change_reasons']??[],
+                'evidence'=>$body['evidence']??[],
+            ]);
+            Http::json(['ok'=>true,'module'=>'M02','read_only'=>true,
+                'quality'=>$report]);
+        }
 
         if (preg_match('#^quality/tour-programs/([1-9][0-9]*)$#D',$route,$m)) {
             if ($method !== 'GET') Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
