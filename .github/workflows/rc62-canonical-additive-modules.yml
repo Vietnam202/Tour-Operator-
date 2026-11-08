@@ -1,0 +1,88 @@
+name: RC6.2 Canonical M01 M03 M04 Additive Integration
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaTourItineraryQuality.php'
+      - 'api/lib/VtaRateIntakeReview.php'
+      - 'api/lib/VtaPriceMatrixAudit.php'
+      - 'tests/rc62-itinerary-quality-unit.php'
+      - 'tests/rc62-m03-rate-intake-unit.php'
+      - 'tests/rc62-m04-price-matrix-audit.php'
+      - '.github/workflows/rc62-canonical-additive-modules.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  canonical-integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact integrated source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Pin exact source SHA and enforce add-only RC6.2 diff
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          actual_head = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert actual_head == os.environ['EXPECTED_HEAD'], 'Unexpected running checkout HEAD'
+          expected = {
+              '.github/workflows/rc62-canonical-additive-modules.yml',
+              'api/lib/VtaTourItineraryQuality.php',
+              'api/lib/VtaRateIntakeReview.php',
+              'api/lib/VtaPriceMatrixAudit.php',
+              'tests/rc62-itinerary-quality-unit.php',
+              'tests/rc62-m03-rate-intake-unit.php',
+              'tests/rc62-m04-price-matrix-audit.php',
+          }
+          lines = subprocess.check_output(['git','diff','--name-status',os.environ['BASE_SHA']+'...HEAD'],text=True).strip().splitlines()
+          diff = [line.split('\t',1) for line in lines]
+          assert all(len(entry)==2 for entry in diff), 'Malformed diff listing'
+          assert {path for _,path in diff} == expected, 'Core drift: '+repr(diff)
+          assert all(status=='A' for status,_ in diff), 'Existing RC6.2 code changed: '+repr(diff)
+          print('PASS exact-HEAD integration: 7 NEW files; original core untouched')
+          PY
+      - name: Set up supported PHP 8.3 runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: Native M01, M03 and M04 domain regressions
+        run: |
+          set -euo pipefail
+          for f in api/lib/VtaTourItineraryQuality.php api/lib/VtaRateIntakeReview.php api/lib/VtaPriceMatrixAudit.php tests/rc62-itinerary-quality-unit.php tests/rc62-m03-rate-intake-unit.php tests/rc62-m04-price-matrix-audit.php; do php -l "$f"; done
+          php tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m04-price-matrix-audit.php
+      - name: Build SHA-pinned existing RC6.2 staging artifact (no deploy)
+        run: |
+          python3 deploy/build-integrated-package.py --output dist-module-review
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess, zipfile
+          sha = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          out = pathlib.Path('dist-module-review')
+          manifest = json.loads((out / ('vta-rc62-manifest-'+sha[:12]+'.json')).read_text())
+          archive = out / ('vta-rc62-integrated-staging-'+sha[:12]+'.zip')
+          assert manifest['source_commit'] == sha
+          assert manifest['migration_execution'] == 'NOT_PERFORMED'
+          expected = (
+              'api/lib/VtaTourItineraryQuality.php',
+              'api/lib/VtaRateIntakeReview.php',
+              'api/lib/VtaPriceMatrixAudit.php',
+          )
+          with zipfile.ZipFile(archive) as pkg:
+              for path in expected:
+                  blob = pkg.read('runtime/'+path)
+                  assert blob == pathlib.Path(path).read_bytes(), 'Runtime source mismatch: '+path
+                  assert hashlib.sha256(blob).hexdigest() == manifest['sha256'][path], 'Manifest mismatch: '+path
+                  print('PASS SHA-pinned runtime includes exact audited helper: '+path)
+              assert not any(name.startswith('runtime/tests/') for name in pkg.namelist()), 'Tests leaked into runtime'
+          print('PASS source/runtime parity, 0 migrations applied, no deploy or staging write')
+          PY
