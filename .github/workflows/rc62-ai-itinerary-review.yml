@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -37,6 +40,7 @@ jobs:
         run: |
           node --check vta-ai-itinerary-editor.js
           node --check document-editor.js
+          node --check tests/rc62-v6-blocks-regression.cjs
       - name: Existing Word editor and new AI UI contract
         run: |
           node tests/vta-ai-itinerary-ui.cjs
