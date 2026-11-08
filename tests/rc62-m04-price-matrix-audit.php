@@ -5,9 +5,10 @@ function must(bool $pass,string $note):void{if(!$pass)throw new RuntimeException
 function issue(array $report,string $code):bool{return in_array($code,array_column($report['warnings'],'code'),true);}
 
 $quote=['id'=>77,'company_id'=>12,'total_guests'=>7,'paying_pax'=>6,'foc'=>1,
-    'adults'=>6,'children'=>0,'infants'=>0,'version_status'=>'DRAFT'];
+    'adults'=>6,'children'=>0,'infants'=>0,'version_status'=>'DRAFT','fx_rate'=>'25400.000000','costing_revision'=>4];
 $matrix=['id'=>91,'quote_version_id'=>77,'generation'=>3,'status'=>'LOCKED',
     'dependency_hash'=>str_repeat('a',64),
+    'inputs_json'=>json_encode(['graph'=>['version'=>['costing_revision'=>4]]],JSON_THROW_ON_ERROR),
     'fx_snapshot_json'=>json_encode(['value'=>'25400.000000','currency_pair'=>'USD/VND','source'=>'MANUAL'],JSON_THROW_ON_ERROR)];
 $result=['method'=>'EXACT_PAX','mode'=>'PRIVATE','hotel_level'=>3,'cruise_level'=>5,
     'scenarios'=>[['pax'=>6,'cost'=>['cost_total_vnd'=>'20000000.00','rate_sources'=>[['rate_version_id'=>17]],'guests'=>['foc'=>1]],
@@ -43,6 +44,12 @@ $notFree=VtaPriceMatrixAudit::inspect($quote,$matrix,[$price],$context);
 must(issue($notFree,'SELLING_PRICE_MISSING_OR_ZERO')&&$notFree['safe_cells'][0]['price_status']==='ON_REQUEST','zero is On request, never Free');
 $fx=$matrix;$fx['fx_snapshot_json']='{"value":"0","source":"UNKNOWN","currency_pair":"USD/VND"}';
 must(issue(VtaPriceMatrixAudit::inspect($quote,$fx,[$cell],$context),'FX_SOURCE_UNVERIFIED'),'unknown FX not guessed');
+$changedFx=$quote;$changedFx['fx_rate']='26000.000000';
+must(issue(VtaPriceMatrixAudit::inspect($changedFx,$matrix,[$cell],$context),'FX_SNAPSHOT_DIFFERS_FROM_QUOTE'),'changed FX must not silently inherit old matrix');
+$changedCost=$quote;$changedCost['costing_revision']=5;
+must(issue(VtaPriceMatrixAudit::inspect($changedCost,$matrix,[$cell],$context),'COSTING_REVISION_SNAPSHOT_DRIFT'),'changed costing must not be treated as current matrix');
+$missingInput=$matrix;unset($missingInput['inputs_json']);
+must(issue(VtaPriceMatrixAudit::inspect($quote,$missingInput,[$cell],$context),'COSTING_REVISION_SNAPSHOT_UNVERIFIED'),'missing source snapshot must fail advisory freshness');
 $foc=$result;$foc['scenarios'][0]['cost']['guests']['foc']=0;
 $bad=$cell;$bad['result_json']=json_encode($foc,JSON_THROW_ON_ERROR);
 must(issue(VtaPriceMatrixAudit::inspect($quote,$matrix,[$bad],$context),'SCENARIO_FOC_DRIFT'),'FOC drift flagged');
