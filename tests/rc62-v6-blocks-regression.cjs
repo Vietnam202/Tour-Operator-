@@ -31,6 +31,10 @@ for(const snippet of ['ctx.program','v6Find','v6Go','source.included_text','sour
 assert(css.includes('flex-wrap:wrap;overflow-x:visible'),'Word toolbar must wrap rather than overflow');
 assert(css.includes('data-v6-focus="true"'),'Focus mode must hide side panels');
 assert(css.includes('data-v6-panels="all"'),'Outline must be optional');
+for(const name of ['standard','brochure','quick','b2b']){
+ assert(css.includes('data-v6-layout="'+name+'"'),'Missing visually distinct screen presentation: '+name);
+}
+assert(!css.includes('display:none!important}.v6-editor-layout[data-v6-layout='),'Preview cannot suppress source content');
 for(const part of ['vta-v6-approval.css?v=V6-APPROVAL-2','document-editor.js?v=V6-STUDIO-2']){
  assert(html.includes(part),'HTML pin mismatch: '+part);
  assert(pwa.includes(part),'PWA precache pin mismatch: '+part);
