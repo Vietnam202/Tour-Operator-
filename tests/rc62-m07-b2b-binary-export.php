@@ -19,6 +19,12 @@ function normalizeM07(string $text):string
 {
     return preg_replace('/\s+/u',' ',trim($text))??trim($text);
 }
+function compactM07(string $text):string
+{
+    // Compare DOCX runs and PDF thousands separators semantically, not
+    // visually: "9,876.54", "9 876.54" and "9876.54" are the same token.
+    return preg_replace('/[\\s,]+/u','',$text)??$text;
+}
 function runM07(string $name,array $args):string
 {
     $command=escapeshellcmd($name);
@@ -111,12 +117,14 @@ foreach(['client','agency','itinerary'] as $audience){
         assertM07(!str_contains($text,'Vietnam Travel Advisor'),
             'Partner white-label does not inject VTA corporate brand: '.$audience);
         if($audience==='client'||$audience==='itinerary'){
-            assertM07(!str_contains($text,'VTA NET / pax')&&!str_contains($text,'9876.54'),
+            assertM07(!str_contains(compactM07($text),'VTANET/pax')
+                &&!str_contains(compactM07($text),'9876.54'),
                 'client/itinerary documents contain no agency NET: '.$audience);
             assertM07(!str_contains($text,'markup_value')&&!str_contains($text,'margin_amount'),
                 'no commercial internals in client export: '.$audience);
         }elseif($audience==='agency'){
-            assertM07(str_contains($text,'VTA NET / pax')&&str_contains($text,'9876.54'),
+            assertM07(str_contains(compactM07($text),'VTANET/pax')
+                &&str_contains(compactM07($text),'9876.54'),
                 'only agency working copy includes authorized B2B NET');
         }
     }
