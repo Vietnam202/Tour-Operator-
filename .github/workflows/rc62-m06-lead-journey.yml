@@ -1,0 +1,99 @@
+name: RC6.2 M06 Read-only LeadHub Journey Evidence
+on:
+  pull_request:
+    paths:
+      - 'api/lib/LeadHub.php'
+      - 'api/lib/VtaLeadJourneyReview.php'
+      - 'tests/rc62-m06-lead-journey-native.php'
+      - '.github/workflows/rc62-m06-lead-journey.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m06-additive-lead-review:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact PR HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Enforce M06 inventory and protected original LeadHub logic
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess,pathlib
+          git=lambda *args:subprocess.check_output(['git',*args],text=True)
+          assert git('rev-parse','HEAD').strip()==os.environ['HEAD_SHA'], 'Checkout source SHA mismatch'
+          lines=git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').strip().splitlines()
+          changed=[x.split('\t',1) for x in lines]
+          allowed={
+            'api/lib/LeadHub.php':'M',
+            'api/lib/VtaLeadJourneyReview.php':'A',
+            'tests/rc62-m06-lead-journey-native.php':'A',
+            '.github/workflows/rc62-m06-lead-journey.yml':'A',
+          }
+          assert len(changed)==4 and {p:s for s,p in changed}==allowed,'Unauthorized original structure diff: '+repr(changed)
+          baseline=git('show',os.environ['BASE_SHA']+':api/lib/LeadHub.php')
+          actual=pathlib.Path('api/lib/LeadHub.php').read_text()
+          anchor="            $cid=(int)$user['company_id']; $uid=(int)$user['id'];\n            if($method==='GET')Auth::requirePermission($db,$user,'lead.view');"
+          assert baseline.count(anchor)==1,'Original LeadHub hook differs'
+          begin=actual.index("            // Optional M06 review inside the existing LeadHub module")
+          finish=actual.index("            if($method==='GET')Auth::requirePermission($db,$user,'lead.view');",begin)
+          original=actual[:begin]+actual[finish:]
+          assert original==baseline, 'Existing LeadHub method bytes changed beyond new diagnostic route'
+          added=actual[begin:finish]
+          assert "getenv('VTA_RC62_LEAD_JOURNEY_REVIEW')!=='1'" in added
+          assert "VtaLeadJourneyReview::review(" in added
+          assert "if($method!=='GET')" in added
+          assert 'LeadSalesHandover::convert(' not in added
+          assert len(added.splitlines())<=16,'M06 hook exceeds narrow integration size'
+          print('PASS exact-HEAD + 3 new files + one minimal default-OFF route; original LeadHub untouched')
+          PY
+      - name: PHP 8.3 + SQLite isolated scenario runner
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, mbstring, dom
+          tools: none
+          coverage: none
+      - name: Native module security and data-contract checks
+        run: |
+          set -euo pipefail
+          php -l api/lib/LeadHub.php
+          php -l api/lib/VtaLeadJourneyReview.php
+          php -l tests/rc62-m06-lead-journey-native.php
+          php tests/rc62-m06-lead-journey-native.php
+          php tests/rc62-m02-ai-evidence-native.php
+          php tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m04-price-matrix-audit.php
+      - name: Verify RC6.2 exact-HEAD ZIP and SHA manifest without deployment
+        run: |
+          python3 deploy/build-integrated-package.py --output dist-m06-review
+          python3 - <<'PY'
+          import pathlib,hashlib,json,subprocess,zipfile
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          out=pathlib.Path('dist-m06-review')
+          manifest=json.loads((out/('vta-rc62-manifest-'+sha[:12]+'.json')).read_text())
+          assert manifest['source_commit']==sha
+          assert manifest['migration_execution']=='NOT_PERFORMED'
+          with zipfile.ZipFile(out/('vta-rc62-integrated-staging-'+sha[:12]+'.zip')) as bundle:
+              for path in [
+                'api/lib/LeadHub.php',
+                'api/lib/VtaLeadJourneyReview.php',
+                'api/lib/LeadSalesHandover.php',
+                'api/lib/Customer360.php',
+                'api/lib/VtaAiEvidenceReview.php',
+                'api/lib/VtaProposalExportEvidence.php',
+              ]:
+                  b=bundle.read('runtime/'+path)
+                  assert b==pathlib.Path(path).read_bytes(), 'Missing/modified file in runtime: '+path
+                  assert hashlib.sha256(b).hexdigest()==manifest['sha256'][path]
+              assert not any(x.startswith('runtime/tests/') for x in bundle.namelist())
+          print('PASS exact-SHA packaged M06 advisory, no DB migrations or hosting write')
+          PY
