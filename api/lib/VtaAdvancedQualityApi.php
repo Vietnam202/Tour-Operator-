@@ -25,6 +25,13 @@ final class VtaAdvancedQualityApi
     {
         if (!str_starts_with($route, 'quality/')) return;
         if (!self::enabled()) Http::json(['ok'=>false,'error'=>'ROUTE_NOT_FOUND'],404);
+        // Never trust a caller-supplied user/company context; bind to this session.
+        $sessionUser=Auth::requireUser($db);
+        if ((int)$sessionUser['id']!==(int)($u['id']??0)
+            || (int)$sessionUser['company_id']!==(int)($u['company_id']??0)) {
+            Http::json(['ok'=>false,'error'=>'AUTH_SCOPE_MISMATCH'],401);
+        }
+        Auth::checkCsrf();
 
         if (preg_match('#^quality/tour-programs/([1-9][0-9]*)$#D',$route,$m)) {
             if ($method !== 'GET') Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
