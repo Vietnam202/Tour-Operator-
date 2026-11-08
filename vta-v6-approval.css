@@ -115,6 +115,7 @@
 
 /* RC6.2 four distinct screen previews. Genuine content/media only.
    These styles never edit/save the Master JSON or assert DOCX/PDF parity. */
+@media screen {
 .v6-editor-layout[data-v6-layout="standard"] .wd-page{background:#fff;border:1px solid #e3e9ee}
 .v6-editor-layout[data-v6-layout="standard"] .tiptap h1{color:#193e60;letter-spacing:-.02em}
 .v6-editor-layout[data-v6-layout="standard"] .tiptap h2{border-bottom:1px solid #dae4ed;padding-bottom:7px}
@@ -135,3 +136,4 @@
 .v6-editor-layout[data-v6-layout="b2b"] .tiptap table{border:1px solid #90a9bf}
 .v6-editor-layout[data-v6-layout="b2b"] .tiptap table th{background:#183f64;color:#fff}
 .v6-editor-layout[data-v6-layout="b2b"] .tiptap table tr:nth-child(even) td{background:#f4f8fb}
+}
