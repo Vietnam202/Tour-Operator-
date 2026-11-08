@@ -1,0 +1,97 @@
+name: RC6.2 M08 B2C Publication and Ads Readback
+on:
+  pull_request:
+    paths:
+      - 'api/lib/B2CStudio.php'
+      - 'api/lib/AdsLandingPages.php'
+      - 'api/lib/VtaB2CPublicationReview.php'
+      - 'tests/rc62-m08-publication-review-native.php'
+      - '.github/workflows/rc62-m08-b2c-publication.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-head-native-and-mariadb:
+    runs-on: ubuntu-24.04
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-not-staging
+          MARIADB_DATABASE: vta_ads_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_DATABASE: vta_ads_ci
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: ci-only-not-staging
+    steps:
+      - name: Checkout exact Draft PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify source SHA and additive inventory
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,subprocess
+          git=lambda *args:subprocess.check_output(['git',*args],text=True)
+          assert git('rev-parse','HEAD').strip()==os.environ['HEAD_SHA'],'M08 exact HEAD mismatch'
+          assert os.environ['BASE_SHA']=='faa1d7e7ab04c48aa05c16aa78863cc183e024e6','M07 reviewed base drifted'
+          expected={
+            'api/lib/B2CStudio.php':'M',
+            'api/lib/AdsLandingPages.php':'M',
+            'api/lib/VtaB2CPublicationReview.php':'A',
+            'tests/rc62-m08-publication-review-native.php':'A',
+            '.github/workflows/rc62-m08-b2c-publication.yml':'A',
+          }
+          rows=[line.split('\t',1) for line in git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').splitlines()]
+          assert {path:status for status,path in rows}==expected,'M08 changed-file inventory: '+repr(rows)
+          for path,start,end in [
+            ('api/lib/B2CStudio.php','            // M08 additive review;','            Auth::requirePermission($db,$u,\'b2c.view\');'),
+            ('api/lib/AdsLandingPages.php','            // M08 additive readback;','            if($route===\'ads/landing-admin/options\'&&$method===\'GET\'){'),
+          ]:
+            before=git('show',os.environ['BASE_SHA']+':'+path)
+            after=pathlib.Path(path).read_text()
+            assert after.count(start)==1 and after.count(end)>=1,'M08 hook anchor mismatch '+path
+            begin=after.index(start)
+            finish=after.index(end,begin)
+            assert after[:begin]+after[finish:]==before,'Original module semantics changed '+path
+          helper=pathlib.Path('api/lib/VtaB2CPublicationReview.php').read_text()
+          assert "getenv(self::FLAG) !== '1'" in helper,'M08 default-OFF gate missing'
+          assert not any(token in helper for token in ['INSERT INTO ','UPDATE ','DELETE FROM ']),'M08 review must be read-only'
+          print('PASS exact M07 base, exact M08 head, five-file additive inventory, original module byte parity')
+          PY
+      - name: PHP 8.3 and isolated SQLite/MariaDB support
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, pdo_mysql
+          tools: none
+          coverage: none
+      - name: Native review and original B2C/Ads regressions
+        env:
+          M08_REQUIRE_REAL_CLASSES: '1'
+          M08_REQUIRE_ROUTES: '1'
+        run: |
+          set -euo pipefail
+          php -l api/lib/B2CStudio.php
+          php -l api/lib/AdsLandingPages.php
+          php -l api/lib/VtaB2CPublicationReview.php
+          php -l tests/rc62-m08-publication-review-native.php
+          php tests/rc62-m08-publication-review-native.php
+          php tests/b2c-unit.php
+          php tests/b2c-storefront-unit.php
+          php tests/ads-landing-contract.php
+          php tests/rc62-m06-lead-journey-native.php
+      - name: Existing real MariaDB publisher, withdraw, UTM and LeadHub assertions
+        run: php tests/ads-landing-mariadb-ci.php
