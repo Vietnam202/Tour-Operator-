@@ -213,7 +213,8 @@ yes($r['request_status']==='CLOSED'
     &&$r['idempotency_metadata_complete']
     &&has($r,'NET_IS_NOT_AN_OPERATIONS_BOOKING_CONFIRMATION'),
     'closed NET has issued same date/PAX source, but is NOT a booking or supplier confirmation');
-yes($r['source_quote_version_id']===701,'only scoped issued quote ID is visible');
+yes($r['source_quote_version_id']===null,
+    'partner sees issued Quote status but not the internal QuoteVersion ID');
 $pending=VtaB2BPartnerAudit::netRequest($db,$uA,111,$clock);
 yes(has($pending,'NET_REQUEST_PENDING_OPERATOR_RESOLUTION')
     &&$pending['state']==='READ_ONLY_REVIEW_NO_NET_APPROVAL',
@@ -246,6 +247,10 @@ yes($expired['source_quote_status']==='QUOTE_NOT_FOUND_IN_COMPANY'
 Auth::$session=$uAdmin;
 yes(http($db,$uAdmin,'b2b/partner-tours/12/quality')->status===200,
     'authorized same-company B2B admin can read permitted agency B status');
+$adminSource=http($db,$uAdmin,'b2b/net-requests/112/quality');
+yes($adminSource->status===200
+    &&$adminSource->payload['quality']['source_quote_version_id']===701,
+    'only authorized internal B2B admin may inspect exact source QuoteVersion ID');
 Auth::$session=$uA;
 $forged=['id'=>101,'company_id'=>2];
 yes(http($db,$forged,'b2b/partner-tours/13/quality')->status===401,
