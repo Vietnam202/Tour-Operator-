@@ -79,7 +79,9 @@ CREATE TABLE leads(id INTEGER PRIMARY KEY,company_id INTEGER,request_id INTEGER,
     status TEXT,handover_status TEXT,owner_user_id INTEGER,
     sales_owner_user_id INTEGER,next_action_due TEXT,inquiry_id INTEGER);
 CREATE TABLE users(id INTEGER PRIMARY KEY,company_id INTEGER,status TEXT);
-CREATE TABLE inquiries(id INTEGER PRIMARY KEY,company_id INTEGER,status TEXT);
+CREATE TABLE inquiries(id INTEGER PRIMARY KEY,company_id INTEGER,status TEXT,trip_id INTEGER);
+CREATE TABLE trips(id INTEGER PRIMARY KEY,company_id INTEGER,customer_id INTEGER);
+CREATE TABLE customers(id INTEGER PRIMARY KEY,company_id INTEGER,status TEXT);
 CREATE TABLE quotes(id INTEGER PRIMARY KEY,company_id INTEGER,inquiry_id INTEGER,status TEXT);");
 
 $req=$db->prepare('INSERT INTO lead_requests VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
@@ -111,13 +113,21 @@ putRequest($req,106,10,'Unrelated','unrelated@example.net','012 345 6789','2027-
 putRequest($req,110,10,'Historic Entry',null,null,null,null,'NEW',null,null,'{"not-json":');
 putRequest($req,111,10,'Broken Link','broken@example.org',null,'2027-01-03','Da Nang','QUALIFIED');
 putRequest($req,112,10,'Converted Broken','nobody@example.org',null,'2027-01-04','Ha Giang','QUALIFIED');
+putRequest($req,113,10,'Trip Foreign Customer','foreign-customer@example.org',null,'2027-01-08','Ninh Binh','QUALIFIED');
+putRequest($req,114,10,'Trip Inactive Customer','inactive@example.org',null,'2027-01-09','Sapa','QUALIFIED');
 
 $db->exec("INSERT INTO users VALUES(5,10,'ACTIVE'),(6,10,'INACTIVE'),(8,11,'ACTIVE');
 INSERT INTO leads VALUES(201,10,101,'QUALIFIED','ACCEPTED',5,NULL,'2026-11-08 05:00:00',301);
 INSERT INTO leads VALUES(211,10,111,'QUALIFIED','CONVERTED',6,NULL,NULL,399);
 INSERT INTO leads VALUES(212,10,112,'CONVERTED','CONVERTED',5,NULL,NULL,NULL);
-INSERT INTO inquiries VALUES(301,10,'WORKING');
-INSERT INTO inquiries VALUES(399,11,'SENT');
+INSERT INTO leads VALUES(213,10,113,'CONVERTED','CONVERTED',5,NULL,NULL,302);
+INSERT INTO leads VALUES(214,10,114,'CONVERTED','CONVERTED',5,NULL,NULL,303);
+INSERT INTO inquiries VALUES(301,10,'WORKING',501);
+INSERT INTO inquiries VALUES(302,10,'QUOTED',502);
+INSERT INTO inquiries VALUES(303,10,'WORKING',503);
+INSERT INTO inquiries VALUES(399,11,'SENT',599);
+INSERT INTO trips VALUES(501,10,701),(502,10,799),(503,10,702),(599,11,799);
+INSERT INTO customers VALUES(701,10,'ACTIVE'),(702,10,'INACTIVE'),(799,11,'ACTIVE');
 INSERT INTO quotes VALUES(401,10,301,'READY'),(402,11,301,'APPROVED');");
 $before=$db->query('SELECT COUNT(*) requests FROM lead_requests')->fetchColumn();
 $beforeLead=$db->query('SELECT COUNT(*) FROM leads')->fetchColumn();
@@ -168,8 +178,9 @@ ok($r['journey']['lead_id']===201 && $r['journey']['inquiry_id']===301
     &&$r['journey']['inquiry_status']==='WORKING'
     &&$r['journey']['latest_quote_id']===401
     &&$r['journey']['latest_quote_status']==='READY'
-    &&$r['journey']['quote_count_bounded']===1,
-    'LeadHub to Inquiry and Quote references scoped to original tenant');
+    &&$r['journey']['quote_count_bounded']===1
+    &&$r['journey']['customer360_link_status']==='ACTIVE_COMPANY_CUSTOMER_LINK',
+    'LeadHub to Inquiry/Trip/Customer360 and Quote references scoped to original tenant');
 $reportText=json_encode($r,JSON_THROW_ON_ERROR);
 foreach(['alice@example.com','84912345678','SYNTHETIC_SECRET_CAMPAIGN',
     'SYNTHETIC_PRIVATE_AD_ID','PRIVATE_SUBMISSION_KEY_101','private-utm-token',
@@ -190,6 +201,14 @@ ok(warning($broken,'LINKED_INQUIRY_NOT_FOUND_IN_COMPANY')
 $noInquiry=inspect($db,$actor,112,$clock);
 ok(warning($noInquiry,'CONVERTED_LEAD_HAS_NO_INQUIRY_LINK'),
     'converted record lacking inquiry link is BLOCKED review');
+$foreignCustomer=inspect($db,$actor,113,$clock);
+ok(warning($foreignCustomer,'CUSTOMER360_CROSS_TENANT_OR_BROKEN_LINK')
+    &&$foreignCustomer['journey']['customer360_link_status']==='CUSTOMER_NOT_FOUND_IN_COMPANY',
+    'cross-tenant customer reference cannot be accepted through a local trip');
+$inactiveCustomer=inspect($db,$actor,114,$clock);
+ok(warning($inactiveCustomer,'CUSTOMER360_CUSTOMER_NOT_ACTIVE')
+    &&$inactiveCustomer['journey']['customer360_link_status']==='CUSTOMER_INACTIVE_REVIEW',
+    'inactive Customer360 link requires human review, never auto-activates');
 
 ok(getRoute($db,'lead-hub/requests/101/quality','POST',$actor)->status===405,
     'new advisory route rejects all mutating methods');
