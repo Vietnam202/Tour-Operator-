@@ -35,8 +35,9 @@ jobs:
             'api/lib/VtaAdvancedQualityApi.php':'M',
             'tests/rc62-m02-ai-evidence-native.php':'A',
             '.github/workflows/rc62-m02-ai-evidence.yml':'A',
+            '.github/workflows/rc62-quality-api-readonly.yml':'M',
           }
-          assert len(changes)==4 and {path:status for status,path in changes}==required,'Core architecture changed: '+repr(changes)
+          assert len(changes)==5 and {path:status for status,path in changes}==required,'Core architecture changed: '+repr(changes)
           diff=git('diff','--unified=0',os.environ['BASE_SHA']+'...HEAD','--','api/lib/VtaAdvancedQualityApi.php')
           removed=[line for line in diff.splitlines() if line.startswith('-') and not line.startswith('---')]
           assert not removed,'Original quality router lines were replaced/deleted'
@@ -49,6 +50,8 @@ jobs:
           assert text.count("getenv('VTA_RC62_AI_EVIDENCE_REVIEW')!=='1'")==1
           assert text.count("Http::json(['ok'=>true,'module'=>'M02'")==1
           assert 'VtaAiItinerary::commit(' not in ''.join(plus)
+          quality_diff=git('diff','--unified=0',os.environ['BASE_SHA']+'...HEAD','--','.github/workflows/rc62-quality-api-readonly.yml')
+          assert not any(line.startswith('-') and not line.startswith('---') for line in quality_diff.splitlines()),'Original quality workflow lines deleted'
           print('PASS exact-SHA add-only; original AI/Word/Price code untouched, M02 route opt-in')
           PY
       - name: PHP 8.3 isolated session + database runner
