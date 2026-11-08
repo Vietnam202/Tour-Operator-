@@ -1,0 +1,48 @@
+name: RC6.2 M03 Supplier Rate Intake Read-Only QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaRateIntakeReview.php'
+      - 'tests/rc62-m03-rate-intake-unit.php'
+      - '.github/workflows/rc62-m03-rate-intake.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview-only-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Refuse original-structure edits
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+            '.github/workflows/rc62-m03-rate-intake.yml',
+            'api/lib/VtaRateIntakeReview.php',
+            'tests/rc62-m03-rate-intake-unit.php',
+          }
+          lines = subprocess.check_output(['git','diff','--name-status',os.environ['BASE_SHA']+'...HEAD'],text=True).strip().splitlines()
+          changes = [line.split('\t',1) for line in lines]
+          assert all(len(item)==2 for item in changes), 'Invalid git status'
+          assert {path for _,path in changes} == expected, 'Original RC6.2 files changed: '+repr(changes)
+          assert all(status=='A' for status,_ in changes), 'Changes MUST be additive only: '+repr(changes)
+          print('PASS M03 strict add-only gate; zero original files modified')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: Lint and security-negative preview fixtures
+        run: |
+          php -l api/lib/VtaRateIntakeReview.php
+          php -l tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m03-rate-intake-unit.php
