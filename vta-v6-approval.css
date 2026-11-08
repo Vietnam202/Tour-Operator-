@@ -77,3 +77,63 @@
  .v6-editor-layout .wd-page{margin:5px auto 12px;min-width:0}
 }
 @media print{.v6-outline,.v6-editor-tools,.v6-library-bar{display:none!important}.v6-editor-layout{display:block!important}}
+
+/* RC6.2 V6 functional editor hotfix: readable document first, panels optional.
+   Layout previews remain screen-only and do not change saved content or export files. */
+.wd-editor .wd-toolbar{flex-wrap:wrap;overflow-x:visible;white-space:normal;row-gap:6px;height:auto;max-height:none}
+.v6-editor-layout{grid-template-columns:minmax(0,1fr) 172px;gap:12px;max-width:1750px}
+.v6-workspace-controls{grid-column:1/-1;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:10px 16px 0}
+.v6-workspace-controls button{min-height:32px}
+.v6-editor-layout .v6-outline{display:none}
+.v6-editor-layout[data-v6-panels="all"]{grid-template-columns:156px minmax(0,1fr) 172px}
+.v6-editor-layout[data-v6-panels="all"] .v6-outline{display:block}
+.v6-editor-layout .wd-canvas{min-width:0;max-width:100%;overflow-x:visible;padding:12px 10px 32px}
+.v6-editor-layout .wd-page{box-sizing:border-box;width:100%;max-width:794px;min-width:0;margin:12px auto 32px;padding:clamp(18px,4vw,64px) clamp(16px,4vw,68px)}
+.v6-editor-layout .wd-page .tiptap{overflow-wrap:anywhere;min-height:720px}
+.v6-editor-layout[data-v6-focus="true"]{grid-template-columns:minmax(0,1fr)}
+.v6-editor-layout[data-v6-focus="true"] .v6-outline,
+.v6-editor-layout[data-v6-focus="true"] .v6-editor-tools{display:none!important}
+.v6-editor-layout[data-v6-focus="true"] .wd-canvas{grid-column:1/-1}
+@media(max-width:1250px){
+ .v6-editor-layout,.v6-editor-layout[data-v6-panels="all"]{grid-template-columns:minmax(0,1fr)}
+ .v6-editor-layout .wd-canvas{grid-column:1/-1}
+ .v6-editor-layout .v6-editor-tools{grid-column:1/-1}
+ .v6-editor-layout[data-v6-panels="all"] .v6-outline{grid-column:1/-1;position:static;max-height:220px}
+}
+@media(max-width:760px){
+ .v6-workspace-controls{width:100%;padding:8px 10px;justify-content:flex-start}
+ .v6-editor-layout .wd-canvas{width:100%;padding:6px 4px 16px}
+ .v6-editor-layout .wd-page{width:100%;min-width:0;padding:18px 16px;min-height:560px}
+ .v6-editor-layout .wd-page .tiptap{min-height:420px}
+ .wd-editor .wd-toolbar{gap:5px;padding:6px}
+}
+@media print{
+ .v6-workspace-controls{display:none!important}
+ .v6-editor-layout .wd-canvas{padding:0!important}
+ .v6-editor-layout .wd-page{max-width:none;min-height:0;padding:0;box-shadow:none}
+}
+
+/* RC6.2 four distinct screen previews. Genuine content/media only.
+   These styles never edit/save the Master JSON or assert DOCX/PDF parity. */
+@media screen {
+.v6-editor-layout[data-v6-layout="standard"] .wd-page{background:#fff;border:1px solid #e3e9ee}
+.v6-editor-layout[data-v6-layout="standard"] .tiptap h1{color:#193e60;letter-spacing:-.02em}
+.v6-editor-layout[data-v6-layout="standard"] .tiptap h2{border-bottom:1px solid #dae4ed;padding-bottom:7px}
+.v6-editor-layout[data-v6-layout="brochure"] .wd-page{background:linear-gradient(180deg,#eaf7f5 0,#fff 145px);border:1px solid #cce9e4;box-shadow:0 16px 34px #0d625c20}
+.v6-editor-layout[data-v6-layout="brochure"] .tiptap h1{font:700 30pt/1.1 Georgia,serif;color:#075f5d;margin:4px 0 28px}
+.v6-editor-layout[data-v6-layout="brochure"] .tiptap h2{font:700 16pt/1.35 Georgia,serif;color:#117a72;border-left:5px solid #20a18f;padding:8px 12px;background:#eef9f6}
+.v6-editor-layout[data-v6-layout="brochure"] .tiptap img{width:100%;max-height:340px;object-fit:cover;border-radius:10px;margin:17px 0}
+.v6-editor-layout[data-v6-layout="brochure"] .tiptap table th{background:#d8f1eb;color:#15524a}
+.v6-editor-layout[data-v6-layout="quick"] .wd-page{max-width:740px;min-height:640px;background:#fff;border:1px solid #dfe7ee;box-shadow:0 6px 18px #0a28540c}
+.v6-editor-layout[data-v6-layout="quick"] .tiptap{line-height:1.42;font-size:10.5pt;min-height:480px}
+.v6-editor-layout[data-v6-layout="quick"] .tiptap h1{font:750 20pt/1.25 Arial,sans-serif;color:#254d69;margin:0 0 14px}
+.v6-editor-layout[data-v6-layout="quick"] .tiptap h2{font:700 12pt/1.3 Arial,sans-serif;color:#174d77;border-left:4px solid #6ea5c7;padding:4px 8px;margin:14px 0 6px}
+.v6-editor-layout[data-v6-layout="quick"] .tiptap p{margin-bottom:5px}
+.v6-editor-layout[data-v6-layout="quick"] .tiptap img{max-height:210px;object-fit:contain}
+.v6-editor-layout[data-v6-layout="b2b"] .wd-page{background:#fff;border-top:12px solid #173e65;border-bottom:4px solid #c1a16c;box-shadow:0 14px 25px #0827431e}
+.v6-editor-layout[data-v6-layout="b2b"] .tiptap h1{font:700 24pt/1.2 Arial,sans-serif;color:#153c63;letter-spacing:.015em;text-transform:uppercase;border-bottom:2px solid #c0a06c;padding-bottom:15px;margin-bottom:24px}
+.v6-editor-layout[data-v6-layout="b2b"] .tiptap h2{font:700 14pt/1.3 Arial,sans-serif;color:#153f64;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid #cad9e4;padding-bottom:6px}
+.v6-editor-layout[data-v6-layout="b2b"] .tiptap table{border:1px solid #90a9bf}
+.v6-editor-layout[data-v6-layout="b2b"] .tiptap table th{background:#183f64;color:#fff}
+.v6-editor-layout[data-v6-layout="b2b"] .tiptap table tr:nth-child(even) td{background:#f4f8fb}
+}

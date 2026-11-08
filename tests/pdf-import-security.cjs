@@ -8,6 +8,6 @@ for(const file of ['assets/document-pdf.js','assets/document-pdf-worker.js'])ass
 assert(read('editor-build/pdf.js').includes('isEvalSupported:false'));
 assert(read('editor-build/pdf.js').includes('document-pdf-worker.js?v=RC62-PDF6-1'));
 assert(read('document-editor.js').includes('document-pdf.js?v=RC62-PDF6-1'));
-assert(read('service-worker.js').includes('vta-RC62-V6-MASTER-EDITOR-1-PWA'));
+assert(read('service-worker.js').includes('vta-RC62-V6-MASTER-EDITOR-2-PWA'));
 assert(read('service-worker.js').includes('document-pdf-worker.js?v=RC62-PDF6-1'));
 console.log('PASS patched PDF.js source/lockfile/client/worker versions and PWA cache pins match; eval remains disabled');
