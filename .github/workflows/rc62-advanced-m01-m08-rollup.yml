@@ -1,0 +1,108 @@
+name: RC6.2 Advanced M01–M08 Rollup
+on:
+  pull_request:
+    paths:
+      - 'docs/RC62_ADVANCED_M01_M08_ROLLUP_20261108.md'
+      - '.github/workflows/rc62-advanced-m01-m08-rollup.yml'
+permissions:
+  contents: read
+jobs:
+  integrated-module-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-not-staging
+          MARIADB_DATABASE: vta_ads_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_DATABASE: vta_ads_ci
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: ci-only-not-staging
+    steps:
+      - name: Checkout exact rollup PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify reviewed ancestry and preserve the M01–M08 code tree
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+
+          root = 'd9a5d2619fce0f3dd5505dc9e61b73d2468029c0'
+          reviewed = 'dd6fe1d910f9e661740463ce6fbc7f1e4db3a239'
+          head = os.environ['HEAD_SHA']
+          assert git('rev-parse', 'HEAD') == head, 'Checkout does not match PR head'
+          assert os.environ['BASE_SHA'] == reviewed, 'PR #133 base SHA changed'
+          assert git('merge-base', root, reviewed) == root, 'PR #108 ancestry changed'
+          assert git('merge-base', reviewed, head) == reviewed, 'Rollup does not descend from PR #133'
+          assert git('rev-list', '--count', f'{root}..{reviewed}') == '39', 'Unexpected module ancestry'
+          expected = {
+              'A\t.github/workflows/rc62-advanced-m01-m08-rollup.yml',
+              'A\tdocs/RC62_ADVANCED_M01_M08_ROLLUP_20261108.md',
+          }
+          rows = git('diff', '--name-status', reviewed, head).splitlines()
+          assert len(rows) == len(expected) and set(rows) == expected, 'Unexpected source change: ' + repr(rows)
+          print(f'PASS source preservation and exact rollup SHA {head}')
+          PY
+      - name: Set up PHP 8.3 with isolated database and export extensions
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, pdo_mysql, openssl, zip, dom, gd
+          tools: none
+          coverage: none
+      - name: Install PDF inspection tools for synthetic export tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          command -v pdfinfo
+          command -v pdftotext
+          command -v pdftoppm
+      - name: M01–M04 itinerary, AI evidence, supplier rates and pricing
+        run: |
+          set -euo pipefail
+          php tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-m02-ai-evidence-native.php
+          php tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m04-price-matrix-audit.php
+          php tests/rc62-quality-api-readonly-native.php
+      - name: M05 and M07 synthetic DOCX/PDF export and audience isolation
+        env:
+          VTA_M05_OUTPUT_DIR: ${{ runner.temp }}/rc62-m05-rollup
+          VTA_M07_OUTPUT_DIR: ${{ runner.temp }}/rc62-m07-rollup
+        run: |
+          set -euo pipefail
+          php tests/rc62-m05-native-export-evidence.php
+          php tests/rc62-m07-b2b-approval-native.php
+          php tests/rc62-m07-b2b-binary-export.php
+          php tests/b2b-partner-hub-unit.php
+          php tests/b2b-hybrid-isolation-unit.php
+      - name: M06 and M08 LeadHub, B2C and Ads review
+        env:
+          M08_REQUIRE_REAL_CLASSES: '1'
+          M08_REQUIRE_ROUTES: '1'
+        run: |
+          set -euo pipefail
+          php tests/rc62-m06-lead-journey-native.php
+          php tests/rc62-m08-publication-review-native.php
+          php tests/b2c-unit.php
+          php tests/b2c-storefront-unit.php
+          php tests/ads-landing-contract.php
+          php tests/ads-landing-mariadb-ci.php
