@@ -165,7 +165,9 @@ final class VtaB2BPartnerAudit
             'request_status'=>$status,
             'idempotency_metadata_complete'=>$hasKey&&$hasPayload,
             'assigned_owner_present'=>$owner!==null,
-            'source_quote_version_id'=>$quoteId,
+            // Internal QuoteVersion IDs are visible only to B2B admins,
+            // never to a partner portal account or white-label consumer.
+            'source_quote_version_id'=>Auth::can($db,(int)$user['id'],'b2b.admin')?$quoteId:null,
             'source_quote_status'=>$source['status'],
             'source_travel_pax_consistency'=>$source['status']!=='SENT_OR_CONFIRMED_SOURCE'
                 ?'UNVERIFIED'
