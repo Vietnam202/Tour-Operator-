@@ -16,6 +16,30 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
+      - name: Enforce add-only diff (no changes to original RC6.2 files)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+              '.github/workflows/rc62-m01-itinerary-quality.yml',
+              'api/lib/VtaTourItineraryQuality.php',
+              'tests/rc62-itinerary-quality-unit.php',
+          }
+          changed = subprocess.check_output(
+              ['git', 'diff', '--name-status', os.environ['BASE_SHA'] + '...HEAD'],
+              text=True
+          ).strip().splitlines()
+          pairs = [line.split('\t', 1) for line in changed]
+          assert all(len(pair) == 2 for pair in pairs), 'Unexpected diff output'
+          actual = {path for _, path in pairs}
+          assert actual == expected, 'Original RC6.2 file changed: ' + repr(pairs)
+          assert all(status == 'A' for status, _ in pairs), 'Only NEW files are permitted: ' + repr(pairs)
+          print('PASS M01 add-only PR diff: exactly three new files, zero original files changed')
+          PY
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
