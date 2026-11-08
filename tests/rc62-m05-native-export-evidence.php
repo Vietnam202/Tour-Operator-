@@ -91,7 +91,7 @@ foreach(VtaProposalExportEvidence::TEMPLATES as $i=>$template){
     }
     $snapshot=['quote_ref'=>'QUOTE-TEST-007','tour_name'=>'SYNTHETIC Vietnam 4D3N',
         'presentation'=>['settings'=>$settings,'blocks'=>$blocks]];
-    $serial=json_encode($snapshot,JSON_THROW_ON_ERROR);
+    $serial=json_encode($snapshot,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     [$docxPath,$pdfPath,$html,$proof]=exportAndProof($snapshot,'m05-'.($i+1).'-'.$template,$out,$photo);
     $r=VtaProposalExportEvidence::inspect($snapshot,$docxPath,$pdfPath,$html,$proof,$expected);
     verify($r['verdict']==='STRUCTURE_AND_MARKERS_PASS_VISUAL_REVIEW_PENDING',
