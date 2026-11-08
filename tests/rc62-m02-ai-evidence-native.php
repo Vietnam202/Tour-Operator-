@@ -155,6 +155,25 @@ okay(code($documented['warnings'],'EVIDENCE_REQUIRES_INDEPENDENT_VERIFICATION'),
     'self-declared proof NEVER becomes verified supplier/official evidence');
 okay(!isset($documented['review_token'])&&!isset($documented['creation_key']),
     'not a preview/commit token generator');
+// Explicitly verify paragraph/block-level edits inside the existing
+// editable Word/Tiptap document, with no paragraph text in the report.
+$wordEdited=$body;
+$wordEdited['document']['content']['content'][1]['content'][0]['text']='Changed illustrative paragraph, no supplier facts asserted.';
+$validatedWord=VtaAiItinerary::validate($wordEdited,$source);
+$wordReport=VtaAiEvidenceReview::inspect($public,$validatedWord,[
+    'source_program_id'=>31,'source_revision'=>TourProgramWorkspace::revision($source),
+]);
+okay(in_array('word:document',array_column($wordReport['changes'],'path'),true),
+    'whole saved Word document changed');
+okay(in_array('word:block:2',array_column($wordReport['changes'],'path'),true),
+    'specific Word paragraph changed at block 2');
+okay(code($wordReport['warnings'],'WORD_BLOCK_DIFF_IS_POSITIONAL_NOT_VISUAL_PARITY'),
+    'paragraph-level diff does not imply Word/PDF pixel parity');
+okay(!str_contains(json_encode($wordReport),'Changed illustrative paragraph'),
+    'Word text remains absent from safe diff response');
+okay(isset($wordReport['master_public_snapshot_sha256'])
+    && !isset($wordReport['source_sha256']),
+    'Master JSON digest is not misrepresented as original uploaded file hash');
 $bad=$review;$bad['change_reasons'][]=$reasons[0];
 try{VtaAiEvidenceReview::inspect($public,$validated,$bad);throw new RuntimeException('Duplicate reasons wrongly accepted');}
 catch(InvalidArgumentException $e){okay(str_contains($e->getMessage(),'Duplicate'),'reason dedup is fail closed');}
