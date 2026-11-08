@@ -1,0 +1,96 @@
+name: RC6.2 M02 AI Itinerary Evidence and Tenant Safety
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaAiEvidenceReview.php'
+      - 'api/lib/VtaAdvancedQualityApi.php'
+      - 'tests/rc62-m02-ai-evidence-native.php'
+      - '.github/workflows/rc62-m02-ai-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m02-evidence-only:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout immutable exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Enforce additive-only diff and original AI/Word/price source unchanged
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess,pathlib
+          git=lambda *a: subprocess.check_output(['git',*a],text=True)
+          assert git('rev-parse','HEAD').strip()==os.environ['HEAD_SHA'],'exact HEAD missing'
+          changes=[record.split('\t',1) for record in git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').strip().splitlines()]
+          required={
+            'api/lib/VtaAiEvidenceReview.php':'A',
+            'api/lib/VtaAdvancedQualityApi.php':'M',
+            'tests/rc62-m02-ai-evidence-native.php':'A',
+            '.github/workflows/rc62-m02-ai-evidence.yml':'A',
+          }
+          assert len(changes)==4 and {path:status for status,path in changes}==required,'Core architecture changed: '+repr(changes)
+          diff=git('diff','--unified=0',os.environ['BASE_SHA']+'...HEAD','--','api/lib/VtaAdvancedQualityApi.php')
+          removed=[line for line in diff.splitlines() if line.startswith('-') and not line.startswith('---')]
+          assert not removed,'Original quality router lines were replaced/deleted'
+          plus=[line for line in diff.splitlines() if line.startswith('+') and not line.startswith('+++')]
+          assert len(plus)<45 and len(plus)>=22,'Quality API change exceeds narrow additive scope'
+          text=pathlib.Path('api/lib/VtaAdvancedQualityApi.php').read_text()
+          assert text.count("require_once __DIR__.'/VtaAiEvidenceReview.php';")==1
+          assert text.count("VtaAiItinerary::validate($body,$source)")==1
+          assert text.count("Auth::requirePermission($db,$u,'tour_library.manage')")==1
+          assert text.count("getenv('VTA_RC62_AI_EVIDENCE_REVIEW')!=='1'")==1
+          assert text.count("Http::json(['ok'=>true,'module'=>'M02'")==1
+          assert 'VtaAiItinerary::commit(' not in ''.join(plus)
+          print('PASS exact-SHA add-only; original AI/Word/Price code untouched, M02 route opt-in')
+          PY
+      - name: PHP 8.3 isolated session + database runner
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, mbstring, dom, zip
+          tools: none
+          coverage: none
+      - name: PHP lint, previous module contracts and native M02 validations
+        run: |
+          set -euo pipefail
+          php -l api/lib/VtaAiEvidenceReview.php
+          php -l api/lib/VtaAdvancedQualityApi.php
+          php -l api/lib/VtaAiItinerary.php
+          php -l api/lib/TourProgramWorkspace.php
+          php -l tests/rc62-m02-ai-evidence-native.php
+          php tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m04-price-matrix-audit.php
+          php tests/rc62-m02-ai-evidence-native.php
+      - name: Exact-HEAD SHA source/runtime parity, no staging deployment
+        run: |
+          python3 deploy/build-integrated-package.py --output dist-m02-audit
+          python3 - <<'PY'
+          import pathlib,subprocess,json,hashlib,zipfile
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          d=pathlib.Path('dist-m02-audit')
+          manifest=json.loads((d/('vta-rc62-manifest-'+sha[:12]+'.json')).read_text())
+          assert manifest['source_commit']==sha
+          assert manifest['migration_execution']=='NOT_PERFORMED'
+          with zipfile.ZipFile(d/('vta-rc62-integrated-staging-'+sha[:12]+'.zip')) as z:
+              for path in [
+                'api/lib/VtaAiEvidenceReview.php',
+                'api/lib/VtaAdvancedQualityApi.php',
+                'api/lib/VtaAiItinerary.php',
+                'api/lib/TourProgramWorkspace.php',
+                'api/lib/VtaProposalExportEvidence.php',
+              ]:
+                  b=z.read('runtime/'+path)
+                  assert b==pathlib.Path(path).read_bytes()
+                  assert hashlib.sha256(b).hexdigest()==manifest['sha256'][path]
+              assert not any(p.startswith('runtime/tests/') for p in z.namelist())
+          print('PASS source/runtime SHA-256 parity with no deploy or DB migration')
+          PY
