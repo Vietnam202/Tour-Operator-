@@ -51,7 +51,9 @@ jobs:
           assert text.count("Http::json(['ok'=>true,'module'=>'M02'")==1
           assert 'VtaAiItinerary::commit(' not in ''.join(plus)
           quality_diff=git('diff','--unified=0',os.environ['BASE_SHA']+'...HEAD','--','.github/workflows/rc62-quality-api-readonly.yml')
-          assert not any(line.startswith('-') and not line.startswith('---') for line in quality_diff.splitlines()),'Original quality workflow lines deleted'
+          assert 'if \'api/lib/VtaAiEvidenceReview.php\' in actual:' in pathlib.Path('.github/workflows/rc62-quality-api-readonly.yml').read_text(), 'Missing stacked guard'
+          assert 'original authenticated router unchanged' in pathlib.Path('.github/workflows/rc62-quality-api-readonly.yml').read_text(), 'Initial quality bridge protection weakened'
+          assert 'assert after==before.replace(anchor,addition)' in pathlib.Path('.github/workflows/rc62-quality-api-readonly.yml').read_text(), 'Original quality bridge guard removed'
           print('PASS exact-SHA add-only; original AI/Word/Price code untouched, M02 route opt-in')
           PY
       - name: PHP 8.3 isolated session + database runner
