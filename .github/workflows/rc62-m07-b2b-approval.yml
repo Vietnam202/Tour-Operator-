@@ -5,6 +5,7 @@ on:
       - 'api/lib/PartnerHub.php'
       - 'api/lib/VtaB2BPartnerAudit.php'
       - 'tests/rc62-m07-b2b-approval-native.php'
+      - 'tests/rc62-m07-b2b-binary-export.php'
       - '.github/workflows/rc62-m07-b2b-approval.yml'
   workflow_dispatch:
 permissions:
@@ -33,10 +34,11 @@ jobs:
             'api/lib/PartnerHub.php':'M',
             'api/lib/VtaB2BPartnerAudit.php':'A',
             'tests/rc62-m07-b2b-approval-native.php':'A',
+            'tests/rc62-m07-b2b-binary-export.php':'A',
             '.github/workflows/rc62-m07-b2b-approval.yml':'A',
           }
           rows=[x.split('\t',1) for x in git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').strip().splitlines()]
-          assert len(rows)==4 and {path:status for status,path in rows}==expected, 'RC6.2 original module changed: '+repr(rows)
+          assert len(rows)==5 and {path:status for status,path in rows}==expected, 'RC6.2 original module changed: '+repr(rows)
           before=git('show',os.environ['BASE_SHA']+':api/lib/PartnerHub.php')
           after=pathlib.Path('api/lib/PartnerHub.php').read_text()
           anchor="            self::requirePortal($db,$u);\n            if($route==='b2b/me'&&$method==='GET'){"
@@ -49,25 +51,61 @@ jobs:
           assert 'VtaB2BPartnerAudit::tour(' in patch and 'VtaB2BPartnerAudit::netRequest(' in patch
           assert 'PartnerHub::approvedRates(' not in patch and 'UPDATE ' not in patch and 'INSERT ' not in patch
           assert len(patch.splitlines())<=29, 'Optional M07 route exceeds bounded addition'
-          print('PASS exact SHA, 3 added files, only new guarded M07 route, original B2B unchanged')
+          print('PASS exact SHA, 4 added files including binary export test; only one guarded M07 route, original B2B unchanged')
           PY
       - name: PHP 8.3 with real SQLite database fixture
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, zip, dom
+          extensions: mbstring, pdo_sqlite, sqlite3, zip, dom, gd
           tools: none
           coverage: none
+      - name: Install PDF verification tools for actual client/agency output
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          command -v pdftotext
+          command -v pdfinfo
+          command -v pdftoppm
       - name: Native agency/NET security and original B2B regressions
         run: |
           set -euo pipefail
           php -l api/lib/PartnerHub.php
           php -l api/lib/VtaB2BPartnerAudit.php
           php -l tests/rc62-m07-b2b-approval-native.php
+          php -l tests/rc62-m07-b2b-binary-export.php
           php tests/rc62-m07-b2b-approval-native.php
           php tests/b2b-partner-hub-unit.php
           php tests/b2b-hybrid-isolation-unit.php
           php tests/rc62-m06-lead-journey-native.php
+      - name: Real white-label client vs agency DOCX/PDF/HTML binary output
+        env:
+          VTA_M07_OUTPUT_DIR: ${{ runner.temp }}/rc62-m07-b2b-native
+        run: |
+          php tests/rc62-m07-b2b-binary-export.php
+          python3 - <<'PY'
+          import os,pathlib,json
+          folder=pathlib.Path(os.environ['VTA_M07_OUTPUT_DIR'])
+          report=json.loads((folder/'m07-native-b2b-evidence.json').read_text())
+          assert report['status']=='SYNTHETIC_REAL_BINARY_ONLY'
+          assert report['owner_visual_acceptance']=='PENDING'
+          assert len(report['templates'])==3
+          assert len(list(folder.glob('*.docx')))==3
+          assert len(list(folder.glob('*.pdf')))==3
+          assert len(list(folder.glob('*-page1.png')))==3
+          print('PASS real client/agency/itinerary ZIP+PDF plus manual PNG review artifacts')
+          PY
+      - name: Archive synthetic audience-separated evidence (no deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc62-m07-synthetic-client-agency-white-label-evidence
+          path: |
+            ${{ runner.temp }}/rc62-m07-b2b-native/*.docx
+            ${{ runner.temp }}/rc62-m07-b2b-native/*.pdf
+            ${{ runner.temp }}/rc62-m07-b2b-native/*-page1.png
+            ${{ runner.temp }}/rc62-m07-b2b-native/m07-native-b2b-evidence.json
+          retention-days: 14
+          if-no-files-found: error
       - name: Exact-SHA source bundle verification, no upload or DB migration
         run: |
           python3 deploy/build-integrated-package.py --output dist-m07-review
