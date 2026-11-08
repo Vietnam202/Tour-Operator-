@@ -270,6 +270,27 @@ final class PartnerHub {
                 Http::json(['ok'=>true,'admin'=>false,'sales'=>true,'agencies'=>[]]);
             }
             self::requirePortal($db,$u);
+            // M07 additive audit only; NO NET rate publication, export or quote write.
+            if(preg_match('#^b2b/partner-tours/([1-9][0-9]*)/quality$#D',$route,$audit)
+                ||preg_match('#^b2b/net-requests/([1-9][0-9]*)/quality$#D',$route,$netAudit)){
+                if(getenv('VTA_RC62_B2B_APPROVAL_REVIEW')!=='1')
+                    Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);
+                if($method!=='GET')
+                    Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
+                require_once __DIR__.'/VtaB2BPartnerAudit.php';
+                $clock=new DateTimeImmutable('now',new DateTimeZone('Asia/Bangkok'));
+                if(isset($audit[1])){
+                    $expected=$_GET['expected_revision']??null;
+                    if($expected!==null){
+                        $expected=filter_var($expected,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+                        if($expected===false)throw new InvalidArgumentException('Invalid expected_revision');
+                    }
+                    Http::json(['ok'=>true,'module'=>'M07','read_only'=>true,
+                        'quality'=>VtaB2BPartnerAudit::tour($db,$u,(int)$audit[1],$expected,$clock)]);
+                }
+                Http::json(['ok'=>true,'module'=>'M07','read_only'=>true,
+                    'quality'=>VtaB2BPartnerAudit::netRequest($db,$u,(int)$netAudit[1],$clock)]);
+            }
             if($route==='b2b/me'&&$method==='GET'){
                 $agencies=$admin?self::q($db,"SELECT * FROM b2b_agencies WHERE company_id=? AND status='ACTIVE' ORDER BY agency_name",[$company])->fetchAll(PDO::FETCH_ASSOC):
                 self::q($db,"SELECT a.* FROM b2b_agencies a JOIN b2b_agency_members m ON m.agency_id=a.id AND m.company_id=a.company_id WHERE a.company_id=? AND m.user_id=? AND a.status='ACTIVE' ORDER BY a.agency_name",[$company,$user])->fetchAll(PDO::FETCH_ASSOC);
