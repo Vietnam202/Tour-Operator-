@@ -67,6 +67,32 @@ final class VtaPriceMatrixAudit
             $add('FX_SOURCE_UNVERIFIED','REVIEW');
         }
 
+        // Compare existing immutable snapshots only. This is a discrepancy
+        // signal, not an authorization to recompute, refresh or overwrite FX.
+        if (is_array($snapshot) && isset($snapshot['value']) && isset($quoteVersion['fx_rate'])) {
+            try {
+                $fxAtGeneration=Vs2Decimal::parse($snapshot['value'],6);
+                $quoteFx=Vs2Decimal::parse($quoteVersion['fx_rate'],6);
+                if ($fxAtGeneration <= 0 || $quoteFx <= 0) {
+                    $add('FX_SOURCE_UNVERIFIED','REVIEW');
+                } elseif ($fxAtGeneration !== $quoteFx) {
+                    $add('FX_SNAPSHOT_DIFFERS_FROM_QUOTE','REVIEW');
+                }
+            } catch (InvalidArgumentException|OverflowException $e) {
+                $add('FX_SNAPSHOT_DIFFERS_FROM_QUOTE','REVIEW');
+            }
+        }
+        $inputSnapshot=self::json($matrix['inputs_json']??null);
+        if (isset($quoteVersion['costing_revision'])) {
+            $currentRevision=self::intIn($quoteVersion['costing_revision'],0,1000000000);
+            $frozenRevision=self::intIn($inputSnapshot['graph']['version']['costing_revision']??null,0,1000000000);
+            if ($currentRevision===null || $frozenRevision===null) {
+                $add('COSTING_REVISION_SNAPSHOT_UNVERIFIED','REVIEW');
+            } elseif ($currentRevision!==$frozenRevision) {
+                $add('COSTING_REVISION_SNAPSHOT_DRIFT','REVIEW');
+            }
+        }
+
         $selected=0;$covered=[];$seen=[];$summaries=[];
         foreach($cells as $cell){
             if(!is_array($cell))throw new InvalidArgumentException('Invalid matrix cell object.');
