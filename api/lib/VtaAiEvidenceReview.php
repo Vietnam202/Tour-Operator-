@@ -82,6 +82,25 @@ final class VtaAiEvidenceReview
         if($json($oldDoc)!==$json($v['document'])){
             $addChange('word:document','WORD_DOCUMENT','HIGH');
             $addWarning('WORD_SOURCE_REVIEW_REQUIRED');
+            // Real Word/Tiptap node tree remains the only source of truth.
+            // A positional block-level diff highlights exactly which paragraph,
+            // heading, image, table or manual page-break changed, without
+            // exposing any text or mutating a stored document.
+            $oldBlocks=$oldDoc['content']['content']??[];
+            $newBlocks=$v['document']['content']['content']??[];
+            if(!is_array($oldBlocks)||!is_array($newBlocks)
+               ||!array_is_list($oldBlocks)||!array_is_list($newBlocks)
+               ||count($oldBlocks)>3000||count($newBlocks)>3000)
+                throw new InvalidArgumentException('Bounded saved Word blocks required for review.');
+            for($bi=0;$bi<max(count($oldBlocks),count($newBlocks));$bi++){
+                if($json($oldBlocks[$bi]??null)===$json($newBlocks[$bi]??null))continue;
+                $oldKind=is_array($oldBlocks[$bi]??null)?($oldBlocks[$bi]['type']??'unknown'):'absent';
+                $newKind=is_array($newBlocks[$bi]??null)?($newBlocks[$bi]['type']??'unknown'):'absent';
+                $high=in_array($oldKind,['image','table','pageBreak'],true)
+                    ||in_array($newKind,['image','table','pageBreak'],true);
+                $addChange('word:block:'.($bi+1),'WORD_BLOCK',$high?'HIGH':'MEDIUM');
+            }
+            $addWarning('WORD_BLOCK_DIFF_IS_POSITIONAL_NOT_VISUAL_PARITY','INFO');
         }
         $max=max(count($days),count($v['days']));
         for($i=0;$i<$max;$i++){
@@ -152,7 +171,7 @@ final class VtaAiEvidenceReview
             'state'=>'ADVISORY_ONLY_NO_REVIEW_TOKEN_NO_COMMIT',
             'verdict'=>$blocks?'BLOCKED_REVIEW':'REVIEW_REQUIRED',
             'source_program_id'=>$sourceId,'source_revision'=>$sourceRevision,
-            'source_sha256'=>hash('sha256',$sourceBytes),
+            'master_public_snapshot_sha256'=>hash('sha256',$sourceBytes),
             'validated_candidate_sha256'=>$hash,
             'source_day_count'=>count($days),'candidate_day_count'=>count($v['days']),
             'private_group_pax'=>array_map(static fn($row)=>(int)$row['pax'],$v['private_groups']),
@@ -183,7 +202,7 @@ final class VtaAiEvidenceReview
             if(!is_array($item))throw new InvalidArgumentException('Invalid review record.');
             $path=$item['path']??null;
             if(!is_string($path)||strlen($path)>80||
-               preg_match('/^(?:tour:title|word:document|day:[1-9][0-9]{0,2}:(?:record|date|title|description|meals|overnight|notes)|price:[1-9][0-9]{0,3}:(?:3star|4star|5star))$/D',$path)!==1)
+               preg_match('/^(?:tour:title|word:document|word:block:[1-9][0-9]{0,3}|day:[1-9][0-9]{0,2}:(?:record|date|title|description|meals|overnight|notes)|price:[1-9][0-9]{0,3}:(?:3star|4star|5star))$/D',$path)!==1)
                 throw new InvalidArgumentException('Review record path invalid.');
             if(isset($map[$path]))throw new InvalidArgumentException('Duplicate review record.');
             if($type==='reason'){
