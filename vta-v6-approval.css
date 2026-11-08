@@ -77,3 +77,38 @@
  .v6-editor-layout .wd-page{margin:5px auto 12px;min-width:0}
 }
 @media print{.v6-outline,.v6-editor-tools,.v6-library-bar{display:none!important}.v6-editor-layout{display:block!important}}
+
+/* RC6.2 V6 functional editor hotfix: readable document first, panels optional.
+   Layout previews remain screen-only and do not change saved content or export files. */
+.wd-editor .wd-toolbar{flex-wrap:wrap;overflow-x:visible;white-space:normal;row-gap:6px;height:auto;max-height:none}
+.v6-editor-layout{grid-template-columns:minmax(0,1fr) 172px;gap:12px;max-width:1750px}
+.v6-workspace-controls{grid-column:1/-1;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:10px 16px 0}
+.v6-workspace-controls button{min-height:32px}
+.v6-editor-layout .v6-outline{display:none}
+.v6-editor-layout[data-v6-panels="all"]{grid-template-columns:156px minmax(0,1fr) 172px}
+.v6-editor-layout[data-v6-panels="all"] .v6-outline{display:block}
+.v6-editor-layout .wd-canvas{min-width:0;max-width:100%;overflow-x:visible;padding:12px 10px 32px}
+.v6-editor-layout .wd-page{box-sizing:border-box;width:100%;max-width:794px;min-width:0;margin:12px auto 32px;padding:clamp(18px,4vw,64px) clamp(16px,4vw,68px)}
+.v6-editor-layout .wd-page .tiptap{overflow-wrap:anywhere;min-height:720px}
+.v6-editor-layout[data-v6-focus="true"]{grid-template-columns:minmax(0,1fr)}
+.v6-editor-layout[data-v6-focus="true"] .v6-outline,
+.v6-editor-layout[data-v6-focus="true"] .v6-editor-tools{display:none!important}
+.v6-editor-layout[data-v6-focus="true"] .wd-canvas{grid-column:1/-1}
+@media(max-width:1250px){
+ .v6-editor-layout,.v6-editor-layout[data-v6-panels="all"]{grid-template-columns:minmax(0,1fr)}
+ .v6-editor-layout .wd-canvas{grid-column:1/-1}
+ .v6-editor-layout .v6-editor-tools{grid-column:1/-1}
+ .v6-editor-layout[data-v6-panels="all"] .v6-outline{grid-column:1/-1;position:static;max-height:220px}
+}
+@media(max-width:760px){
+ .v6-workspace-controls{width:100%;padding:8px 10px;justify-content:flex-start}
+ .v6-editor-layout .wd-canvas{width:100%;padding:6px 4px 16px}
+ .v6-editor-layout .wd-page{width:100%;min-width:0;padding:18px 16px;min-height:560px}
+ .v6-editor-layout .wd-page .tiptap{min-height:420px}
+ .wd-editor .wd-toolbar{gap:5px;padding:6px}
+}
+@media print{
+ .v6-workspace-controls{display:none!important}
+ .v6-editor-layout .wd-canvas{padding:0!important}
+ .v6-editor-layout .wd-page{max-width:none;min-height:0;padding:0;box-shadow:none}
+}
