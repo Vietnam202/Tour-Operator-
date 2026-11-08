@@ -6,6 +6,7 @@ declare(strict_types=1);
  * Synthetic records only; 100% offline and no production quote/provider.
  * Real binary export, real DOCX XML re-open, real Poppler PDF text extraction.
  */
+require_once __DIR__.'/../api/lib/RuntimeGuard.php';
 require_once __DIR__.'/../api/lib/ScheduleImport.php';
 require_once __DIR__.'/../api/lib/PartnerHub.php';
 require_once __DIR__.'/../api/lib/ProposalOutput.php';
