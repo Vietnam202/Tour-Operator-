@@ -1,0 +1,56 @@
+name: RC6.2 M03 Additive Supplier Rate Preview QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaSupplierRateIntakeReview.php'
+      - 'tests/rc62-m03-supplier-rate-intake-unit.php'
+      - '.github/workflows/rc62-m03-supplier-rate-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Strict add-only change inventory
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+            'api/lib/VtaSupplierRateIntakeReview.php',
+            'tests/rc62-m03-supplier-rate-intake-unit.php',
+            '.github/workflows/rc62-m03-supplier-rate-review.yml',
+          }
+          lines = subprocess.check_output(['git', 'diff', '--name-status', os.environ['BASE_SHA']+'...HEAD'], text=True).strip().splitlines()
+          pairs = [line.split('\t', 1) for line in lines]
+          assert all(len(item) == 2 for item in pairs), 'Unparseable change inventory'
+          assert {path for status,path in pairs} == expected, 'Core or unrelated code modified'
+          assert all(status == 'A' for status,path in pairs), 'Only additive files are allowed'
+          print('PASS strict 3-file add-only boundary')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: Syntax & bounded source-preview behavior
+        run: |
+          php -l api/lib/VtaSupplierRateIntakeReview.php
+          php -l tests/rc62-m03-supplier-rate-intake-unit.php
+          php tests/rc62-m03-supplier-rate-intake-unit.php
+      - name: Existing module source untouched
+        run: |
+          test -f api/lib/RateEngine.php
+          test -f api/lib/Procurement.php
+          test -f api/lib/RateRules.php
+          test -f api/lib/Vs2Decimal.php
+          test -f api/lib/QuoteSmartCosting.php
+          echo 'PASS existing core preserved'
