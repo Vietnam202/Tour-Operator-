@@ -90,6 +90,17 @@ final class LeadHub {
         if(!str_starts_with($route,'lead-hub/')) return;
         try {
             $cid=(int)$user['company_id']; $uid=(int)$user['id'];
+            // Optional M06 review inside the existing LeadHub module, disabled
+            // unless explicitly enabled in an authorized isolated environment.
+            if(preg_match('#^lead-hub/requests/([1-9][0-9]*)/quality$#D',$route,$match)){
+                if(getenv('VTA_RC62_LEAD_JOURNEY_REVIEW')!=='1')
+                    Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);
+                if($method!=='GET')Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
+                require_once __DIR__.'/VtaLeadJourneyReview.php';
+                $asOf=new DateTimeImmutable('now',new DateTimeZone('Asia/Bangkok'));
+                Http::json(['ok'=>true,'module'=>'M06','read_only'=>true,
+                    'quality'=>VtaLeadJourneyReview::review($db,$user,(int)$match[1],$asOf)]);
+            }
             if($method==='GET')Auth::requirePermission($db,$user,'lead.view');
             if($method!=='GET'&&in_array($route,['lead-hub/campaigns','lead-hub/forms'],true))Auth::requirePermission($db,$user,'campaign.manage');
             if($method==='GET' && $route==='lead-hub/owners') {
