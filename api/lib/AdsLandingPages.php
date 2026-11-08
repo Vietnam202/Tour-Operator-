@@ -259,6 +259,15 @@ final class AdsLandingPages {
     public static function manage(string $route,string $method,PDO $db,array $cfg,array $u):void {
         if(!str_starts_with($route,'ads/landing-admin'))return;
         try{
+            // M08 additive readback; inactive unless explicitly enabled in an isolated environment.
+            if(preg_match('#^ads/landing-admin/([1-9][0-9]*)/quality$#D',$route,$review)){
+                require_once __DIR__.'/VtaB2CPublicationReview.php';
+                if(getenv(VtaB2CPublicationReview::FLAG)!=='1')
+                    Http::json(['ok'=>false,'error'=>'NOT_FOUND'],404);
+                if($method!=='GET')Http::json(['ok'=>false,'error'=>'METHOD_NOT_ALLOWED'],405);
+                Http::json(['ok'=>true,'module'=>'M08','read_only'=>true,
+                    'quality'=>VtaB2CPublicationReview::landing($db,$u,(int)$review[1])]);
+            }
             if($route==='ads/landing-admin/options'&&$method==='GET'){
                 Auth::requirePermission($db,$u,'b2c.approve');
                 Auth::requirePermission($db,$u,'campaign.manage');
