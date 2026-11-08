@@ -1,0 +1,134 @@
+name: RC6.2 M07 Agency NET White-label Approval QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/PartnerHub.php'
+      - 'api/lib/VtaB2BPartnerAudit.php'
+      - 'tests/rc62-m07-b2b-approval-native.php'
+      - 'tests/rc62-m07-b2b-binary-export.php'
+      - '.github/workflows/rc62-m07-b2b-approval.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m07-audit-and-isolation:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact integrated Draft HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Fail-closed original PartnerHub structural parity
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,subprocess
+          git=lambda *a:subprocess.check_output(['git',*a],text=True)
+          assert git('rev-parse','HEAD').strip()==os.environ['HEAD_SHA'],'Git HEAD mismatch'
+          expected={
+            'api/lib/PartnerHub.php':'M',
+            'api/lib/VtaB2BPartnerAudit.php':'A',
+            'tests/rc62-m07-b2b-approval-native.php':'A',
+            'tests/rc62-m07-b2b-binary-export.php':'A',
+            '.github/workflows/rc62-m07-b2b-approval.yml':'A',
+          }
+          rows=[x.split('\t',1) for x in git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').strip().splitlines()]
+          assert len(rows)==5 and {path:status for status,path in rows}==expected, 'RC6.2 original module changed: '+repr(rows)
+          before=git('show',os.environ['BASE_SHA']+':api/lib/PartnerHub.php')
+          after=pathlib.Path('api/lib/PartnerHub.php').read_text()
+          anchor="            self::requirePortal($db,$u);\n            if($route==='b2b/me'&&$method==='GET'){"
+          assert before.count(anchor)==1, 'Original B2B router anchor changed unexpectedly'
+          begin=after.index('            // M07 additive audit only; NO NET rate publication')
+          end=after.index("            if($route==='b2b/me'&&$method==='GET'){",begin)
+          assert after[:begin]+after[end:]==before, 'Existing B2B semantics are NOT byte-identical'
+          patch=after[begin:end]
+          assert "getenv('VTA_RC62_B2B_APPROVAL_REVIEW')!=='1'" in patch, 'Private feature flag missing'
+          assert 'VtaB2BPartnerAudit::tour(' in patch and 'VtaB2BPartnerAudit::netRequest(' in patch
+          assert 'PartnerHub::approvedRates(' not in patch and 'UPDATE ' not in patch and 'INSERT ' not in patch
+          assert len(patch.splitlines())<=29, 'Optional M07 route exceeds bounded addition'
+          print('PASS exact SHA, 4 added files including binary export test; only one guarded M07 route, original B2B unchanged')
+          PY
+      - name: PHP 8.3 with real SQLite database fixture
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, zip, dom, gd
+          tools: none
+          coverage: none
+      - name: Install PDF verification tools for actual client/agency output
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          command -v pdftotext
+          command -v pdfinfo
+          command -v pdftoppm
+      - name: Native agency/NET security and original B2B regressions
+        run: |
+          set -euo pipefail
+          php -l api/lib/PartnerHub.php
+          php -l api/lib/VtaB2BPartnerAudit.php
+          php -l tests/rc62-m07-b2b-approval-native.php
+          php -l tests/rc62-m07-b2b-binary-export.php
+          php tests/rc62-m07-b2b-approval-native.php
+          php tests/b2b-partner-hub-unit.php
+          php tests/b2b-hybrid-isolation-unit.php
+          php tests/rc62-m06-lead-journey-native.php
+      - name: Real white-label client vs agency DOCX/PDF/HTML binary output
+        env:
+          VTA_M07_OUTPUT_DIR: ${{ runner.temp }}/rc62-m07-b2b-native
+        run: |
+          php tests/rc62-m07-b2b-binary-export.php
+          python3 - <<'PY'
+          import os,pathlib,json
+          folder=pathlib.Path(os.environ['VTA_M07_OUTPUT_DIR'])
+          report=json.loads((folder/'m07-native-b2b-evidence.json').read_text())
+          assert report['status']=='SYNTHETIC_REAL_BINARY_ONLY'
+          assert report['owner_visual_acceptance']=='PENDING'
+          assert len(report['templates'])==3
+          assert len(list(folder.glob('*.docx')))==3
+          assert len(list(folder.glob('*.pdf')))==3
+          assert len(list(folder.glob('*-page1.png')))==3
+          print('PASS real client/agency/itinerary ZIP+PDF plus manual PNG review artifacts')
+          PY
+      - name: Archive synthetic audience-separated evidence (no deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc62-m07-synthetic-client-agency-white-label-evidence
+          path: |
+            ${{ runner.temp }}/rc62-m07-b2b-native/*.docx
+            ${{ runner.temp }}/rc62-m07-b2b-native/*.pdf
+            ${{ runner.temp }}/rc62-m07-b2b-native/*-page1.png
+            ${{ runner.temp }}/rc62-m07-b2b-native/m07-native-b2b-evidence.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Exact-SHA source bundle verification, no upload or DB migration
+        run: |
+          python3 deploy/build-integrated-package.py --output dist-m07-review
+          python3 - <<'PY'
+          import pathlib,json,hashlib,subprocess,zipfile
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          out=pathlib.Path('dist-m07-review')
+          manifest=json.loads((out/('vta-rc62-manifest-'+sha[:12]+'.json')).read_text())
+          assert manifest['source_commit']==sha
+          assert manifest['migration_execution']=='NOT_PERFORMED'
+          assert manifest['release_type']=='STAGING_CANDIDATE_NOT_PRODUCTION'
+          with zipfile.ZipFile(out/('vta-rc62-integrated-staging-'+sha[:12]+'.zip')) as pkg:
+              for path in [
+                'api/lib/PartnerHub.php',
+                'api/lib/VtaB2BPartnerAudit.php',
+                'api/lib/PriceMatrix.php',
+                'api/lib/QuoteProposal.php',
+                'api/lib/LeadHub.php',
+                'api/lib/VtaAiEvidenceReview.php',
+              ]:
+                  data=pkg.read('runtime/'+path)
+                  assert data==pathlib.Path(path).read_bytes()
+                  assert hashlib.sha256(data).hexdigest()==manifest['sha256'][path]
+              assert not any(name.startswith('runtime/tests/') for name in pkg.namelist())
+          print('PASS M07 read-only helper in exact-HEAD RC6.2 package with no deploy')
+          PY
