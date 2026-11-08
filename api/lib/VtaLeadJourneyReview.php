@@ -32,7 +32,7 @@ final class VtaLeadJourneyReview
         $session=Auth::requireUser($db);
         if((int)($session['id']??0)!==(int)($caller['id']??-1)
             ||(int)($session['company_id']??0)!==(int)($caller['company_id']??-1))
-            throw new DomainException('AUTH_SCOPE_MISMATCH');
+            Http::json(['ok'=>false,'error'=>'AUTH_SCOPE_MISMATCH'],401);
         Auth::checkCsrf();
         Auth::requirePermission($db,$caller,'lead.view');
         Auth::requirePermission($db,$caller,'sales.view');
@@ -225,6 +225,7 @@ final class VtaLeadJourneyReview
             'warnings'=>array_values($warn),
             'limits'=>[
                 'No PII values, raw UTM/consent text, submission key, duplicate contact or internal notes are returned.',
+                'Follow-up DATETIME is compared in the explicitly reported review timezone; confirm actual company DB timezone at staging.',
                 'Candidate matching is recent bounded and is not a complete tenant-wide identity search.',
                 'Never infer consent, first-response SLA, booking, quote availability or customer identity.',
                 'Existing LeadSalesHandover identity review, permissions and command idempotency remain authoritative.',
