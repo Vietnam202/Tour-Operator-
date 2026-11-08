@@ -33,7 +33,7 @@ function runM07(string $name,array $args):string
     if($status!==0)throw new RuntimeException('M07 external tool failed: '.$name.' '.implode("\n",$log));
     return implode("\n",$log);
 }
-function docxTextM07(string $filename):string
+function docxTextM07(string $filename,bool $expectsPriceTable):string
 {
     $zip=new ZipArchive();
     assertM07($zip->open($filename)===true,'DOCX is a genuine ZIP document');
@@ -47,7 +47,7 @@ function docxTextM07(string $filename):string
     $xp->registerNamespace('w','http://schemas.openxmlformats.org/wordprocessingml/2006/main');
     $texts=[];
     foreach($xp->query('//w:t') as $node)$texts[]=$node->textContent;
-    assertM07($xp->query('//w:tbl')->length>0,'Word export has actual editable table');
+    if($expectsPriceTable)assertM07($xp->query('//w:tbl')->length>0,'Priced client/agency Word export has editable table');
     return normalizeM07(implode(' ',$texts));
 }
 
@@ -101,7 +101,7 @@ foreach(['client','agency','itinerary'] as $audience){
     $docPath=$dir.'/m07-'. $audience.'.docx';
     $pdfPath=$dir.'/m07-'. $audience.'.pdf';
     file_put_contents($docPath,$docx);file_put_contents($pdfPath,$pdf);
-    $docText=docxTextM07($docPath);
+    $docText=docxTextM07($docPath,$audience!=='itinerary');
     $info=runM07('pdfinfo',[$pdfPath]);
     assertM07(preg_match('/^Pages:\s*(\d+)/m',$info,$p)===1&&(int)$p[1]>=1,
         'actual PDF has pages: '.$audience);
