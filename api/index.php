@@ -137,6 +137,9 @@ try {
     $companyId=(int)$user['company_id'];
     $userId=(int)$user['id'];
     Auth::checkCsrf();
+    // Optional, default-OFF read-only diagnostics inside existing M01/M03/M04 module routes.
+    require_once __DIR__.'/lib/VtaAdvancedQualityApi.php';
+    VtaAdvancedQualityApi::handle($route,$method,$db,$user);
     SmartEnhancements::handle($route,$method,$db,$user);
 
     // VTA v2.4 complete core routes (Sales → Booking → Operations → Finance → TODAY)
