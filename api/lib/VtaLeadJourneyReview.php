@@ -156,16 +156,44 @@ final class VtaLeadJourneyReview
 
         $inquiryId=self::positiveInt($row['inquiry_id']??null);
         $inquiryStatus='NOT_LINKED';
+        $customer360Link='NOT_LINKED';
         $quoteCount=null;$latestQuoteStatus=null;$latestQuoteId=null;
         if($inquiryId!==null){
-            $q=$db->prepare('SELECT id,status FROM inquiries WHERE company_id=? AND id=? LIMIT 1');
+            // Reuse the original Inquiry -> Trip -> Customer360 hierarchy.
+            // Every join is tenant-constrained; a foreign customer/trip is
+            // never treated as a legitimate customer identity.
+            $q=$db->prepare('SELECT i.id,i.status,t.id trip_id,t.customer_id,
+                    c.id customer_id_scoped,c.status customer_status
+                FROM inquiries i
+                LEFT JOIN trips t ON t.id=i.trip_id AND t.company_id=i.company_id
+                LEFT JOIN customers c ON c.id=t.customer_id AND c.company_id=t.company_id
+                WHERE i.company_id=? AND i.id=? LIMIT 1');
             $q->execute([$cid,$inquiryId]);
             $inquiry=$q->fetch(PDO::FETCH_ASSOC);
             if(!$inquiry){
                 $inquiryStatus='BROKEN_OR_FOREIGN_LINK';
+                $customer360Link='INQUIRY_NOT_FOUND';
                 $add('LINKED_INQUIRY_NOT_FOUND_IN_COMPANY');
             }else{
                 $inquiryStatus=self::safeStatus($inquiry['status']??null);
+                $tripId=self::positiveInt($inquiry['trip_id']??null);
+                $customerId=self::positiveInt($inquiry['customer_id']??null);
+                $scopedCustomerId=self::positiveInt($inquiry['customer_id_scoped']??null);
+                if($tripId===null){
+                    $customer360Link='TRIP_NOT_FOUND_IN_COMPANY';
+                    $add('INQUIRY_TRIP_LINK_NOT_FOUND_IN_COMPANY');
+                }elseif($customerId===null){
+                    $customer360Link='CUSTOMER_NOT_LINKED';
+                    $add('INQUIRY_TRIP_CUSTOMER_NOT_LINKED');
+                }elseif($scopedCustomerId!==$customerId){
+                    $customer360Link='CUSTOMER_NOT_FOUND_IN_COMPANY';
+                    $add('CUSTOMER360_CROSS_TENANT_OR_BROKEN_LINK');
+                }elseif(($inquiry['customer_status']??null)!=='ACTIVE'){
+                    $customer360Link='CUSTOMER_INACTIVE_REVIEW';
+                    $add('CUSTOMER360_CUSTOMER_NOT_ACTIVE');
+                }else{
+                    $customer360Link='ACTIVE_COMPANY_CUSTOMER_LINK';
+                }
                 $q=$db->prepare('SELECT id,status FROM quotes WHERE company_id=? AND inquiry_id=? ORDER BY id DESC LIMIT 21');
                 $q->execute([$cid,$inquiryId]);
                 $quotes=$q->fetchAll(PDO::FETCH_ASSOC);
@@ -218,6 +246,7 @@ final class VtaLeadJourneyReview
                 'handover_status'=>self::safeStatus($row['handover_status']??null),
                 'inquiry_id'=>$inquiryId,
                 'inquiry_status'=>$inquiryStatus,
+                'customer360_link_status'=>$customer360Link,
                 'latest_quote_id'=>$latestQuoteId,
                 'latest_quote_status'=>$latestQuoteStatus,
                 'quote_count_bounded'=>$quoteCount,
