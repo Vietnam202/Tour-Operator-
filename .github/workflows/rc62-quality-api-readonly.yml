@@ -1,0 +1,92 @@
+name: RC6.2 Advanced Quality API Guarded Opt-in
+on:
+  pull_request:
+    paths:
+      - 'api/index.php'
+      - 'api/lib/VtaAdvancedQualityApi.php'
+      - 'tests/rc62-quality-api-readonly-native.php'
+      - '.github/workflows/rc62-quality-api-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  module-quality-routes:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Fail closed on any original structure or route rewrite
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess,pathlib
+          git=lambda *args: subprocess.check_output(['git',*args],text=True)
+          assert git('rev-parse','HEAD').strip()==os.environ['HEAD_SHA'], 'HEAD changed'
+          changes=[x.split('\t',1) for x in git('diff','--name-status',os.environ['BASE_SHA']+'...HEAD').strip().splitlines()]
+          expected={
+            'api/index.php':'M',
+            'api/lib/VtaAdvancedQualityApi.php':'A',
+            'tests/rc62-quality-api-readonly-native.php':'A',
+            '.github/workflows/rc62-quality-api-readonly.yml':'A',
+          }
+          assert len(changes)==4 and dict((path,status) for status,path in changes)==expected, repr(changes)
+          before=git('show',os.environ['BASE_SHA']+':api/index.php')
+          anchor="    Auth::checkCsrf();\n    SmartEnhancements::handle($route,$method,$db,$user);"
+          addition="    Auth::checkCsrf();\n    // Optional, default-OFF read-only diagnostics inside existing M01/M03/M04 module routes.\n    require_once __DIR__.'/lib/VtaAdvancedQualityApi.php';\n    VtaAdvancedQualityApi::handle($route,$method,$db,$user);\n    SmartEnhancements::handle($route,$method,$db,$user);"
+          assert before.count(anchor)==1,'Original hook changed unexpectedly'
+          after=pathlib.Path('api/index.php').read_text()
+          assert after==before.replace(anchor,addition),'Existing router code was changed outside 3 added lines'
+          print('PASS exact source HEAD and locked original RC6.2 router structure')
+          PY
+      - name: Set up PHP 8.3 + SQLite isolated test database
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3
+          tools: none
+          coverage: none
+      - name: PHP lint and existing module regressions
+        run: |
+          set -euo pipefail
+          php -l api/index.php
+          php -l api/lib/VtaAdvancedQualityApi.php
+          php -l tests/rc62-quality-api-readonly-native.php
+          php tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-m03-rate-intake-unit.php
+          php tests/rc62-m04-price-matrix-audit.php
+      - name: Test new guarded routes with real SQLite company-scoped SELECT fixtures
+        run: |
+          php -m | grep -i pdo_sqlite
+          php tests/rc62-quality-api-readonly-native.php
+      - name: Verify generated RC6.2 runtime includes opt-in helper (no deploy)
+        run: |
+          python3 deploy/build-integrated-package.py --output dist-quality-gated
+          python3 - <<'PY'
+          import pathlib,json,subprocess,zipfile,hashlib
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          root=pathlib.Path('dist-quality-gated')
+          manifest=json.loads((root/('vta-rc62-manifest-'+sha[:12]+'.json')).read_text())
+          assert manifest['source_commit']==sha
+          assert manifest['migration_execution']=='NOT_PERFORMED'
+          assert manifest['release_type']=='STAGING_CANDIDATE_NOT_PRODUCTION'
+          with zipfile.ZipFile(root/('vta-rc62-integrated-staging-'+sha[:12]+'.zip')) as pkg:
+              for path in [
+                'api/lib/VtaTourItineraryQuality.php',
+                'api/lib/VtaRateIntakeReview.php',
+                'api/lib/VtaPriceMatrixAudit.php',
+                'api/lib/VtaAdvancedQualityApi.php',
+                'api/index.php',
+              ]:
+                  b=pkg.read('runtime/'+path)
+                  assert hashlib.sha256(b).hexdigest()==manifest['sha256'][path]
+                  assert b==pathlib.Path(path).read_bytes()
+              assert not any(x.startswith('runtime/tests/') for x in pkg.namelist())
+          print('PASS exact-HEAD source/package parity; no schema or runtime deploy')
+          PY
