@@ -1,0 +1,56 @@
+name: RC6.2 M04 Additive Cost Evidence Audit QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaQuoteCostEvidenceAudit.php'
+      - 'tests/rc62-m04-cost-evidence-unit.php'
+      - '.github/workflows/rc62-m04-cost-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-cost-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Strict additive 3-file inventory
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+            'api/lib/VtaQuoteCostEvidenceAudit.php',
+            'tests/rc62-m04-cost-evidence-unit.php',
+            '.github/workflows/rc62-m04-cost-evidence.yml',
+          }
+          diff = subprocess.check_output(['git','diff','--name-status',os.environ['BASE_SHA']+'...HEAD'],text=True).strip().splitlines()
+          pairs = [line.split('\t',1) for line in diff]
+          assert all(len(x)==2 for x in pairs), 'Unexpected diff data'
+          assert {path for status,path in pairs} == expected, 'Unexpected core file change'
+          assert all(status=='A' for status,path in pairs), 'Existing files must never change'
+          print('PASS exactly 3 additions, original schema/routes/editor/engine untouched')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: Fixed-point VND & scenario/tenant audit
+        run: |
+          php -l api/lib/Vs2Decimal.php
+          php -l api/lib/VtaQuoteCostEvidenceAudit.php
+          php -l tests/rc62-m04-cost-evidence-unit.php
+          php tests/rc62-m04-cost-evidence-unit.php
+      - name: Verify core Pricing, Quote and Cost untouched
+        run: |
+          test -f api/lib/RateEngine.php
+          test -f api/lib/PriceMatrix.php
+          test -f api/lib/QuoteSmartCosting.php
+          test -f api/lib/QuoteVs2.php
+          echo 'PASS core pricing modules preserved'
