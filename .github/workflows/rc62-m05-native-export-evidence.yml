@@ -47,8 +47,10 @@ jobs:
           extensions: zip, dom, gd, mbstring, xml
           tools: none
           coverage: none
-      - name: Verify PDF extraction/rendering tools
+      - name: Install isolated PDF extraction/rendering tools
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
           command -v pdfinfo
           command -v pdftotext
           command -v pdftoppm
