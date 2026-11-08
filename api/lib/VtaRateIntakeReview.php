@@ -107,7 +107,7 @@ final class VtaRateIntakeReview
                 if (($raw['product_name'] ?? '') === '' || strlen($raw['product_name']) > 190) {
                     $issues[] = ['code'=>'PRODUCT_NAME_INVALID','severity'=>'BLOCK','field'=>'product_name'];
                 }
-                if (strlen($raw['option_name'] ?? '') > 190 || strlen($raw['destination'] ?? '') > 160 || strlen($raw['market'] ?? '') > 120) {
+                if (strlen($raw['option_name'] ?? '') > 190 || strlen($raw['destination'] ?? '') > 160 || strlen($raw['market'] ?? '') > 120 || strlen($raw['source_locator'] ?? '') > 255 || strlen($raw['linked_trip_ref'] ?? '') > 64) {
                     $issues[] = ['code'=>'DESCRIPTION_TOO_LONG','severity'=>'BLOCK'];
                 }
                 // Validate 18,2 amount via strings. Never use float for supplier money.
@@ -133,7 +133,7 @@ final class VtaRateIntakeReview
                 }
                 $min = self::optionalPositiveInt($raw['min_pax'] ?? '');
                 $max = self::optionalPositiveInt($raw['max_pax'] ?? '');
-                if ($min === false || $max === false || (is_int($min) && is_int($max) && $max < $min)) {
+                if ($min === false || $max === false || (is_int($min) && $min > 10000) || (is_int($max) && $max > 10000) || (is_int($min) && is_int($max) && $max < $min)) {
                     $issues[] = ['code'=>'PAX_RANGE_INVALID','severity'=>'BLOCK'];
                 }
                 if (($min === null) !== ($max === null)) {
@@ -161,7 +161,7 @@ final class VtaRateIntakeReview
                     'product_name'=>$raw['product_name'] ?? '', 'option_name'=>$raw['option_name'] ?? '',
                     'destination'=>$raw['destination'] ?? '', 'market'=>$raw['market'] ?? '',
                     'rate_type'=>$type, 'rate_basis'=>$basis,'currency'=>$currency,
-                    'amount'=>$money, 'valid_from'=>$from, 'valid_to'=>$to,
+                    'amount'=>$money, 'tax_basis'=>$tax, 'source_locator'=>$raw['source_locator'] ?? '', 'linked_trip_ref'=>$raw['linked_trip_ref'] ?? '', 'valid_from'=>$from, 'valid_to'=>$to,
                     'min_pax'=>is_int($min)?$min:null, 'max_pax'=>is_int($max)?$max:null,
                     'source_document_id'=>is_int($evidence)?$evidence:null,
                     'booking_valid_from'=>$raw['booking_valid_from'] ?? '',
