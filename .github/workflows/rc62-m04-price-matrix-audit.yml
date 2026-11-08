@@ -1,0 +1,44 @@
+name: RC6.2 M04 Read-Only PriceMatrix Audit QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaPriceMatrixAudit.php'
+      - 'tests/rc62-m04-price-matrix-audit.php'
+      - '.github/workflows/rc62-m04-price-matrix-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Refuse original structure changes
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess
+          expected={'.github/workflows/rc62-m04-price-matrix-audit.yml','api/lib/VtaPriceMatrixAudit.php','tests/rc62-m04-price-matrix-audit.php'}
+          raw=subprocess.check_output(['git','diff','--name-status',os.environ['BASE_SHA']+'...HEAD'],text=True).strip().splitlines()
+          actual=[x.split('\t',1) for x in raw]
+          assert all(len(x)==2 for x in actual)
+          assert {p for _,p in actual}==expected, 'Original RC6.2 files changed: '+repr(actual)
+          assert all(s=='A' for s,_ in actual), 'Only new files permitted: '+repr(actual)
+          print('PASS exact-HEAD M04 add-only gate')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: PHP lint and native pricing audit fixture
+        run: |
+          php -l api/lib/VtaPriceMatrixAudit.php
+          php -l tests/rc62-m04-price-matrix-audit.php
+          php tests/rc62-m04-price-matrix-audit.php
