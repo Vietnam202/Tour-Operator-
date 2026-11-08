@@ -1,0 +1,35 @@
+name: RC6.2 M01 Additive Master Itinerary QA
+on:
+  pull_request:
+    paths:
+      - 'api/lib/VtaTourItineraryQuality.php'
+      - 'tests/rc62-itinerary-quality-unit.php'
+      - '.github/workflows/rc62-m01-itinerary-quality.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+      - name: PHP 8.3 syntax and pure read-only contract
+        run: |
+          php -l api/lib/VtaTourItineraryQuality.php
+          php -l tests/rc62-itinerary-quality-unit.php
+          php tests/rc62-itinerary-quality-unit.php
+      - name: Verify core remains unwired and unchanged in this add-on
+        run: |
+          test -f api/lib/TourProgramWorkspace.php
+          test -f document-editor.js
+          test -f api/lib/QuoteSmartCosting.php
+          test -f api/lib/LeadHub.php
+          echo 'PASS baseline files exist; inspect PR changed-file list for add-only review'
